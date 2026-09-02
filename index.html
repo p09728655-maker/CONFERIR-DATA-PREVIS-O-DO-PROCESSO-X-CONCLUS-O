@@ -455,6 +455,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.6.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>O prazo da ordem passa a ser julgado pela Previsão do Processo</b>, não pela previsão da capa da ordem. É a data que o PPCP programou por fase.</li>
+    <li><b>Correção importante:</b> ordem fechada antes de a primeira fase estar prevista aparecia como "adiantada" e contava como entrega no prazo. Agora é marcada como <b>Inconsistente</b> e fica fora do cálculo de aderência — fechar uma ordem antes de a produção existir não é desempenho.</li>
+    <li>A aba Ordens mostra as duas datas lado a lado: <b>Prev. processo</b> (por onde se julga) e <b>Prev. ordem</b> (o que o ERP traz na capa).</li>
+    <li>O indicador de aderência diz sobre quantas ordens foi calculado e quantas ficaram fora.</li>
+  </ul>
   <h3>1.5.0 — 02/09/2026</h3>
   <ul>
     <li><b>Quadro de responsabilidade por setor</b> no topo da folha da reunião: quem deixou de apontar, quantas operações e quantas peças, do pior para o menor.</li>
@@ -729,6 +736,34 @@ function faltasApontamento(ordens,ref,flagEmb){
   return out.sort((a,b)=>(peso[b.tipo]-peso[a.tipo])||(b.vencida-a.vencida)||(b.pecas-a.pecas));
 }
 
+/**
+ * A ORDEM É JULGADA PELO ROTEIRO, NÃO PELA CAPA.
+ *
+ * A ordem tem uma previsão própria — a data de entrega — e cada operação tem a
+ * sua Previsão do Processo, que é o que o PPCP de fato programou por fase. As
+ * duas divergem, e julgar pela capa produz número falso: uma ordem fechada em
+ * 02/09, com o roteiro previsto para começar em 08/09 e NENHUMA operação
+ * apontada, aparecia como "12 dias adiantada" e entrava na aderência como
+ * cumprida. Não é adiantamento — é fechamento antes de a produção existir.
+ *
+ *   ref  — a data em que a ordem deveria estar pronta segundo o roteiro: a
+ *          ÚLTIMA previsão de processo, porque a ordem termina quando a última
+ *          fase termina. Sem roteiro programado, resta a previsão da ordem.
+ *   inconsistente — concluída antes da PRIMEIRA previsão de processo. Isso não
+ *          é desempenho e não pode entrar em indicador de prazo: é dado a
+ *          corrigir, e aparece nos Achados como tal.
+ */
+function prazoOrdem(of){
+  const prevs=of.operacoes.map(o=>o.previsao).filter(Boolean).sort();
+  const ini=prevs[0]||null, fim=prevs[prevs.length-1]||null;
+  return {
+    ini, fim,
+    ref: fim||of.previsao||null,
+    doProcesso: !!fim,
+    inconsistente: !!(of.conclusao&&ini&&of.conclusao<ini),
+  };
+}
+
 function analisar(docs,ref,flagEmb){
   const ach=[];
   const add=(id,of,op,det)=>{
@@ -742,10 +777,14 @@ function analisar(docs,ref,flagEmb){
     const ops=of.operacoes, q=of.qtd||0;
     if(!ops.length) add('OF_SEM_OPERACOES',of,null,'A ordem não possui operações no relatório.');
 
-    if(!of.conclusao&&of.previsao&&of.previsao<ref)
-      add('OF_ABERTA_VENCIDA',of,null,`Previsão ${br(of.previsao)}, ${dias(of.previsao,ref)} dia(s) vencida. Faltam ${nf(q-(of.pronto||0))} pç.`);
-    if(of.conclusao&&of.previsao&&of.conclusao>of.previsao)
-      add('OF_ATRASO',of,null,`Previsão ${br(of.previsao)} · conclusão ${br(of.conclusao)} · ${dias(of.previsao,of.conclusao)} dia(s).`);
+    const pz=prazoOrdem(of);
+    const fonte=pz.doProcesso?'previsão do processo':'previsão da ordem';
+    if(!of.conclusao&&pz.ref&&pz.ref<ref)
+      add('OF_ABERTA_VENCIDA',of,null,`Última ${fonte} ${br(pz.ref)}, ${dias(pz.ref,ref)} dia(s) vencida. Faltam ${nf(q-(of.pronto||0))} pç.`);
+    // Ordem fechada antes de o roteiro começar não conta como atraso nem como
+    // adiantamento: é inconsistência, e OF_CONCL_ANTES_PREV já a reporta.
+    if(of.conclusao&&pz.ref&&!pz.inconsistente&&of.conclusao>pz.ref)
+      add('OF_ATRASO',of,null,`Última ${fonte} ${br(pz.ref)} · conclusão ${br(of.conclusao)} · ${dias(pz.ref,of.conclusao)} dia(s).`);
     if((of.pronto||0)>q+CFG.tolQtd)
       add('APONTADO_MAIOR',of,null,`Ordem: apontado ${nf(of.pronto)} para ${nf(q)} previsto.`);
 
@@ -820,7 +859,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.5.0';
+const VERSAO='1.6.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1094,11 +1133,16 @@ function renderAviso(){
 function renderResposta(){
   const ord=ordensFiltradas(), ach=achFiltrados(), ref=$('#fRef').value;
   const abertas=ord.filter(o=>!o.conclusao);
-  const vencidas=abertas.filter(o=>o.previsao&&o.previsao<ref);
+  const vencidas=abertas.filter(o=>{const z=prazoOrdem(o);return z.ref&&z.ref<ref;});
   const crit=[...new Set(ach.filter(a=>a.sev==='critico').map(a=>a.of))].filter(x=>x!=='—');
   const conc=ord.filter(o=>o.conclusao);
-  const noPrazo=conc.filter(o=>o.previsao&&o.conclusao<=o.previsao).length;
-  const ader=conc.length?Math.round(noPrazo/conc.length*100):null;
+  // Aderência julgada pelo ROTEIRO e sem as inconsistentes: uma ordem fechada
+  // antes de a primeira fase estar prevista não é entrega no prazo, e contá-la
+  // como tal levava a aderência a 100% num lote cheio de apontamento esquecido.
+  const julgaveis=conc.filter(o=>{const z=prazoOrdem(o);return z.ref&&!z.inconsistente;});
+  const inconsist=conc.filter(o=>prazoOrdem(o).inconsistente).length;
+  const noPrazo=julgaveis.filter(o=>o.conclusao<=prazoOrdem(o).ref).length;
+  const ader=julgaveis.length?Math.round(noPrazo/julgaveis.length*100):null;
   const saldo=ord.reduce((s,o)=>s+Math.max(0,(o.qtd||0)-(o.pronto||0)),0);
   // Cor só quando há problema: "0" colorido treina o olho a ignorar a cor.
   const bloco=(rot,val,unid,expl,cls)=>`
@@ -1122,7 +1166,9 @@ function renderResposta(){
 
   const lotes=new Set(DOCS.map(d=>d.lote).filter(Boolean));
   const ctx=[['Arquivos',DOCS.length],['Lotes',lotes.size],['Ordens',ord.length],['Operações',opsFiltradas().length],
-    ['Achados',ach.length],['Saldo a produzir',nf(saldo)+' pç'],['Aderência de prazo',ader==null?'—':ader+'%'],
+    ['Achados',ach.length],['Saldo a produzir',nf(saldo)+' pç'],
+    ['Aderência (previsão do processo)',(ader==null?'—':ader+'%')+` · ${noPrazo}/${julgaveis.length}`],
+    ...(inconsist?[['Fora da conta (fechada antes do roteiro)',inconsist]]:[]),
     ['Relatório emitido em',br(DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop())||'—']];
   $('#contexto').innerHTML=ctx.map(([r,v])=>`<div class="i"><span>${r}</span><b class="num">${v}</b></div>`).join('');
 
@@ -1205,23 +1251,36 @@ function desenhar(){
   }
   if(ABA==='ord'){
     const ord=ordensFiltradas();
-    p.innerHTML=tabela('Ordens',`${ord.length} ordem(ns) · nas concluídas o desvio é conclusão − previsão; nas em aberto, o prazo contra ${br(ref)}`,
-      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Previsão'},{h:'Conclusão'},{h:'Desvio / prazo',n:1},
-       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
+    p.innerHTML=tabela('Ordens',
+      `${ord.length} ordem(ns) · o prazo é julgado pela última previsão do processo, não pela previsão da ordem`,
+      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Prev. processo'},{h:'Prev. ordem'},{h:'Conclusão'},
+       {h:'Desvio / prazo',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
       ord.map(o=>{
-        const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0));
+        const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
         let sit,cls;
-        if(o.conclusao){sit='Concluída';cls='ok';}
-        else if(o.previsao&&o.previsao<ref){sit='Vencida';cls='critico';}
+        if(pz.inconsistente){sit='Inconsistente';cls='critico';}
+        else if(concl){sit='Concluída';cls='ok';}
+        else if(pz.ref&&pz.ref<ref){sit='Vencida';cls='critico';}
         else {sit='Em aberto';cls='neutro';}
-        const concl=!!o.conclusao;
-        const dv=concl&&o.previsao?dias(o.previsao,o.conclusao):(!concl&&o.previsao?dias(o.previsao,ref):null);
+        // Fechada antes de o roteiro começar: o desvio não é desempenho, e
+        // exibi-lo como adiantamento é o que fazia a ordem parecer exemplar.
+        const dv=pz.inconsistente?null
+          :concl&&pz.ref?dias(pz.ref,o.conclusao)
+          :!concl&&pz.ref?dias(pz.ref,ref):null;
         const feitas=o.operacoes.filter(x=>x.conclusao).length;
-        return `<tr><td class="cod">${esc(o.of)}</td><td class="cod">${esc(o.produto)}</td><td>${esc(o.descricao)}</td>
-          <td><span class="selo ${cls}">${sit}</span></td><td class="cod">${br(o.previsao)}</td><td class="cod">${br(o.conclusao)}</td>
-          <td class="n">${concl?desvio(dv):prazo(dv)}</td><td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
+        return `<tr${pz.inconsistente?' class="sev-critico"':''}>
+          <td class="cod">${esc(o.of)}</td><td class="cod">${esc(o.produto)}</td><td>${esc(o.descricao)}</td>
+          <td><span class="selo ${cls}">${sit}</span></td>
+          <td class="cod"${pz.doProcesso?'':' title="A ordem não tem previsão de processo; o prazo cai para a previsão da ordem"'}>${pz.doProcesso?br(pz.fim):'—'}</td>
+          <td class="cod">${br(o.previsao)}</td><td class="cod">${br(o.conclusao)}</td>
+          <td class="n">${pz.inconsistente?'<span class="c-critico" title="Concluída antes da primeira previsão de processo">fechada antes do roteiro</span>'
+            :concl?desvio(dv):prazo(dv)}</td>
+          <td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
-          <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}));
+          <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}),
+      '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
+      '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
+      '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência.');
   }
   if(ABA==='op'){
     const ops=opsFiltradas();
