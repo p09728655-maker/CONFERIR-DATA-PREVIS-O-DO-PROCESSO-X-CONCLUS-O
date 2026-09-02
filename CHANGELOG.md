@@ -52,6 +52,42 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.4.0] — 2026-09-02
+
+### Adicionado
+
+- **Imprimir para os líderes** — o documento que faltava para a conferência sair do
+  computador e virar conversa. Não é a tela levada ao papel: é outro documento.
+  - **Agrupado por setor**, porque é assim que a reunião acontece: cada líder responde
+    pelo processo dele. Uma lista corrida por ordem obrigaria cada um a garimpar as
+    próprias linhas.
+  - Resumo no topo: apontamentos esquecidos, peças com registro esquecido, operações sem
+    registro, peças no total e setores envolvidos.
+  - Uma **coluna em branco para a tratativa** em cada linha. O que a reunião decidir é
+    escrito ali, e a folha vira o registro em vez de uma lista que se perde.
+  - Campos de assinatura: PPCP, responsável pelo setor e data da tratativa.
+  - Rodapé com a legenda das três situações e a ressalva de origem do dado.
+  - Respeita os filtros da tela.
+
+### Decisões de impressão
+
+- **Preto e branco.** A impressora da fábrica é P&B: nada depende de cor. A situação é dita
+  por palavra, e o que é certeza (`ESQUECIDO`) leva tarja preta, que sobrevive à fotocópia.
+- **O setor flui entre páginas** em vez de pular inteiro para a próxima. Forçar cada setor a
+  caber numa folha gastava uma página por setor — 12 folhas para 124 linhas. Protege-se o
+  essencial: título nunca órfão, linha nunca partida ao meio, cabeçalho da tabela repetido
+  no alto de cada página.
+- Colunas de largura fixa, iguais em todos os setores. Sem isso cada tabela calculava a
+  própria largura e as colunas dançavam de bloco em bloco na mesma folha.
+- `venc.` desce para a linha de baixo em vez de alargar a coluna de previsão: transbordando,
+  ele invadia a coluna de peças e o número ficava ambíguo no papel.
+
+### Verificado
+
+PDF gerado em A4 retrato via Chromium, no lote de teste e num volume de 12 setores e 124
+linhas: 9 páginas, nenhuma colisão de coluna, nenhum setor maior que uma página, cabeçalho
+repetido a cada página.
+
 ## [1.3.0] — 2026-09-02
 
 ### Adicionado

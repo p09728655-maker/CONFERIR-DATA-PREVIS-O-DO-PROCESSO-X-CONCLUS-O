@@ -204,6 +204,19 @@ investiga no chão de fábrica.
 
 ## 6. Exportação
 
+### Levar para a reunião com os líderes
+
+**Imprimir para os líderes** gera uma folha A4 agrupada **por setor** — cada líder responde pelo
+processo dele. Cada linha traz a situação, a ordem, o produto, a previsão, as peças, o motivo, e
+uma **coluna em branco para a tratativa**: o que a reunião decidir é escrito ali, e a folha vira o
+registro em vez de uma lista que se perde. Tem campo de assinatura do PPCP, do responsável pelo
+setor e a data.
+
+Feita para impressora preto e branco: a situação é dita por palavra, e o que é certeza
+(`ESQUECIDO`) leva tarja preta que sobrevive à fotocópia. Respeita os filtros da tela.
+
+## 6.1 Exportação
+
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
 | CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |

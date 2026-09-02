@@ -233,6 +233,81 @@ dialog h3{font-size:14px;margin:var(--lg) 0 var(--xs)}
 dialog ul{margin:0;padding-left:var(--xl);color:var(--texto-medio)}
 dialog form{margin-top:var(--lg);text-align:right}
 
+/* ================================================================ IMPRESSÃO
+   O papel é outro documento, não a tela fotografada. Na reunião com os
+   líderes, a folha circula, é anotada à mão e depois arquivada — por isso
+   ela é agrupada POR SETOR (cada líder responde por um) e traz uma coluna
+   em branco para a tratativa.
+
+   A impressora da fábrica é preto e branco: nada aqui depende de cor. A
+   situação é dita por PALAVRA e por peso, e o que é certeza ganha uma
+   tarja preta que sobrevive a qualquer fotocópia. */
+.somente-impressao{display:none}
+
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{background:#fff!important;color:#000!important;font-size:9.5pt}
+  .tela{display:none!important}
+  dialog{display:none!important}
+  .somente-impressao{display:block!important}
+
+  .doc-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:12mm;
+    border-bottom:1.5pt solid #000;padding-bottom:3mm;margin-bottom:4mm}
+  .doc-topo img{height:9mm;width:auto;display:block;margin-bottom:2mm}
+  .doc-marca{min-width:0}
+  .doc-titulo{font-size:15pt;font-weight:700;margin:0 0 1mm;letter-spacing:-.2pt}
+  .doc-sub{font-size:9pt;margin:0;line-height:1.5}
+  .doc-sub b{font-weight:700}
+  .doc-carimbo{text-align:right;font-size:8pt;line-height:1.5;white-space:nowrap}
+
+  .doc-resumo{display:flex;gap:8mm;border:1pt solid #000;padding:2.5mm 3mm;margin-bottom:4mm}
+  .doc-resumo div{flex:1}
+  .doc-resumo .v{font-size:16pt;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  .doc-resumo .r{font-size:7.5pt;text-transform:uppercase;letter-spacing:.4pt}
+
+  /* O setor FLUI entre páginas em vez de pular inteiro para a próxima.
+     Forçar cada setor a caber numa folha gastava uma página por setor —
+     doze folhas para pouco mais de cem linhas, o que ninguém imprime duas
+     vezes. O que se protege é o essencial: o título nunca fica órfão no pé
+     da página, nenhuma linha se parte ao meio, e o cabeçalho da tabela se
+     repete no alto de cada página (thead como table-header-group). */
+  .doc-setor{margin-bottom:5mm}
+  .doc-setor h2{font-size:11pt;margin:0 0 1.5mm;padding-bottom:1mm;border-bottom:1pt solid #000;
+    break-after:avoid;page-break-after:avoid;
+    display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
+  .doc-setor h2 span{font-size:8.5pt;font-weight:400;white-space:nowrap}
+
+  .somente-impressao table{width:100%;border-collapse:collapse;font-size:8.5pt;table-layout:fixed}
+  .somente-impressao td{color:#000}
+  .somente-impressao td,.somente-impressao th{overflow-wrap:break-word}
+  /* Cabeçalho repetido quando a tabela cruza a página. */
+  .somente-impressao thead{display:table-header-group}
+  .somente-impressao th{text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.3pt;
+    border-bottom:.75pt solid #000;padding:1.2mm 1.5mm;white-space:nowrap}
+  .somente-impressao td{padding:1.5mm;border-bottom:.5pt solid #999;vertical-align:top;line-height:1.35}
+  .somente-impressao tr{break-inside:avoid;page-break-inside:avoid}
+  .somente-impressao .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .somente-impressao .cod{font-variant-numeric:tabular-nums;white-space:normal}
+  /* A data não parte no meio; o aviso de vencido cai para a linha de baixo
+     em vez de alargar a coluna e invadir a de peças. */
+  .somente-impressao .cod>span.venc{display:block;font-weight:700;white-space:nowrap}
+  .somente-impressao td.cod{word-break:keep-all}
+  /* Tarja preta: o que é certeza se distingue mesmo em fotocópia ruim. */
+  .sit-certeza,.sit-duvida{display:inline-block;max-width:100%;padding:.3mm 1.2mm;
+    font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.2pt;white-space:nowrap}
+  .sit-certeza{background:#000;color:#fff;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sit-duvida{border:.75pt solid #000}
+  /* Onde o líder escreve o que vai fazer. A linha existe para ser preenchida. */
+  .doc-tratativa{border-bottom:.5pt solid #000;min-width:34mm;display:block;height:4mm}
+
+  .doc-rodape{margin-top:6mm;padding-top:2.5mm;border-top:1pt solid #000;font-size:7.5pt;line-height:1.5}
+  .doc-rodape p{margin:0 0 1.5mm}
+  .doc-assina{display:flex;gap:10mm;margin-top:7mm}
+  .doc-assina div{flex:1;border-top:.75pt solid #000;padding-top:1.2mm;font-size:7.5pt}
+  .doc-vazio{padding:10mm;text-align:center;border:1pt solid #000;font-size:10pt}
+}
+
 /* ---------------------------------------------------------------- Telas menores */
 @media (max-width:900px){
   .tela{flex-direction:column}
@@ -275,6 +350,12 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="grupo">Arquivos abertos</div>
     <div class="grupo-dica">Relatório "Situação do Lote de Produção"</div>
     <div id="arquivos"></div>
+  </div>
+
+  <div class="bloco hide" id="navImprimir">
+    <div class="grupo">Reunião</div>
+    <div class="grupo-dica">Uma folha por setor, com espaço para a tratativa</div>
+    <button type="button" class="item" id="btnImprimir"><span class="t">Imprimir para os líderes</span></button>
   </div>
 
   <div class="bloco hide" id="navExportar">
@@ -347,9 +428,21 @@ dialog form{margin-top:var(--lg);text-align:right}
 
 </div>
 
+<!-- DOCUMENTO IMPRESSO — montado no clique, invisível na tela.
+     Não é a tela levada ao papel: é outro documento, feito para circular
+     numa reunião com os líderes de setor e para ser arquivado depois. -->
+<div class="somente-impressao" id="impresso" aria-hidden="true"></div>
+
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.4.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>Imprimir para os líderes</b>: gera uma folha agrupada por setor, com resumo, o motivo de cada pendência e uma coluna em branco para anotar a tratativa da reunião.</li>
+    <li>Feita para impressora preto e branco: a situação é dita por palavra, e o que é certeza ganha tarja preta que sobrevive à fotocópia.</li>
+    <li>Traz campo de assinatura do PPCP, do responsável pelo setor e a data da tratativa.</li>
+    <li>Respeita os filtros da tela: filtrou um lote, imprime aquele lote.</li>
+  </ul>
   <h3>1.3.0 — 02/09/2026</h3>
   <ul>
     <li><b>Instalação no aparelho</b>: o app pode ser instalado no computador, tablet ou celular e abre pelo ícone, como qualquer programa.</li>
@@ -694,7 +787,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.3.0';
+const VERSAO='1.4.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -863,7 +956,7 @@ function recalc(){
   const tem=DOCS.length>0;
   $('#app').classList.toggle('hide',!tem);
   $('#vazio').classList.toggle('hide',tem);
-  ['#navSecoes','#navArquivos','#navExportar'].forEach(s=>$(s).classList.toggle('hide',!tem));
+  ['#navSecoes','#navArquivos','#navExportar','#navImprimir'].forEach(s=>$(s).classList.toggle('hide',!tem));
   if(!tem)return;
   ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
   renderAviso(); renderResposta(); render();
@@ -1140,6 +1233,117 @@ function desenhar(){
       Se aparecer divergência ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
   }
 }
+
+/* ============================================================================
+   DOCUMENTO PARA A REUNIÃO COM OS LÍDERES
+   ==========================================================================
+   Agrupado POR SETOR porque é assim que a reunião acontece: cada líder
+   responde pelo processo dele e recebe a folha do processo dele. Uma lista
+   corrida por ordem obrigaria cada um a garimpar as próprias linhas.
+
+   Dentro do setor, o que é certeza vem primeiro. E cada linha tem uma coluna
+   em branco: o que a reunião decidir é escrito ali, e a folha vira o registro
+   da tratativa em vez de uma lista que se perde.
+
+   Respeita os filtros da tela — filtrou um lote, imprime aquele lote. */
+// O mesmo logotipo já embutido na lateral: duplicar os 8 KB de base64 só
+// para o papel engordaria o arquivo à toa.
+const LOGO=document.querySelector('.marca img').src;
+
+function montarImpresso(){
+  const f=faltasFiltradas(), ref=$('#fRef').value;
+  const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
+  const lotes=[...new Set(f.map(x=>x.of.lote).filter(Boolean))];
+  const desc=DOCS.filter(d=>lotes.includes(d.lote)).map(d=>[d.lt?'LT '+d.lt:'',d.descricao].filter(Boolean).join(' ')).filter(Boolean);
+  const hoje=new Date().toISOString().slice(0,10);
+
+  const furos=f.filter(x=>x.furo);
+  const pecas=f.reduce((s,x)=>s+x.pecas,0), pcFuro=furos.reduce((s,x)=>s+x.pecas,0);
+
+  // Setores ordenados pelo que exige conversa primeiro.
+  const porSetor={};
+  f.forEach(x=>{(porSetor[x.op.descricao]=porSetor[x.op.descricao]||[]).push(x);});
+  const setores=Object.entries(porSetor).map(([nome,itens])=>({
+    nome, itens,
+    furos:itens.filter(i=>i.furo).length,
+    pecas:itens.reduce((s,i)=>s+i.pecas,0),
+  })).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+
+  const cab=`<div class="doc-topo">
+      <div class="doc-marca">
+        <img src="${LOGO}" alt="Patrimar Móveis">
+        <h1 class="doc-titulo">Apontamentos pendentes por setor</h1>
+        <p class="doc-sub">
+          ${lotes.length?`Lote <b>${esc(lotes.join(', '))}</b>${desc.length?' — '+esc(desc.join(' · ')):''}<br>`:''}
+          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b>
+        </p>
+      </div>
+      <div class="doc-carimbo">
+        RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${br(hoje)}
+      </div>
+    </div>`;
+
+  if(!f.length){
+    $('#impresso').innerHTML=cab+
+      `<div class="doc-vazio">Nenhuma operação sem apontamento nos filtros selecionados.</div>`+rodape(ref);
+    return;
+  }
+
+  const resumo=`<div class="doc-resumo">
+      <div><div class="v">${furos.length}</div><div class="r">Apontamentos esquecidos</div></div>
+      <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças com registro esquecido</div></div>
+      <div><div class="v">${f.length}</div><div class="r">Operações sem registro</div></div>
+      <div><div class="v">${nf(pecas)}</div><div class="r">Peças sem registro no total</div></div>
+      <div><div class="v">${setores.length}</div><div class="r">Setores envolvidos</div></div>
+    </div>`;
+
+  const blocos=setores.map(st=>`<section class="doc-setor">
+      <h2>${esc(st.nome)}
+        <span>${st.itens.length} operação(ões) · ${nf(st.pecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
+      <table>
+        <colgroup>
+          <col style="width:13%"><col style="width:9%"><col style="width:12%"><col style="width:17%">
+          <col style="width:13%"><col style="width:7%"><col style="width:15%"><col style="width:14%">
+        </colgroup>
+        <thead><tr>
+          <th>Situação</th><th>Ordem</th><th>Produto</th><th>Descrição</th>
+          <th>Previsão</th><th class="n">Peças</th><th>Por que</th><th>Tratativa</th>
+        </tr></thead>
+        <tbody>${st.itens.map(x=>`<tr>
+          <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem qtd':'pendente'}</span></td>
+          <td class="cod">${esc(x.of.of)}</td>
+          <td class="cod">${esc(x.of.produto)}</td>
+          <td>${esc(x.of.descricao)}</td>
+          <td class="cod">${br(x.op.previsao)}${x.vencida?'<span class="venc">venc.</span>':''}</td>
+          <td class="n">${nf(x.pecas)}</td>
+          <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td>
+          <td><span class="doc-tratativa"></span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </section>`).join('');
+
+  $('#impresso').innerHTML=cab+resumo+blocos+rodape(ref);
+}
+
+function rodape(ref){
+  return `<div class="doc-rodape">
+    <p><b>ESQUECIDO</b> — a fase seguinte do roteiro já foi apontada, ou a ordem foi dada como concluída.
+    A peça passou por este setor, então o apontamento existe para ser feito. Não é dúvida.</p>
+    <p><b>SEM QTD</b> — a fase tem data de conclusão mas nenhuma peça lançada: foi fechada sem apontar o que produziu.</p>
+    <p><b>PENDENTE</b> — nada apontado e a previsão venceu, sem prova de que a peça passou.
+    Pode ser falta de apontamento ou de produção; é o que esta reunião precisa esclarecer.</p>
+    <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
+    Vencimento medido contra ${br(ref)}. O relatório mostra ausência de <i>registro</i> no sistema,
+    que não é o mesmo que ausência de produção — exceto nos casos marcados como ESQUECIDO.</p>
+    <div class="doc-assina">
+      <div>PPCP — responsável pela conferência</div>
+      <div>Produção — responsável pelo setor</div>
+      <div>Data da tratativa</div>
+    </div>
+  </div>`;
+}
+
+$('#btnImprimir').onclick=()=>{ montarImpresso(); window.print(); };
 
 /* ============================================================================
    EXPORTAÇÃO CSV (; decimal vírgula, datas dd/mm/aaaa — Excel e Power BI pt-BR)
