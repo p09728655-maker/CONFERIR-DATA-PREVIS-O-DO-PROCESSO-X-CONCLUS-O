@@ -212,8 +212,18 @@ uma **coluna em branco para a tratativa**: o que a reunião decidir é escrito a
 registro em vez de uma lista que se perde. Tem campo de assinatura do PPCP, do responsável pelo
 setor e a data.
 
+No topo vem o **quadro de responsabilidade por setor**: quem deixou de apontar, quantas
+operações e quantas peças, do pior para o menor. É a resposta consolidada antes do detalhe.
+
 Feita para impressora preto e branco: a situação é dita por palavra, e o que é certeza
-(`ESQUECIDO`) leva tarja preta que sobrevive à fotocópia. Respeita os filtros da tela.
+(`ESQUECIDO`) leva tarja preta que sobrevive à fotocópia.
+
+**Imprimir a lista da tela** leva a tabela que está sendo vista (Operações, Ordens, Achados)
+deitada no papel — para quando alguém questiona o resumo e é preciso mostrar a evidência bruta.
+
+Os dois documentos **declaram o recorte impresso** no cabeçalho: qual filtro estava aplicado,
+ou que não havia nenhum. Uma folha que mostra 12 linhas de um lote com 195 operações, sem
+dizer que estava filtrada, faz o problema parecer menor do que é.
 
 ## 6.1 Exportação
 
