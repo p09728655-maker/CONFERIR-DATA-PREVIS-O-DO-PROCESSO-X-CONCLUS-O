@@ -3,173 +3,350 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conferência de Lotes de Produção — Patrimar</title>
+<meta name="theme-color" content="#14171A">
+<meta name="description" content="RitmoPatrimar — Estudo de Datas de Produção. Conferência de previsão × conclusão das ordens de um lote, Patrimar Móveis.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>RitmoPatrimar — Estudo de Datas de Produção</title>
 <style>
+/* ============================================================================
+   TOKENS — mesmos do RitmoPatrimar (crono-analise/src/theme).
+   Conteúdo claro (o que está no monitor é o que sai no papel);
+   lateral escura (navegação nunca vai para a impressora).
+   O vermelho #DB2126 é IDENTIDADE, nunca status. Crítico é laranja queimado.
+   ========================================================================== */
 :root{
-  /* Identidade Patrimar */
-  --marca:#DB2126; --bordeaux:#A8140F; --areia:#F7ECC0; --grafite:#1F2328;
-  /* Status — deliberadamente distintos do vermelho de marca */
-  --ok:#12693C; --ok-bg:#E7F4EC;
-  --atencao:#8A5A00; --atencao-bg:#FCF2DC;
-  --critico:#8E2F0B; --critico-bg:#FBE9E1;
-  --info:#1F4E79; --info-bg:#E8F0F7;
-  /* Neutros */
-  --bg:#F4F5F7; --surface:#FFFFFF; --borda:#DDE1E6; --texto:#1F2328; --mudo:#5F6B76;
-  --r:6px;
+  --vermelho:#DB2126; --bordeaux:#A8140F; --areia:#F7ECC0; --grafite:#1F2328;
+
+  --fundo:#F4F5F7; --papel:#FFFFFF; --borda:#D8DCE2; --borda-forte:#B4BBC4;
+  --texto:#14171A; --texto-medio:#4A525C; --texto-fraco:#6B7480; --papel-cabecalho:#F8F9FB;
+
+  --ok:#15803D; --ok-fundo:rgba(21,128,61,.12);
+  --atencao:#B45309; --atencao-fundo:rgba(180,83,9,.12);
+  --critico:#C2410C; --critico-fundo:rgba(194,65,12,.14);
+  --neutro:#64748B; --neutro-fundo:rgba(100,116,139,.12);
+
+  --esc-fundo:#14171A; --esc-superficie:#1F2328; --esc-alta:#2A3038; --esc-borda:#3A424C;
+  --esc-texto:#F5F7FA; --esc-texto-medio:#C3CBD4; --esc-fraco:#9AA5B1;
+
+  --fonte:'Calibri','Carlito','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Roboto Mono','Consolas','DejaVu Sans Mono',monospace;
+
+  --xs:4px; --sm:8px; --md:12px; --lg:16px; --xl:24px; --xxl:32px; --xxxl:48px; --gigante:64px;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+
+  --elev-baixa:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  --elev-media:0 2px 4px rgba(16,24,40,.04),0 4px 12px rgba(16,24,40,.07);
+  --elev-escura:0 2px 8px rgba(0,0,0,.30);
+  --rapida:120ms cubic-bezier(.4,0,.2,1);
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--texto);
-  font-family:'Calibri','Carlito','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.45}
-header{background:var(--grafite);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-header .bar{width:5px;height:30px;background:var(--marca);border-radius:2px}
-header h1{font-size:19px;margin:0;font-weight:600;letter-spacing:.2px}
-header .sub{font-size:13px;color:#B9C0C7;margin-left:auto}
-main{max-width:1500px;margin:0 auto;padding:18px 20px 60px}
-.card{background:var(--surface);border:1px solid var(--borda);border-radius:var(--r);margin-bottom:16px}
-.card h2{font-size:14px;margin:0;padding:11px 14px;border-bottom:1px solid var(--borda);
-  text-transform:uppercase;letter-spacing:.5px;color:var(--mudo);font-weight:700}
-.card .body{padding:14px}
+*,*::before,*::after{box-sizing:border-box}
+html{scrollbar-gutter:stable}
+body{margin:0;background:var(--fundo);color:var(--texto);font-family:var(--fonte);font-size:14px;line-height:1.6}
+button{font-family:inherit}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--areia);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
-/* Dropzone */
-#drop{border:2px dashed #C3CAD1;border-radius:var(--r);background:var(--surface);
-  padding:26px;text-align:center;cursor:pointer;transition:.15s}
-#drop.hot{border-color:var(--marca);background:#FFF6F6}
-#drop strong{display:block;font-size:17px;margin-bottom:4px}
-#drop span{color:var(--mudo);font-size:13px}
-#arquivos{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.chip{display:inline-flex;align-items:center;gap:7px;background:#EEF1F4;border:1px solid var(--borda);
-  border-radius:20px;padding:3px 6px 3px 12px;font-size:13px}
-.chip b{font-weight:600}
-.chip button{border:0;background:#D8DEE4;border-radius:50%;width:19px;height:19px;cursor:pointer;
-  line-height:1;color:#333;font-size:13px}
-.chip.erro{background:var(--critico-bg);border-color:#EBC4B4;color:var(--critico)}
+/* Escala tipográfica (razão ~1,2): micro 11 · legenda 12 · corpo 14 · destaque 17 · título 21 · display 40 */
+.micro{font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.legenda{font-size:12px;line-height:1.5;color:var(--texto-fraco)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.hide{display:none!important}
 
-/* KPIs */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:var(--surface);border:1px solid var(--borda);border-left:4px solid var(--mudo);
-  border-radius:var(--r);padding:12px 14px}
-.kpi .lbl{font-size:12px;color:var(--mudo);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
-.kpi .val{font-size:27px;font-weight:700;line-height:1.15;margin-top:2px}
-.kpi .obs{font-size:12px;color:var(--mudo)}
-.kpi.critico{border-left-color:var(--critico)} .kpi.critico .val{color:var(--critico)}
-.kpi.atencao{border-left-color:var(--atencao)} .kpi.atencao .val{color:var(--atencao)}
-.kpi.ok{border-left-color:var(--ok)} .kpi.ok .val{color:var(--ok)}
+/* ---------------------------------------------------------------- Esqueleto */
+.tela{min-height:100dvh;display:flex;align-items:flex-start}
+.conteudo{flex:1;min-width:0;max-width:1400px;padding:var(--xl) var(--xl) var(--gigante)}
 
-/* Filtros */
-.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-.f{display:flex;flex-direction:column;gap:3px}
-.f label{font-size:12px;color:var(--mudo);font-weight:600}
-select,input[type=text],input[type=date]{border:1px solid var(--borda);border-radius:4px;padding:6px 8px;
-  font:inherit;font-size:14px;background:#fff;min-width:150px}
-.btn{border:1px solid var(--borda);background:#fff;border-radius:4px;padding:7px 13px;font:inherit;
-  font-size:14px;cursor:pointer}
-.btn:hover{background:#F0F2F4}
-.btn.pri{background:var(--marca);border-color:var(--marca);color:#fff;font-weight:600}
-.btn.pri:hover{background:var(--bordeaux);border-color:var(--bordeaux)}
-.check{display:flex;align-items:center;gap:6px;font-size:14px;padding-bottom:7px}
+/* ---------------------------------------------------------------- Lateral */
+.lateral{position:sticky;top:0;align-self:flex-start;width:248px;flex-shrink:0;height:100dvh;overflow-y:auto;
+  background:var(--esc-fundo);border-right:1px solid var(--esc-borda);color:var(--esc-texto);
+  padding:var(--xl) var(--lg);display:flex;flex-direction:column;gap:var(--xl)}
+.marca{display:flex;flex-direction:column;gap:2px}
+.marca img{height:30px;width:auto;max-width:100%;align-self:flex-start;display:block;margin-bottom:var(--sm)}
+.marca .titulo{font-size:17px;line-height:1.4;font-weight:700;letter-spacing:-.01em;color:var(--esc-texto)}
+.marca .sub{font-size:12px;line-height:1.5;color:var(--esc-fraco);display:flex;align-items:center;gap:var(--sm)}
+.versao{padding:1px 6px;background:transparent;border:1px solid var(--esc-borda);border-radius:var(--r-pill);
+  color:var(--esc-fraco);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer}
+.bloco{display:flex;flex-direction:column;gap:var(--xs)}
+.grupo{font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--esc-fraco)}
+.grupo-dica{font-size:11px;line-height:1.45;color:var(--esc-fraco);margin-bottom:var(--xs)}
+/* Único elemento vermelho do menu e o mais alto: é a ação principal. */
+.primario{width:100%;min-height:46px;padding:0 var(--md);background:var(--vermelho);border:0;border-radius:var(--r-md);
+  color:#fff;font-size:17px;font-weight:700;letter-spacing:-.01em;cursor:pointer;box-shadow:var(--elev-baixa);transition:background var(--rapida)}
+.primario:hover{background:var(--bordeaux)}
+/* Uma régua só: o realce sangra até a borda da lateral, o texto fica a 16px. */
+.item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:36px;padding:0 var(--lg);
+  display:flex;align-items:center;justify-content:space-between;gap:var(--sm);
+  background:transparent;border:0;border-radius:0;color:var(--esc-texto-medio);font-size:14px;text-align:left;cursor:pointer;
+  transition:background var(--rapida),color var(--rapida)}
+.item:hover{background:var(--esc-superficie);color:var(--esc-texto)}
+.item[aria-current="page"]{background:var(--esc-alta);color:var(--esc-texto);font-weight:700;box-shadow:inset 3px 0 0 var(--vermelho)}
+.item .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contagem{flex-shrink:0;min-width:20px;padding:0 6px;text-align:center;border-radius:var(--r-pill);
+  background:var(--esc-superficie);color:var(--esc-fraco);font-size:11px;font-weight:600;line-height:1.45;letter-spacing:.06em}
+.contagem.alerta{background:var(--atencao);color:#fff}
+.arquivo{display:flex;align-items:center;gap:var(--sm);min-height:36px;padding:var(--xs) 0}
+.arquivo .info{min-width:0;flex:1;display:flex;flex-direction:column}
+.arquivo .nome{font-size:12px;color:var(--esc-texto-medio);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arquivo .meta{font-size:11px;color:var(--esc-fraco);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arquivo .meta.erro{color:#F59E0B}
+.arquivo button{flex-shrink:0;width:26px;height:26px;border:1px solid var(--esc-borda);border-radius:var(--r-sm);
+  background:transparent;color:var(--esc-fraco);font-size:15px;line-height:1;cursor:pointer}
+.arquivo button:hover{color:var(--esc-texto);border-color:var(--esc-fraco)}
+.rodape{margin-top:auto;padding-top:var(--md);border-top:1px solid var(--esc-borda);font-size:12px;color:var(--esc-fraco);line-height:1.5}
 
-/* Abas */
-.abas{display:flex;gap:2px;border-bottom:2px solid var(--borda);margin-bottom:14px;flex-wrap:wrap}
-.aba{border:0;background:none;padding:9px 15px;font:inherit;font-size:14px;font-weight:600;
-  color:var(--mudo);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
-.aba.on{color:var(--grafite);border-bottom-color:var(--marca)}
-.aba .n{background:#E4E8EC;border-radius:10px;padding:0 7px;font-size:12px;margin-left:6px}
+/* ---------------------------------------------------------------- Estados */
+.estado{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 120px);padding:var(--xl)}
+.estado .caixa{width:100%;max-width:560px;padding:var(--xxl) var(--xl);background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-lg);display:flex;flex-direction:column;align-items:center;gap:var(--md);text-align:center;cursor:pointer;
+  transition:border-color var(--rapida),background var(--rapida)}
+.estado .caixa.hot{border-color:var(--vermelho);background:#FFF8F8}
+.estado .rotulo{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+.estado h2{font-size:21px;line-height:1.3;font-weight:700;letter-spacing:-.015em;margin:0}
+.estado p{margin:0;max-width:420px;color:var(--texto-medio)}
+.estado .passos{margin:0;padding:0;list-style:none;text-align:left;color:var(--texto-medio);display:flex;flex-direction:column;gap:var(--xs);max-width:420px}
+.estado .passos li{display:flex;gap:var(--sm)}
+.estado .passos b{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--fundo);border:1px solid var(--borda);
+  font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;color:var(--texto-medio);margin-top:2px}
+.secundario{min-height:36px;padding:0 var(--md);background:transparent;border:1px solid var(--borda);border-radius:var(--r-md);
+  color:var(--texto-medio);font-size:12px;font-weight:600;cursor:pointer;transition:background var(--rapida)}
+.secundario:hover{background:var(--fundo)}
+#status{margin-bottom:var(--lg);color:var(--texto-medio)}
+#status:empty{display:none}
 
-/* Tabelas */
-.wrap{overflow:auto;max-height:66vh}
-table{border-collapse:collapse;width:100%;font-size:13.5px}
-th{position:sticky;top:0;background:#EFF1F4;text-align:left;padding:8px 10px;border-bottom:2px solid var(--borda);
-  font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--mudo);white-space:nowrap;z-index:2}
-td{padding:6px 10px;border-bottom:1px solid #EDEFF2;vertical-align:top}
-tbody tr:hover{background:#F7F9FA}
-.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.mono{font-variant-numeric:tabular-nums}
-.tag{display:inline-block;padding:1px 8px;border-radius:11px;font-size:11.5px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-.tag.critico{background:var(--critico-bg);color:var(--critico)}
-.tag.atencao{background:var(--atencao-bg);color:var(--atencao)}
-.tag.info{background:var(--info-bg);color:var(--info)}
-.tag.ok{background:var(--ok-bg);color:var(--ok)}
-.tag.neutro{background:#E9ECEF;color:var(--mudo)}
+/* ---------------------------------------------------------------- Aviso */
+.aviso{margin:0 0 var(--lg);padding:var(--md) var(--lg);background:var(--atencao-fundo);border:1px solid var(--atencao);
+  border-radius:var(--r-md);color:var(--texto)}
+.aviso.err{background:var(--critico-fundo);border-color:var(--critico)}
+.aviso summary{display:flex;align-items:center;gap:var(--sm);cursor:pointer;list-style:none;font-weight:600}
+.aviso summary::-webkit-details-marker{display:none}
+.aviso .ico{width:20px;height:20px;flex-shrink:0;border-radius:50%;background:var(--atencao);color:#fff;font-size:13px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center}
+.aviso.err .ico{background:var(--critico)}
+.aviso ul{margin:var(--sm) 0 0;padding-left:var(--xxl)}
+.aviso li{margin-top:var(--xs)}
+
+/* ---------------------------------------------------------------- Resposta */
+.resposta{min-width:0;margin:0 0 var(--lg);padding:var(--xl);background:var(--papel);border-radius:var(--r-lg);box-shadow:var(--elev-media);
+  border-left:4px solid var(--vermelho);display:flex;gap:var(--xxl);flex-wrap:wrap}
+.resposta .b{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:var(--xs)}
+.resposta .rotulo{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+.resposta .linha{display:flex;align-items:baseline;gap:var(--sm)}
+.resposta .valor{font-size:40px;line-height:1.05;font-weight:700;letter-spacing:-.03em}
+.resposta .unidade{color:var(--texto-medio)}
+.resposta .explica{margin:var(--xs) 0 0;color:var(--texto-medio)}
+.c-critico{color:var(--critico)} .c-atencao{color:var(--atencao)} .c-ok{color:var(--ok)}
+
+/* Números de apoio: entre duas linhas, sem cartão. */
+.contexto{margin:0 0 var(--xl);padding:var(--md) var(--xl);display:flex;gap:var(--xxl);flex-wrap:wrap;
+  border-top:1px solid var(--borda);border-bottom:1px solid var(--borda)}
+.contexto .i{display:flex;align-items:baseline;gap:var(--sm)}
+.contexto .i span:first-child{font-size:12px;color:var(--texto-fraco)}
+.contexto .i b{font-weight:600}
+
+/* ---------------------------------------------------------------- Filtros */
+.filtros{margin:0 0 var(--xl);padding:var(--lg) var(--xl);background:var(--papel);border:1px solid var(--borda);
+  border-radius:var(--r-lg);box-shadow:var(--elev-baixa)}
+.filtros .grade{display:flex;gap:var(--lg);flex-wrap:wrap;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:var(--xs);min-width:160px;flex:1 1 160px;max-width:320px}
+.f label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+select,input[type=text],input[type=date],input[type=search]{min-height:36px;padding:0 var(--md);border:1px solid var(--borda);
+  border-radius:var(--r-md);background:var(--papel);color:var(--texto);font:inherit;font-size:14px;width:100%}
+.check{display:flex;align-items:center;gap:var(--sm);min-height:36px;color:var(--texto-medio);flex:1 1 280px}
+.check input{width:16px;height:16px;margin:0}
+.filtros details{margin-top:var(--md)}
+.filtros summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--texto-medio)}
+.regras{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--xs) var(--lg);margin-top:var(--sm)}
+.regras label{display:flex;gap:var(--sm);align-items:flex-start;padding:2px 0;color:var(--texto-medio)}
+.regras input{margin:4px 0 0;flex-shrink:0}
+
+/* ---------------------------------------------------------------- Bloco de tabela */
+.blocoTabela{min-width:0;background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-lg);box-shadow:var(--elev-baixa);overflow:hidden}
+.cabecalhoSecao{display:flex;align-items:baseline;justify-content:space-between;gap:var(--md);flex-wrap:wrap;
+  padding:var(--lg) var(--xl);border-bottom:1px solid var(--borda)}
+.cabecalhoSecao h2{font-size:17px;line-height:1.4;font-weight:700;letter-spacing:-.01em;margin:0}
+.cabecalhoSecao .meta{font-size:12px;color:var(--texto-fraco)}
+.wrap{overflow:auto;max-height:68vh}
+table{width:100%;border-collapse:collapse}
+th{position:sticky;top:0;z-index:2;text-align:left;padding:var(--md) var(--lg);background:var(--papel-cabecalho);border-bottom:1px solid var(--borda);
+  font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);white-space:nowrap}
+th.n{text-align:right}
+td{padding:var(--sm) var(--lg);border-bottom:1px solid var(--borda);color:var(--texto-medio);vertical-align:top}
+td.n{text-align:right;white-space:nowrap;color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+td.cod{white-space:nowrap;color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.forte{color:var(--texto);font-weight:600}
+tbody tr:hover{background:var(--fundo)}
 tr.sev-critico td:first-child{box-shadow:inset 3px 0 0 var(--critico)}
 tr.sev-atencao td:first-child{box-shadow:inset 3px 0 0 var(--atencao)}
-tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--info)}
-.vazio{padding:34px;text-align:center;color:var(--mudo)}
-.aviso{background:var(--atencao-bg);border:1px solid #E8D5A8;color:#5C3D00;border-radius:var(--r);
-  padding:10px 13px;font-size:13.5px;margin-bottom:12px}
-.aviso.err{background:var(--critico-bg);border-color:#EBC4B4;color:var(--critico)}
-.legenda{font-size:12.5px;color:var(--mudo);margin-top:10px;line-height:1.6}
-.hide{display:none!important}
-.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-#loading{font-size:14px;color:var(--mudo);margin-top:10px}
-.regras{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:6px 18px;font-size:13.5px}
-.regras label{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
-.regras small{color:var(--mudo);display:block}
+tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--neutro)}
+.selo{display:inline-block;padding:2px 8px;border-radius:var(--r-sm);font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap}
+.selo.critico{background:var(--critico-fundo);color:var(--critico)}
+.selo.atencao{background:var(--atencao-fundo);color:var(--atencao)}
+.selo.info,.selo.neutro{background:var(--neutro-fundo);color:var(--neutro)}
+.selo.ok{background:var(--ok-fundo);color:var(--ok)}
+.vazio{padding:var(--xxl);text-align:center;color:var(--texto-fraco)}
+.nota{padding:var(--md) var(--xl);font-size:12px;line-height:1.6;color:var(--texto-fraco);border-top:1px solid var(--borda)}
+.nota b{color:var(--texto-medio)}
+
+/* Painel por setor: cartao de decisao, nao mais uma tabela.
+   A cor nunca informa sozinha — o estado esta escrito no selo. */
+.setores{padding:var(--lg) var(--xl);display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--md)}
+.setor{padding:var(--md) var(--lg);background:var(--fundo);border-radius:var(--r-md);
+  border-left:3px solid var(--borda);display:flex;flex-direction:column;gap:var(--xs);min-width:0}
+.setor.critico{border-left-color:var(--critico)}
+.setor.atencao{border-left-color:var(--atencao)}
+.setor.ok{border-left-color:var(--ok)}
+.setor .topo{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sm);min-width:0}
+.setor .topo .selo{flex-shrink:0}
+.setor .nome{font-size:17px;line-height:1.4;font-weight:700;letter-spacing:-.01em;color:var(--texto);
+  min-width:0;overflow-wrap:anywhere}
+.setor .numeros{display:flex;gap:var(--lg);flex-wrap:wrap}
+.setor .n1{display:flex;flex-direction:column}
+.setor .n1 .v{font-size:21px;line-height:1.3;font-weight:700;letter-spacing:-.015em;
+  font-family:var(--mono);font-variant-numeric:tabular-nums}
+.setor .n1 .r{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+.setor .barra{height:6px;border-radius:var(--r-pill);background:var(--borda);overflow:hidden}
+.setor .barra i{display:block;height:100%;background:var(--ok)}
+.setor .linha{font-size:12px;color:var(--texto-medio);overflow-wrap:anywhere}
+.setor .linha b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--texto)}
+
+/* Leitura dos arquivos */
+.leitura{padding:var(--lg) var(--xl);display:flex;flex-direction:column;gap:var(--md)}
+.cartao{padding:var(--md) var(--lg);background:var(--fundo);border-radius:var(--r-md);border-left:3px solid var(--borda)}
+.cartao.ok{border-left-color:var(--ok)} .cartao.atencao{border-left-color:var(--atencao)} .cartao.erro{border-left-color:var(--critico)}
+.cartao .nome{font-weight:700;color:var(--texto)}
+.cartao .det{font-size:12px;color:var(--texto-fraco);line-height:1.6}
+.cartao .aviso{margin:var(--sm) 0 0;font-size:12px}
+
+/* Histórico de versões */
+dialog{border:1px solid var(--borda);border-radius:var(--r-lg);padding:var(--xl);max-width:560px;width:calc(100% - 32px);
+  color:var(--texto);font-family:var(--fonte);box-shadow:var(--elev-media)}
+dialog::backdrop{background:rgba(20,23,26,.5)}
+dialog h2{font-size:17px;margin:0 0 var(--xs)}
+dialog h3{font-size:14px;margin:var(--lg) 0 var(--xs)}
+dialog ul{margin:0;padding-left:var(--xl);color:var(--texto-medio)}
+dialog form{margin-top:var(--lg);text-align:right}
+
+/* ---------------------------------------------------------------- Telas menores */
+@media (max-width:900px){
+  .tela{flex-direction:column}
+  .lateral{position:static;width:100%;height:auto;border-right:0;border-bottom:1px solid var(--esc-borda);padding:var(--lg)}
+  .conteudo{width:100%;max-width:100%;padding:var(--lg) var(--lg) var(--xxl)}
+  .resposta{padding:var(--lg);gap:var(--lg)}
+  .resposta .valor{font-size:32px}
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="bar"></div>
-  <h1>Conferência de Lotes de Produção</h1>
-  <div class="sub">Patrimar Móveis · PPCP · leitura local do PDF, nenhum dado sai do computador <span id="ver" style="opacity:.6"></span></div>
-</header>
+<div class="tela">
 
-<main>
-
-<div class="card">
-  <div class="body">
-    <div id="drop">
-      <strong>Arraste os PDFs de "Situação do Lote de Produção"</strong>
-      <span>ou clique para selecionar — vários arquivos de uma vez</span>
-      <input type="file" id="file" accept="application/pdf" multiple hidden>
+<nav class="lateral" aria-label="Navegação">
+  <div class="marca">
+    <img src="data:image/png;base64,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" alt="Patrimar Móveis">
+    <div class="titulo">RitmoPatrimar</div>
+    <div class="sub">Estudo de Datas de Produção
+      <button type="button" class="versao" id="btnVersao" title="Ver histórico de versões">v<span id="ver"></span></button>
     </div>
-    <div id="arquivos"></div>
-    <div id="loading"></div>
   </div>
-</div>
 
-<div id="app" class="hide">
+  <div class="bloco">
+    <button type="button" class="primario" id="btnAbrir">Abrir PDFs do lote</button>
+    <input type="file" id="file" accept="application/pdf" multiple hidden>
+  </div>
 
-  <div class="kpis" id="kpis"></div>
+  <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
+    <div class="grupo">Conferência</div>
+    <button type="button" class="item" data-t="ach" aria-current="page"><span class="t">Achados</span><span class="contagem" id="nAch">0</span></button>
+    <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
+    <button type="button" class="item" data-t="op"><span class="t">Operações</span><span class="contagem" id="nOp">0</span></button>
+    <button type="button" class="item" data-t="ader"><span class="t">Painel por setor</span><span class="contagem" id="nSet">0</span></button>
+    <button type="button" class="item" data-t="leit"><span class="t">Leitura dos arquivos</span><span class="contagem" id="nLeit">0</span></button>
+  </div>
 
-  <div class="card">
-    <h2>Filtros e parâmetros</h2>
-    <div class="body">
-      <div class="filtros">
+  <div class="bloco hide" id="navArquivos">
+    <div class="grupo">Arquivos abertos</div>
+    <div class="grupo-dica">Relatório "Situação do Lote de Produção"</div>
+    <div id="arquivos"></div>
+  </div>
+
+  <div class="bloco hide" id="navExportar">
+    <div class="grupo">Exportar</div>
+    <div class="grupo-dica">CSV para Excel e Power BI · respeita os filtros</div>
+    <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
+    <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
+    <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
+  </div>
+
+  <div class="rodape">Leitura local do PDF. Nenhum dado sai deste computador.</div>
+</nav>
+
+<main class="conteudo">
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <div id="vazio" class="estado">
+    <div class="caixa" id="drop" tabindex="0" role="button" aria-label="Arrastar PDFs ou clicar para selecionar">
+      <span class="rotulo">Estudo de datas</span>
+      <h2>Previsão × conclusão das ordens do lote</h2>
+      <p>Lê o relatório do ERP, confere ordem por ordem e operação por operação, e lista o que exige ação antes que o lote atrase.</p>
+      <ol class="passos">
+        <li><b>1</b><span>No ERP, emita <strong>Situação do Lote de Produção</strong> com <em>Status das Ordens: Todas</em> e salve em PDF.</span></li>
+        <li><b>2</b><span>Arraste aqui um ou vários PDFs, ou clique para selecionar.</span></li>
+        <li><b>3</b><span>Comece pelos <strong>Achados</strong>. Antes de concluir, confira <strong>Leitura dos arquivos</strong>.</span></li>
+      </ol>
+      <button type="button" class="secundario" id="btnSelecionar">Selecionar arquivos</button>
+    </div>
+  </div>
+
+  <div id="app" class="hide">
+    <details class="aviso hide" id="avisoLeitura">
+      <summary><span class="ico" aria-hidden="true">!</span><span id="avisoResumo"></span></summary>
+      <ul id="avisoLista"></ul>
+    </details>
+
+    <section class="resposta" id="resposta" aria-label="O que exige atenção"></section>
+    <section class="contexto" id="contexto" aria-label="Números de apoio"></section>
+
+    <section class="filtros" aria-label="Filtros e parâmetros">
+      <div class="grade">
         <div class="f"><label for="fLote">Lote</label><select id="fLote"></select></div>
-        <div class="f"><label for="fProduto">Produto / descrição</label><input type="text" id="fProduto" placeholder="ex.: 778.002 ou SLEEP"></div>
+        <div class="f"><label for="fProduto">Produto ou descrição</label><input type="search" id="fProduto" placeholder="ex.: 778.002 ou SLEEP"></div>
         <div class="f"><label for="fOper">Operação</label><select id="fOper"></select></div>
         <div class="f"><label for="fSev">Severidade</label><select id="fSev">
           <option value="">Todas</option><option value="critico">Só crítico</option>
-          <option value="critico,atencao">Crítico + atenção</option></select></div>
-        <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef"></div>
-        <div class="check"><input type="checkbox" id="fEmb" checked><label for="fEmb" style="font-size:14px;color:var(--texto)">Ignorar EMBALAR sem apontamento em produto acabado</label></div>
-        <div class="acoes">
-          <button class="btn" id="btnCsvAch">CSV achados</button>
-          <button class="btn" id="btnCsvOrd">CSV ordens</button>
-          <button class="btn" id="btnCsvOp">CSV operações</button>
-        </div>
+          <option value="critico,atencao">Crítico e atenção</option></select></div>
+        <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef" title="O que conta como vencido é medido contra esta data. Padrão: data de emissão do relatório."></div>
+        <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (103.)</label>
       </div>
-      <details style="margin-top:12px">
-        <summary style="cursor:pointer;font-size:13.5px;color:var(--mudo);font-weight:600">Regras de conferência ativas</summary>
-        <div class="regras" id="regras" style="margin-top:10px"></div>
+      <details>
+        <summary>Regras de conferência ativas</summary>
+        <div class="regras" id="regras"></div>
       </details>
-    </div>
-  </div>
+    </section>
 
-  <div class="abas" id="abas">
-    <button class="aba on" data-t="ach">Achados <span class="n" id="nAch">0</span></button>
-    <button class="aba" data-t="ord">Ordens <span class="n" id="nOrd">0</span></button>
-    <button class="aba" data-t="op">Operações <span class="n" id="nOp">0</span></button>
-    <button class="aba" data-t="ader">Aderência por processo</button>
-    <button class="aba" data-t="leit">Leitura dos arquivos</button>
+    <section class="blocoTabela" id="painel" aria-live="polite"></section>
   </div>
-
-  <div class="card"><div id="painel"></div></div>
+</main>
 
 </div>
-</main>
+
+<dialog id="dlgVersao">
+  <h2>Histórico de versões</h2>
+  <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.1.0 — 02/09/2026</h3>
+  <ul>
+    <li>Interface no padrão RitmoPatrimar: lateral escura com navegação, conteúdo claro, cartão de resposta e tabelas com números em fonte tabular.</li>
+    <li>Biblioteca de leitura de PDF publicada junto com o app (pasta <code>vendor</code>). Sem ela nenhum arquivo era lido.</li>
+    <li>Aviso de leitura no topo quando algum arquivo diverge do rodapé do relatório ou tem linha não reconhecida.</li>
+    <li>Texto vindo do PDF passa a ser escapado antes de ir para a tela.</li>
+  </ul>
+  <h3>1.0.0 — 02/09/2026</h3>
+  <ul>
+    <li>Leitura posicional do relatório, 13 regras de conferência, exportação CSV.</li>
+  </ul>
+  <form method="dialog"><button type="submit" class="secundario">Fechar</button></form>
+</dialog>
 
 <script src="vendor/pdf.min.js"></script>
 <script>
@@ -205,12 +382,12 @@ const CFG = {
    PARSER — leitura posicional do relatório
    ========================================================================== */
 const RE_OF=/^\d{5,7}$/, RE_PROD=/^\d{3}\.\d{3}\.\d{3}$/,
-      RE_DATE=/^(\d{2})\/(\d{2})\/(\d{2,4})$/, RE_NUM=/^-?[\d.]+,\d+$/, RE_SLASH=/^\/+$/;
+      RE_DATE=/^(\d{2})\/(\d{2})\/(\d{2,4})$/, RE_NUM=/^-?[\d.]+,\d+$/, RE_SLASH=/^[\s/]*\/[\s/]*$/;
 const SKIP=/PATRIMAR|CNPJ|Situa[çc][ãa]o do Lote|Opera[çc][õo]es|Descri[çc][ãa]o|Peso Bruto|Total M3|P[áa]gina|Status das Ordens/i;
 
 const toIso=t=>{const m=t.match(RE_DATE);if(!m)return null;let y=m[3];if(y.length===2)y=(+y>70?'19':'20')+y;return `${y}-${m[2]}-${m[1]}`;};
 const toNum=t=>Number(t.replace(/\./g,'').replace(',','.'));
-const br=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
+const br=d=>(typeof d==='string'&&d.length>=10)?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
 const nf=(v,c=0)=>v==null?'':v.toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
 const dias=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
 
@@ -247,9 +424,14 @@ function splitRow(tokens){
   return {desc:txt.join(' ').trim(),vals};
 }
 
+/* Um valor so' e' aceito na coluna cujo TIPO ele tem. Antes, um numero caindo
+   na coluna de data era gravado como data e a tela exibia lixo sem avisar —
+   que e' o pior modo de falhar num app de conferencia. */
 function parseDoc(pages,arquivo){
   const doc={arquivo,lote:null,lt:null,descricao:null,dataInicio:null,dataPrevisao:null,
-             dataRelatorio:null,totalM3:null,totalPeso:null,ofs:[],avisos:[],ignoradas:0,paginas:pages.length};
+             dataRelatorio:null,totalM3:null,totalPeso:null,ofs:[],avisos:[],ignoradas:0,suspeitas:0,paginas:pages.length};
+  const dt=s=>{if(!s)return null;if(s.k==='D')return s.v;doc.suspeitas++;return null;};
+  const nm=s=>{if(!s)return null;if(s.k==='N')return s.v;doc.suspeitas++;return null;};
   let cur=null;
   for(const items of pages){
     for(const tokens of buildRows(items)){
@@ -284,15 +466,15 @@ function parseDoc(pages,arquivo){
 
       if(!desc&&cur&&!cur._ok&&vals.length>=4&&vals[0].k==='N'){
         const [m3,pv,cc,q,p,f]=vals;
-        cur.m3=m3.v; cur.previsao=pv?pv.v:null; cur.conclusao=cc?cc.v:null;
-        cur.qtd=q?q.v:null; cur.pronto=p?p.v:null; cur.faltam=f?f.v:null; cur._ok=true;
+        cur.m3=nm(m3); cur.previsao=dt(pv); cur.conclusao=dt(cc);
+        cur.qtd=nm(q); cur.pronto=nm(p); cur.faltam=nm(f); cur._ok=true;
         continue;
       }
       if(desc&&cur&&vals.length>=4){
         const [pv,cc,q,p,f]=vals;
         cur.operacoes.push({seq:cur.operacoes.length+1,descricao:desc,
-          previsao:pv?pv.v:null,conclusao:cc?cc.v:null,
-          qtd:q?q.v:null,pronto:p?p.v:null,faltam:f?f.v:null});
+          previsao:dt(pv),conclusao:dt(cc),
+          qtd:nm(q),pronto:nm(p),faltam:nm(f)});
         continue;
       }
       doc.ignoradas++;
@@ -305,6 +487,7 @@ function parseDoc(pages,arquivo){
   const semQ=doc.ofs.filter(o=>o.qtd==null).map(o=>o.of);
   if(semQ.length)doc.avisos.push('Ordens sem linha de quantidade: '+semQ.join(', '));
   if(doc.ignoradas)doc.avisos.push(doc.ignoradas+' linha(s) não reconhecida(s) — o layout pode ter mudado.');
+  if(doc.suspeitas)doc.avisos.push(doc.suspeitas+' valor(es) em coluna inesperada (data onde se esperava número, ou o contrário) — as colunas podem ter mudado de ordem. Confira o PDF antes de usar os números.');
   if(!doc.ofs.length)doc.avisos.push('Nenhuma ordem reconhecida. Este PDF parece não ser o relatório "Situação do Lote de Produção".');
   return doc;
 }
@@ -408,53 +591,68 @@ function analisar(docs,ref,flagEmb){
 
 /* ============================================================================
    ESTADO E UI
+/* ============================================================================
+   ESTADO E UI
    ========================================================================== */
-const VERSAO='1.0.0';
+const VERSAO='1.1.0';
 let DOCS=[], ACH=[], ABA='ach';
 const $=s=>document.querySelector(s);
-document.getElementById('ver').textContent='v'+VERSAO;
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('#ver').textContent=VERSAO;
+$('#btnVersao').onclick=()=>$('#dlgVersao').showModal();
 
-const drop=$('#drop'), inp=$('#file');
+/* --- entrada de arquivos: botão da lateral, botão do estado vazio, arrastar --- */
+const inp=$('#file'), drop=$('#drop');
+$('#btnAbrir').onclick=()=>inp.click();
+$('#btnSelecionar').onclick=e=>{e.stopPropagation();inp.click();};
 drop.onclick=()=>inp.click();
-drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot');};
-drop.ondragleave=()=>drop.classList.remove('hot');
-drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');carregar([...e.dataTransfer.files]);};
-inp.onchange=e=>carregar([...e.target.files]);
+drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click();}};
+inp.onchange=e=>{carregar([...e.target.files]);inp.value='';};
+// Arrastar vale na página inteira: quem já tem lote aberto solta o próximo em qualquer lugar.
+document.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('hot');});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)drop.classList.remove('hot');});
+document.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('hot');carregar([...e.dataTransfer.files]);});
 
 async function carregar(files){
   files=files.filter(f=>/\.pdf$/i.test(f.name));
   if(!files.length)return;
   if(typeof pdfjsLib==='undefined'){
-    $('#loading').innerHTML='<div class="aviso err">Não foi possível carregar a biblioteca de leitura de PDF (vendor/pdf.min.js). Confirme que a pasta <b>vendor</b> foi publicada junto com o index.html e recarregue a página.</div>';
+    $('#status').innerHTML='<div class="aviso err"><summary><span class="ico" aria-hidden="true">!</span>Não foi possível carregar a biblioteca de leitura de PDF (vendor/pdf.min.js). Confirme que a pasta <b>vendor</b> foi publicada junto com o index.html e recarregue a página.</summary></div>';
     return;
   }
   pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
-  for(const f of files){
-    if(DOCS.some(d=>d.arquivo===f.name))continue;
-    $('#loading').textContent='Lendo '+f.name+'…';
+  const novos=files.filter(f=>!DOCS.some(d=>d.arquivo===f.name));
+  let i=0;
+  for(const f of novos){
+    i++;
+    $('#status').textContent=`Lendo ${f.name}… (${i} de ${novos.length})`;
     try{ DOCS.push(await lerPdf(f)); }
     catch(err){ DOCS.push({arquivo:f.name,ofs:[],avisos:['Falha ao ler o arquivo: '+err.message],erro:true,paginas:0}); }
   }
-  $('#loading').textContent='';
-  montarFiltros(); renderChips(); recalc();
+  $('#status').textContent='';
+  montarFiltros(); renderArquivos(); recalc();
 }
 
-function renderChips(){
-  $('#arquivos').innerHTML=DOCS.map((d,i)=>
-    `<span class="chip${d.erro?' erro':''}"><b>${d.arquivo}</b>
-      ${d.erro?'falha':`lote ${d.lote||'?'} · ${d.ofs.length} ordens`}
-      <button data-i="${i}" title="Remover">×</button></span>`).join('');
+function renderArquivos(){
+  $('#arquivos').innerHTML=DOCS.map((d,i)=>`
+    <div class="arquivo">
+      <div class="info">
+        <span class="nome" title="${esc(d.arquivo)}">${esc(d.arquivo)}</span>
+        <span class="meta${d.erro?' erro':''}">${d.erro?'falha na leitura':`lote ${esc(d.lote||'?')} · ${d.ofs.length} ordens`}</span>
+      </div>
+      <button type="button" data-i="${i}" title="Remover arquivo" aria-label="Remover ${esc(d.arquivo)}">×</button>
+    </div>`).join('');
   $('#arquivos').querySelectorAll('button').forEach(b=>b.onclick=()=>{
-    DOCS.splice(+b.dataset.i,1);montarFiltros();renderChips();recalc();});
+    DOCS.splice(+b.dataset.i,1);montarFiltros();renderArquivos();recalc();});
 }
 
 function montarFiltros(){
   const lotes=[...new Set(DOCS.map(d=>d.lote).filter(Boolean))].sort();
   const selLote=$('#fLote').value, selOper=$('#fOper').value;
   $('#fLote').innerHTML='<option value="">Todos</option>'+lotes.map(l=>{
-    const d=DOCS.find(x=>x.lote===l); return `<option value="${l}">${l} — LT ${d.lt||''} ${d.descricao||''}</option>`;}).join('');
+    const d=DOCS.find(x=>x.lote===l); return `<option value="${esc(l)}">${esc(l)} — LT ${esc(d.lt||'')} ${esc(d.descricao||'')}</option>`;}).join('');
   const ops=[...new Set(DOCS.flatMap(d=>d.ofs.flatMap(o=>o.operacoes.map(x=>x.descricao))))].sort();
-  $('#fOper').innerHTML='<option value="">Todas</option>'+ops.map(o=>`<option>${o}</option>`).join('');
+  $('#fOper').innerHTML='<option value="">Todas</option>'+ops.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
   if(lotes.includes(selLote))$('#fLote').value=selLote;
   if(ops.includes(selOper))$('#fOper').value=selOper;
   if(!$('#fRef').value){
@@ -463,12 +661,12 @@ function montarFiltros(){
   }
   $('#regras').innerHTML=CFG.regras.map(([id,lbl,sev])=>
     `<label><input type="checkbox" data-r="${id}" ${regraOn[id]?'checked':''}>
-      <span>${lbl} <small><span class="tag ${sev}">${sev}</span></small></span></label>`).join('');
+      <span>${esc(lbl)} <span class="selo ${sev}">${sev}</span></span></label>`).join('');
   $('#regras').querySelectorAll('input').forEach(c=>c.onchange=()=>{regraOn[c.dataset.r]=c.checked;recalc();});
 }
 
 ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{
-  if(e.target.closest('.filtros')) recalc();
+  if(e.target.closest('.filtros')&&!e.target.closest('#regras')) recalc();
 }));
 
 function filtros(){
@@ -496,142 +694,232 @@ function achFiltrados(){
 }
 
 function recalc(){
-  if(!DOCS.length){$('#app').classList.add('hide');return;}
-  $('#app').classList.remove('hide');
+  const tem=DOCS.length>0;
+  $('#app').classList.toggle('hide',!tem);
+  $('#vazio').classList.toggle('hide',tem);
+  ['#navSecoes','#navArquivos','#navExportar'].forEach(s=>$(s).classList.toggle('hide',!tem));
+  if(!tem)return;
   ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
-  renderKpis(); render();
+  renderAviso(); renderResposta(); render();
 }
 
-function renderKpis(){
-  const ord=ordensFiltradas(), ach=achFiltrados();
-  const ref=$('#fRef').value;
+/* Aviso de leitura: uma linha no topo, detalhe sob demanda. Sem ele, o usuário
+   só descobriria a divergência de M³ se abrisse a última seção do menu. */
+function renderAviso(){
+  const com=DOCS.filter(d=>d.avisos&&d.avisos.length);
+  const box=$('#avisoLeitura');
+  box.classList.toggle('hide',!com.length);
+  box.classList.toggle('err',com.some(d=>d.erro));
+  $('#nLeit').textContent=DOCS.length;
+  $('#nLeit').classList.toggle('alerta',com.length>0);
+  $('#nLeit').title=com.length?`${com.length} arquivo(s) com aviso de leitura`:'Todos os arquivos lidos sem aviso';
+  if(!com.length)return;
+  $('#avisoResumo').textContent=`${com.length} arquivo(s) com aviso de leitura — não use os números da tela antes de conferir`;
+  $('#avisoLista').innerHTML=com.flatMap(d=>d.avisos.map(a=>`<li><strong>${esc(d.arquivo)}</strong> — ${esc(a)}</li>`)).join('');
+}
+
+function renderResposta(){
+  const ord=ordensFiltradas(), ach=achFiltrados(), ref=$('#fRef').value;
   const abertas=ord.filter(o=>!o.conclusao);
   const vencidas=abertas.filter(o=>o.previsao&&o.previsao<ref);
   const crit=[...new Set(ach.filter(a=>a.sev==='critico').map(a=>a.of))].filter(x=>x!=='—');
   const conc=ord.filter(o=>o.conclusao);
   const noPrazo=conc.filter(o=>o.previsao&&o.conclusao<=o.previsao).length;
-  const ader=conc.length?Math.round(noPrazo/conc.length*100):0;
+  const ader=conc.length?Math.round(noPrazo/conc.length*100):null;
   const saldo=ord.reduce((s,o)=>s+Math.max(0,(o.qtd||0)-(o.pronto||0)),0);
-  $('#kpis').innerHTML=`
-    <div class="kpi ${crit.length?'critico':'ok'}"><div class="lbl">Ordens com achado crítico</div>
-      <div class="val">${crit.length}</div><div class="obs">de ${ord.length} ordens no filtro</div></div>
-    <div class="kpi ${vencidas.length?'critico':'ok'}"><div class="lbl">Em aberto e vencidas</div>
-      <div class="val">${vencidas.length}</div><div class="obs">${abertas.length} em aberto · ref. ${br(ref)}</div></div>
-    <div class="kpi ${ader>=90?'ok':ader>=70?'atencao':'critico'}"><div class="lbl">Aderência de prazo</div>
-      <div class="val">${ader}%</div><div class="obs">${noPrazo} de ${conc.length} concluídas no prazo</div></div>
-    <div class="kpi ${saldo?'atencao':'ok'}"><div class="lbl">Saldo a produzir</div>
-      <div class="val">${nf(saldo)}</div><div class="obs">peças em ordens do filtro</div></div>`;
+  // Cor só quando há problema: "0" colorido treina o olho a ignorar a cor.
+  const bloco=(rot,val,unid,expl,cls)=>`
+    <div class="b"><span class="rotulo">${rot}</span>
+      <div class="linha"><span class="valor num ${cls||''}">${val}</span>${unid?`<span class="unidade">${unid}</span>`:''}</div>
+      <p class="explica">${expl}</p></div>`;
+  $('#resposta').innerHTML=
+    bloco('Ordens com achado crítico',crit.length,'',`de ${ord.length} ordens no filtro`,crit.length?'c-critico':'')+
+    bloco('Em aberto e vencidas',vencidas.length,'',`${abertas.length} em aberto · referência ${br(ref)}`,vencidas.length?'c-critico':'')+
+    bloco('Aderência de prazo',ader==null?'—':ader,ader==null?'':'%',`${noPrazo} de ${conc.length} concluídas no prazo`,
+      ader==null?'':ader>=90?'c-ok':ader>=70?'c-atencao':'c-critico')+
+    bloco('Saldo a produzir',nf(saldo),'pç','em ordens do filtro',saldo?'c-atencao':'');
+
+  const lotes=new Set(DOCS.map(d=>d.lote).filter(Boolean));
+  const ctx=[['Arquivos',DOCS.length],['Lotes',lotes.size],['Ordens',ord.length],['Operações',opsFiltradas().length],
+    ['Achados',ach.length],['Relatório emitido em',br(DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop())||'—']];
+  $('#contexto').innerHTML=ctx.map(([r,v])=>`<div class="i"><span>${r}</span><b class="num">${v}</b></div>`).join('');
+
   $('#nAch').textContent=ach.length;
   $('#nOrd').textContent=ord.length;
   $('#nOp').textContent=opsFiltradas().length;
 }
 
-$('#abas').onclick=e=>{const b=e.target.closest('.aba');if(!b)return;
-  ABA=b.dataset.t;[...$('#abas').children].forEach(x=>x.classList.toggle('on',x===b));render();};
+$('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
+  ABA=b.dataset.t;
+  $('#navSecoes').querySelectorAll('.item').forEach(x=>{
+    if(x===b)x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current');
+  });
+  render();};
 
-function tabela(cols,linhas){
-  if(!linhas.length)return '<div class="vazio">Nada encontrado com os filtros atuais.</div>';
-  return `<div class="wrap"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="num"':''}>${c.h}</th>`).join('')}</tr></thead>
-    <tbody>${linhas.join('')}</tbody></table></div>`;
+const SECOES={ach:'Achados',ord:'Ordens',op:'Operações',ader:'Painel por setor',leit:'Leitura dos arquivos'};
+
+function tabela(titulo,meta,cols,linhas,nota){
+  const corpo=linhas.length
+    ?`<div class="wrap"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="n"':''}>${c.h}</th>`).join('')}</tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
+    :'<div class="vazio">Nada encontrado com os filtros atuais.</div>';
+  return `<div class="cabecalhoSecao"><h2>${titulo}</h2><span class="meta">${meta}</span></div>${corpo}${nota?`<div class="nota">${nota}</div>`:''}`;
 }
+const desvio=dv=>dv==null?'':`<span class="${dv>0?'c-critico':dv<0?'c-ok':''}">${dv>0?'+'+dv:dv} d</span>`;
+/* Ordem/operação ainda em aberto: o número é prazo, não resultado. Vermelho
+   quando venceu; sem cor quando ainda há prazo, com a palavra que explica. */
+const prazo=dv=>dv==null?''
+  :dv>0?`<span class="c-critico">+${dv} d</span>`
+  :`<span title="Ainda dentro do prazo">${-dv} d restante(s)</span>`;
 
 function render(){
-  const p=$('#painel');
+  try{ desenhar(); }
+  catch(err){
+    $('#painel').innerHTML=`<div class="cabecalhoSecao"><h2>${SECOES[ABA]}</h2></div>
+      <div class="vazio">Não foi possível montar esta seção: ${esc(err.message)}.<br>
+      Confira a seção <b>Leitura dos arquivos</b> — provavelmente o PDF não foi lido como esperado.</div>`;
+  }
+}
+
+function desenhar(){
+  const p=$('#painel'), ref=$('#fRef').value;
   if(ABA==='ach'){
     const a=achFiltrados();
-    p.innerHTML=tabela(
+    p.innerHTML=tabela('Achados',`${a.length} achado(s) · ordenados por severidade`,
       [{h:'Sev.'},{h:'Regra'},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Operação'},{h:'Detalhe'},{h:'Lote'}],
-      a.map(x=>`<tr class="sev-${x.sev}"><td><span class="tag ${x.sev}">${x.sev}</span></td>
-        <td>${x.regra}</td><td class="mono">${x.of}</td><td class="mono">${x.produto}</td>
-        <td>${x.descricao||''}</td><td>${x.operacao||''}</td><td>${x.detalhe}</td><td class="mono">${x.lote||''}</td></tr>`))
-      +`<div class="legenda" style="padding:0 14px 14px">
-         <b>crítico</b> = dado inconsistente ou prazo estourado, exige ação. &nbsp;
-         <b>atenção</b> = divergência que precisa de conferência. &nbsp;
-         <b>info</b> = registro histórico, não exige ação imediata.</div>`;
+      a.map(x=>`<tr class="sev-${x.sev}"><td><span class="selo ${x.sev}">${x.sev==='atencao'?'atenção':x.sev==='critico'?'crítico':x.sev}</span></td>
+        <td class="forte">${esc(x.regra)}</td><td class="cod">${esc(x.of)}</td><td class="cod">${esc(x.produto)}</td>
+        <td>${esc(x.descricao)}</td><td>${esc(x.operacao)}</td><td>${esc(x.detalhe)}</td><td class="cod">${esc(x.lote)}</td></tr>`),
+      '<b>Crítico</b> = dado inconsistente ou prazo estourado, exige ação. <b>Atenção</b> = divergência que precisa de conferência. <b>Info</b> = registro histórico, não exige ação imediata.');
   }
   if(ABA==='ord'){
-    const ref=$('#fRef').value;
-    p.innerHTML=tabela(
-      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Previsão'},{h:'Conclusão'},{h:'Desvio'},
-       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops'},{h:'Lote'}],
-      ordensFiltradas().map(o=>{
+    const ord=ordensFiltradas();
+    p.innerHTML=tabela('Ordens',`${ord.length} ordem(ns) · nas concluídas o desvio é conclusão − previsão; nas em aberto, o prazo contra ${br(ref)}`,
+      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Previsão'},{h:'Conclusão'},{h:'Desvio / prazo',n:1},
+       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
+      ord.map(o=>{
         const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0));
         let sit,cls;
         if(o.conclusao){sit='Concluída';cls='ok';}
         else if(o.previsao&&o.previsao<ref){sit='Vencida';cls='critico';}
         else {sit='Em aberto';cls='neutro';}
-        const dv=o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):(!o.conclusao&&o.previsao?dias(o.previsao,ref):null);
-        const dvTxt=dv==null?'':(dv>0?'+'+dv:dv)+' d';
+        const concl=!!o.conclusao;
+        const dv=concl&&o.previsao?dias(o.previsao,o.conclusao):(!concl&&o.previsao?dias(o.previsao,ref):null);
         const feitas=o.operacoes.filter(x=>x.conclusao).length;
-        return `<tr><td class="mono">${o.of}</td><td class="mono">${o.produto}</td><td>${o.descricao}</td>
-          <td><span class="tag ${cls}">${sit}</span></td><td class="mono">${br(o.previsao)}</td>
-          <td class="mono">${br(o.conclusao)}</td>
-          <td class="num" style="color:${dv>0?'var(--critico)':dv<0?'var(--ok)':'inherit'}">${dvTxt}</td>
-          <td class="num">${nf(o.qtd)}</td><td class="num">${nf(o.pronto)}</td>
-          <td class="num" style="${saldo?'font-weight:700;color:var(--atencao)':''}">${saldo?nf(saldo):''}</td>
-          <td class="num">${feitas}/${o.operacoes.length}</td><td class="mono">${o.lote||''}</td></tr>`;}));
+        return `<tr><td class="cod">${esc(o.of)}</td><td class="cod">${esc(o.produto)}</td><td>${esc(o.descricao)}</td>
+          <td><span class="selo ${cls}">${sit}</span></td><td class="cod">${br(o.previsao)}</td><td class="cod">${br(o.conclusao)}</td>
+          <td class="n">${concl?desvio(dv):prazo(dv)}</td><td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
+          <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
+          <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}));
   }
   if(ABA==='op'){
-    const ref=$('#fRef').value;
-    p.innerHTML=tabela(
-      [{h:'Ordem'},{h:'Produto'},{h:'Seq'},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio'},
+    const ops=opsFiltradas();
+    p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
+      [{h:'Ordem'},{h:'Produto'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio / prazo',n:1},
        {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
-      opsFiltradas().map(({of,op})=>{
+      ops.map(({of,op})=>{
         const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
-        const dv=op.conclusao&&op.previsao?dias(op.previsao,op.conclusao):null;
+        const dv=op.previsao?dias(op.previsao,op.conclusao||ref):null;
         let sit,cls;
-        if(op.conclusao){sit=dv>0?'Concluída c/ atraso':'Concluída';cls=dv>0?'atencao':'ok';}
+        if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
         else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
         else {sit='Pendente';cls='neutro';}
-        return `<tr><td class="mono">${of.of}</td><td class="mono">${of.produto}</td><td class="num">${op.seq}</td>
-          <td>${op.descricao}</td><td class="mono">${br(op.previsao)}</td><td class="mono">${br(op.conclusao)}</td>
-          <td class="num" style="color:${dv>0?'var(--critico)':dv<0?'var(--ok)':'inherit'}">${dv==null?'':(dv>0?'+'+dv:dv)+' d'}</td>
-          <td class="num">${nf(op.qtd)}</td><td class="num">${nf(op.pronto)}</td>
-          <td class="num" style="${saldo?'font-weight:700;color:var(--atencao)':''}">${saldo?nf(saldo):''}</td>
-          <td><span class="tag ${cls}">${sit}</span></td></tr>`;}));
+        return `<tr><td class="cod">${esc(of.of)}</td><td class="cod">${esc(of.produto)}</td><td class="n">${op.seq}</td>
+          <td class="forte">${esc(op.descricao)}</td><td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
+          <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
+          <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
+          <td><span class="selo ${cls}">${sit}</span></td></tr>`;}));
   }
   if(ABA==='ader'){
-    const ref=$('#fRef').value, m={};
+    /* PAINEL POR SETOR — a pergunta é "onde o lote está travado agora".
+       Setor = processo do roteiro (CORTAR, PINTAR UV, EMBALAR...), que é o
+       centro de trabalho onde a operação acontece. O cartão responde antes
+       da tabela: a tabela detalha depois, para quem quer o número exato. */
+    const m={};
     opsFiltradas().forEach(({of,op})=>{
-      const k=op.descricao, r=m[k]=m[k]||{n:0,conc:0,prazo:0,soma:0,cnt:0,pend:0,venc:0,saldo:0};
-      r.n++;
+      const k=op.descricao, r=m[k]=m[k]||{n:0,conc:0,prazo:0,soma:0,cnt:0,pend:0,venc:0,saldo:0,ordens:new Set(),travada:null};
+      r.n++; r.ordens.add(of.of);
       if(op.conclusao){r.conc++;
         if(op.previsao){const d=dias(op.previsao,op.conclusao);r.soma+=d;r.cnt++;if(d<=0)r.prazo++;}
-      }else{r.pend++;if(op.previsao&&op.previsao<ref)r.venc++;}
+      }else{
+        r.pend++;
+        const conta=!of.conclusao&&!ignoraEmbalagem(of,op,$('#fEmb').checked);
+        if(conta&&op.previsao&&op.previsao<ref){
+          r.venc++;
+          const d=dias(op.previsao,ref);
+          // A ordem que mais tempo está parada aqui: é por ela que se começa.
+          if(!r.travada||d>r.travada.d) r.travada={of:of.of,produto:of.produto,d,prev:op.previsao};
+        }
+      }
       r.saldo+=Math.max(0,(op.qtd||0)-(op.pronto||0));
     });
-    const lin=Object.entries(m).sort((a,b)=>b[1].venc-a[1].venc||b[1].n-a[1].n).map(([k,r])=>{
+
+    const setores=Object.entries(m).map(([k,r])=>{
+      const estado=r.venc?'critico':r.pend?'atencao':'ok';
+      const rotulo=r.venc?'atrasado':r.pend?'em andamento':'concluído';
+      return {k,r,estado,rotulo,
+        ord:(r.venc?2:r.pend?1:0)*1e9 + r.venc*1e6 + r.saldo};
+    }).sort((a,b)=>b.ord-a.ord||b.r.n-a.r.n);
+
+    $('#nSet').textContent=setores.length;
+    $('#nSet').classList.toggle('alerta',setores.some(x=>x.estado==='critico'));
+
+    const cartoes=setores.map(({k,r,estado,rotulo})=>{
+      const avanco=r.n?Math.round(r.conc/r.n*100):0;
+      const med=r.cnt?(r.soma/r.cnt):null;
+      return `<div class="setor ${estado}">
+        <div class="topo"><span class="nome" title="${esc(k)}">${esc(k)}</span><span class="selo ${estado}">${rotulo}</span></div>
+        <div class="numeros">
+          <span class="n1"><span class="v ${r.venc?'c-critico':''}">${r.venc||'—'}</span><span class="r">Vencidas</span></span>
+          <span class="n1"><span class="v">${r.pend}</span><span class="r">Pendentes</span></span>
+          <span class="n1"><span class="v ${r.saldo?'c-atencao':''}">${r.saldo?nf(r.saldo):'—'}</span><span class="r">Saldo pç</span></span>
+          <span class="n1"><span class="v ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'—':(med>0?'+':'')+med.toFixed(1).replace('.',',')}</span><span class="r">Desvio méd. d</span></span>
+        </div>
+        <div class="barra" role="img" aria-label="${avanco}% das operações concluídas"><i style="width:${avanco}%"></i></div>
+        <div class="linha">${r.conc} de ${r.n} operações concluídas · ${r.ordens.size} ordem(ns)</div>
+        ${r.travada
+          ? `<div class="linha">Mais parada: ordem <b>${esc(r.travada.of)}</b> — previsão ${br(r.travada.prev)}, <b>${r.travada.d}</b> dia(s) vencida</div>`
+          : `<div class="linha">Nenhuma operação vencida neste setor</div>`}
+      </div>`;}).join('');
+
+    const lin=setores.map(({k,r})=>{
       const ad=r.cnt?Math.round(r.prazo/r.cnt*100):null;
       const med=r.cnt?(r.soma/r.cnt):null;
-      return `<tr><td><b>${k}</b></td><td class="num">${r.n}</td><td class="num">${r.conc}</td>
-        <td class="num">${r.pend}</td>
-        <td class="num" style="${r.venc?'font-weight:700;color:var(--critico)':''}">${r.venc||''}</td>
-        <td class="num">${ad==null?'':ad+'%'}</td>
-        <td class="num" style="color:${med>0?'var(--critico)':med<0?'var(--ok)':'inherit'}">${med==null?'':(med>0?'+':'')+med.toFixed(1)+' d'}</td>
-        <td class="num" style="${r.saldo?'font-weight:700;color:var(--atencao)':''}">${r.saldo?nf(r.saldo):''}</td></tr>`;});
-    p.innerHTML=tabela([{h:'Processo'},{h:'Operações',n:1},{h:'Concluídas',n:1},{h:'Pendentes',n:1},
-      {h:'Vencidas',n:1},{h:'No prazo',n:1},{h:'Desvio médio',n:1},{h:'Saldo (pç)',n:1}],lin)
-      +`<div class="legenda" style="padding:0 14px 14px">
-        <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas.
-        Valor positivo indica que o processo termina depois do programado.
-        <b>Vencidas</b> = operações sem conclusão com previsão anterior a ${br(ref)}.</div>`;
+      return `<tr><td class="forte">${esc(k)}</td><td class="n">${r.ordens.size}</td><td class="n">${r.n}</td><td class="n">${r.conc}</td><td class="n">${r.pend}</td>
+        <td class="n ${r.venc?'c-critico':''}">${r.venc||''}</td>
+        <td class="n">${ad==null?'':ad+'%'}</td>
+        <td class="n ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'':(med>0?'+':'')+med.toFixed(1).replace('.',',')+' d'}</td>
+        <td class="n ${r.saldo?'c-atencao':''}">${r.saldo?nf(r.saldo):''}</td></tr>`;});
+
+    const criticos=setores.filter(x=>x.estado==='critico');
+    p.innerHTML=`<div class="cabecalhoSecao"><h2>Painel por setor</h2>
+        <span class="meta">${setores.length} setor(es) · ${criticos.length?`${criticos.length} com operação vencida`:'nenhum com operação vencida'} · referência ${br(ref)}</span></div>
+      ${setores.length?`<div class="setores">${cartoes}</div>`:'<div class="vazio">Nada encontrado com os filtros atuais.</div>'}
+      ${setores.length?`<div class="cabecalhoSecao" style="border-top:1px solid var(--borda)"><h2>Aderência por setor</h2>
+        <span class="meta">o número exato por trás dos cartões</span></div>
+      <div class="wrap"><table><thead><tr>${[{h:'Setor'},{h:'Ordens',n:1},{h:'Operações',n:1},{h:'Concluídas',n:1},{h:'Pendentes',n:1},{h:'Vencidas',n:1},{h:'No prazo',n:1},{h:'Desvio médio',n:1},{h:'Saldo (pç)',n:1}]
+        .map(c=>`<th${c.n?' class="n"':''}>${c.h}</th>`).join('')}</tr></thead><tbody>${lin.join('')}</tbody></table></div>
+      <div class="nota"><b>Setor</b> = processo do roteiro, o centro de trabalho onde a operação é apontada.
+        <b>Vencidas</b> = operações sem conclusão, com previsão anterior a ${br(ref)}, em ordem ainda em aberto — o mesmo critério do achado "Operação vencida e não concluída". Operação pendente em ordem já concluída não é fila de trabalho: aparece nos Achados como inconsistência de apontamento.
+        <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas; positivo indica que o setor entrega depois do programado.
+        <b>Saldo</b> = peças ainda não apontadas nas operações do setor.</div>`:''}`;
   }
   if(ABA==='leit'){
-    p.innerHTML=`<div class="body">`+DOCS.map(d=>`
-      <div style="border:1px solid var(--borda);border-radius:6px;padding:12px;margin-bottom:10px">
-        <b>${d.arquivo}</b><br>
-        <span style="font-size:13.5px;color:var(--mudo)">
-          Lote ${d.lote||'?'} — LT ${d.lt||'?'} ${d.descricao||''} · ${d.paginas} página(s) ·
+    const m3=d=>d.ofs.reduce((s,o)=>s+(o.m3||0),0);
+    const cards=DOCS.map(d=>{
+      const confere=d.totalM3!=null&&Math.abs(m3(d)-d.totalM3)<=0.02;
+      const cls=d.erro?'erro':d.avisos.length?'atencao':'ok';
+      return `<div class="cartao ${cls}">
+        <div class="nome">${esc(d.arquivo)} ${confere?'<span class="selo ok">M³ confere</span>':''}</div>
+        <div class="det">Lote ${esc(d.lote||'?')} — LT ${esc(d.lt||'?')} ${esc(d.descricao||'')} · ${d.paginas} página(s) ·
           início ${br(d.dataInicio)} · previsão ${br(d.dataPrevisao)} · relatório emitido em ${br(d.dataRelatorio)}<br>
-          ${d.ofs.length} ordens · ${d.ofs.reduce((s,o)=>s+o.operacoes.length,0)} operações ·
-          M³ lido ${nf(d.ofs.reduce((s,o)=>s+(o.m3||0),0),3)} · M³ do rodapé ${nf(d.totalM3,3)}
-          ${d.totalM3!=null&&Math.abs(d.ofs.reduce((s,o)=>s+(o.m3||0),0)-d.totalM3)<=0.02?'<span class="tag ok" style="margin-left:6px">confere</span>':''}
-        </span>
-        ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}" style="margin-top:8px">${a}</div>`).join('')}
-      </div>`).join('')+`
-      <div class="legenda">A conferência do total de M³ contra o rodapé do próprio relatório é a verificação
-      automática de que o arquivo foi lido por inteiro. Se aparecer divergência ou linha não reconhecida,
-      não confie nos números desta tela até revisar o PDF.</div></div>`;
+          <span class="num">${d.ofs.length}</span> ordens · <span class="num">${d.ofs.reduce((s,o)=>s+o.operacoes.length,0)}</span> operações ·
+          M³ lido <span class="num">${nf(m3(d),3)}</span> · M³ do rodapé <span class="num">${nf(d.totalM3,3)}</span></div>
+        ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}">${esc(a)}</div>`).join('')}
+      </div>`;});
+    p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
+      <div class="leitura">${cards.join('')}</div>
+      <div class="nota">A conferência do total de M³ contra o rodapé do próprio relatório é a verificação automática de que o arquivo foi lido por inteiro.
+      Se aparecer divergência ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
   }
 }
 
@@ -639,8 +927,8 @@ function render(){
    EXPORTAÇÃO CSV (; decimal vírgula, datas dd/mm/aaaa — Excel e Power BI pt-BR)
    ========================================================================== */
 function csv(nome,cols,linhas){
-  const esc=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const txt='\uFEFF'+[cols.join(';'),...linhas.map(l=>l.map(esc).join(';'))].join('\r\n');
+  const escCsv=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const txt='﻿'+[cols.join(';'),...linhas.map(l=>l.map(escCsv).join(';'))].join('\r\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));
   a.download=nome;a.click();URL.revokeObjectURL(a.href);
