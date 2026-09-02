@@ -52,6 +52,41 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.7.0] — 2026-09-02
+
+### Corrigido — o total de peças contava a mesma peça várias vezes
+
+Cada item da lista de faltas é **uma fase** sem registro, e traz a quantidade prevista daquela
+fase. Somar tudo conta a mesma peça uma vez por fase: uma ordem de 100 peças com corte,
+furação e lixamento sem apontar virava **300 peças**.
+
+Num lote real o efeito foi: **18.394 peças sem registro** contra um **saldo de 3.933** no lote
+inteiro — quase cinco vezes mais peças do que existem para produzir. Levado a uma reunião, o
+primeiro cruzamento derruba o número, e junto com ele o achado verdadeiro, que são os
+apontamentos esquecidos.
+
+**A conta agora é por ordem**, tomando a maior quantidade entre as fases sem registro dela.
+Maior, e não a quantidade da ordem, porque a operação pode ter multiplicador — duas peças por
+unidade — e é a quantidade da fase que diz quantas peças de fato ficaram sem apontamento.
+
+Verificado contra verdade conhecida: duas ordens de 100 e 50 peças, com 5 fases sem
+apontamento no total. Soma ingênua: 400. Peças distintas: **150**, que é o número real.
+
+### O que continua somando por fase, de propósito
+
+- **Dentro de um setor** a soma está certa: cada peça passa uma vez por lá. O quadro de
+  responsabilidade por setor mantém o total do setor, e passou a avisar no título que a soma
+  das colunas ultrapassa o lote porque a mesma peça passa por vários setores.
+- **"Apontamentos a fazer"** é o número de fases, e mede o esforço de regularização — outra
+  pergunta, com outro número.
+
+### Rótulos
+
+- "Peças esquecidas" sugeria peça perdida ou com defeito. O que foi esquecido é o
+  **apontamento**, não a peça: virou "Peças sem apontamento" e "Peças que passaram sem registro".
+- A nota da seção avisa que somar a coluna Peças à mão dá um número maior que o total do
+  cabeçalho, e por quê.
+
 ## [1.6.0] — 2026-09-02
 
 ### O prazo da ordem passa a ser julgado pelo roteiro

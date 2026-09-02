@@ -455,6 +455,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.7.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>Correção importante nos totais de peças.</b> Uma peça que passou por três fases sem apontamento era contada três vezes. Num lote real isso deu 18.394 peças sem registro contra um saldo de 3.933 no lote inteiro — quase cinco vezes mais peças do que existem.</li>
+    <li>Agora o total conta cada peça <b>uma vez</b>. O número de fases a apontar aparece separado, como "apontamentos a fazer".</li>
+    <li>Por setor a soma continua como estava, e está certa: cada peça passa uma vez por lá. O que não se pode somar são setores diferentes da mesma peça — e a tela agora avisa isso.</li>
+    <li>Rótulos trocados: "peças esquecidas" sugeria peça perdida. O que foi esquecido é o apontamento, não a peça.</li>
+  </ul>
   <h3>1.6.0 — 02/09/2026</h3>
   <ul>
     <li><b>O prazo da ordem passa a ser julgado pela Previsão do Processo</b>, não pela previsão da capa da ordem. É a data que o PPCP programou por fase.</li>
@@ -859,7 +866,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.6.0';
+const VERSAO='1.7.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1091,6 +1098,34 @@ function opsFiltradas(){
 }
 /* As faltas de apontamento respeitam os mesmos filtros da tela, inclusive o de
    operação: é assim que o PPCP isola um setor para cobrar. */
+/**
+ * PEÇA FÍSICA × PEÇA-FASE — duas contas diferentes, e confundi-las quebra o número.
+ *
+ * Cada item de `faltasApontamento` é UMA FASE sem registro, e traz a quantidade
+ * prevista daquela fase. Somar tudo conta a mesma peça uma vez por fase: uma
+ * ordem de 100 peças com corte, furação e lixamento sem apontar vira "300
+ * peças". Num lote real isso deu 18.394 peças sem registro contra um saldo de
+ * 3.933 no lote inteiro — quase cinco vezes mais peças do que existem. Levado
+ * a uma reunião, o primeiro cruzamento derruba o número, e junto com ele o
+ * achado verdadeiro.
+ *
+ * DENTRO DE UM SETOR a soma está certa: cada peça passa uma vez por lá. O que
+ * não se pode somar são setores diferentes da mesma peça.
+ *
+ * Aqui a conta é por ORDEM, tomando a maior quantidade entre as fases sem
+ * registro dela. Maior, e não a quantidade da ordem, porque a operação pode ter
+ * multiplicador — duas peças por unidade — e é a quantidade da fase que diz
+ * quantas peças de fato ficaram sem apontamento.
+ */
+function pecasDistintas(faltas){
+  const porOrdem={};
+  faltas.forEach(x=>{
+    const k=x.of.arquivo+'|'+x.of.of;
+    porOrdem[k]=Math.max(porOrdem[k]||0, x.pecas);
+  });
+  return Object.values(porOrdem).reduce((s,v)=>s+v,0);
+}
+
 function faltasFiltradas(){
   const f=filtros();
   return faltasApontamento(ordensFiltradas(),$('#fRef').value,$('#fEmb').checked)
@@ -1152,15 +1187,15 @@ function renderResposta(){
   // A pergunta que a ferramenta existe para responder vem primeiro, e o
   // apontamento esquecido antes do pendente: um é cobrança, o outro é dúvida.
   const falt=faltasFiltradas(), furos=falt.filter(x=>x.furo);
-  const pcFuro=furos.reduce((s,x)=>s+x.pecas,0), pcFalt=falt.reduce((s,x)=>s+x.pecas,0);
+  const pcFuro=pecasDistintas(furos), pcFalt=pecasDistintas(falt);
   const setores=[...new Set(falt.map(x=>x.op.descricao))];
   // Quatro blocos, uma linha. O quinto empurrava a régua para baixo e a
   // primeira leitura da tela deixava de ser uma leitura só.
   $('#resposta').innerHTML=
     bloco('Apontamento esquecido',furos.length,'op.',
-      `${nf(pcFuro)} pç com prova de que a peça passou por lá`,furos.length?'c-critico':'c-ok')+
-    bloco('Peças sem registro',nf(pcFalt),'pç',
-      `${falt.length} operação(ões) em ${setores.length} setor(es)`,pcFalt?'c-atencao':'c-ok')+
+      `${nf(pcFuro)} peça(s) com prova de que passaram pelo setor`,furos.length?'c-critico':'c-ok')+
+    bloco('Peças sem apontamento',nf(pcFalt),'pç',
+      `peças distintas · ${falt.length} apontamento(s) a fazer em ${setores.length} setor(es)`,pcFalt?'c-atencao':'c-ok')+
     bloco('Ordens com achado crítico',crit.length,'',`de ${ord.length} ordens no filtro`,crit.length?'c-critico':'')+
     bloco('Em aberto e vencidas',vencidas.length,'',`${abertas.length} em aberto · referência ${br(ref)}`,vencidas.length?'c-critico':'');
 
@@ -1221,10 +1256,10 @@ function desenhar(){
   const p=$('#painel'), ref=$('#fRef').value;
   if(ABA==='apont'){
     const f=faltasFiltradas();
-    const furos=f.filter(x=>x.furo), pecasFuro=furos.reduce((s,x)=>s+x.pecas,0);
-    const pecas=f.reduce((s,x)=>s+x.pecas,0);
+    const furos=f.filter(x=>x.furo), pecasFuro=pecasDistintas(furos);
+    const pecas=pecasDistintas(f);
     p.innerHTML=tabela('Sem apontamento',
-      `${f.length} operação(ões) · ${nf(pecas)} pç · ${furos.length} com apontamento comprovadamente esquecido (${nf(pecasFuro)} pç)`,
+      `${f.length} apontamento(s) a fazer · ${nf(pecas)} peça(s) sem registro · ${furos.length} com apontamento comprovadamente esquecido (${nf(pecasFuro)} pç)`,
       [{h:'Situação'},{h:'Setor'},{h:'Peças',n:1},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Previsão'},{h:'Por que'},{h:'Lote'}],
       f.map(x=>`<tr class="sev-${x.furo?'critico':'atencao'}">
         <td><span class="selo ${x.furo?'critico':'atencao'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem quantidade':'pendente'}</span></td>
@@ -1238,7 +1273,9 @@ function desenhar(){
       '<b>Esquecido</b> = a fase seguinte já foi apontada, ou a ordem foi dada como concluída. A peça passou por aqui, logo o apontamento existe para ser feito — é cobrança direta com o setor. '+
       '<b>Sem quantidade</b> = a fase tem data de conclusão mas nenhuma peça lançada; o setor fechou sem apontar o que produziu. '+
       '<b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde. '+
-      'A coluna <b>Peças</b> traz a quantidade prevista da operação, que é o que ficará sem registro se o apontamento não for feito.');
+      'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
+      '<b>Atenção ao somar:</b> uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três. '+
+      'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
   }
   if(ABA==='ach'){
     const a=achFiltrados();
@@ -1463,12 +1500,12 @@ function quadroSetores(faltas){
     .sort((a,b)=>b[1].furos-a[1].furos||b[1].pcFuro-a[1].pcFuro||b[1].pecas-a[1].pecas);
   if(!linhas.length)return '';
   return `<section class="doc-setor">
-    <h2>Responsabilidade por setor <span>quem deixou de apontar, e quanto</span></h2>
+    <h2>Responsabilidade por setor <span>quem deixou de apontar, e quanto · a soma das colunas de peças é maior que o lote, porque a mesma peça passa por vários setores</span></h2>
     <table>
       <colgroup><col style="width:26%"><col style="width:13%"><col style="width:16%"><col style="width:13%">
         <col style="width:16%"><col style="width:16%"></colgroup>
       <thead><tr><th>Setor</th><th class="n">Esquecidos</th><th class="n">Peças esquecidas</th>
-        <th class="n">Sem registro</th><th class="n">Peças no total</th><th class="n">Ordens</th></tr></thead>
+        <th class="n">A apontar</th><th class="n">Peças do setor</th><th class="n">Ordens</th></tr></thead>
       <tbody>${linhas.map(([nome,r])=>`<tr>
         <td><b>${esc(nome)}</b></td>
         <td class="n">${r.furos?`<b>${r.furos}</b>`:'—'}</td>
@@ -1516,7 +1553,7 @@ function montarImpresso(){
   const hoje=new Date().toISOString().slice(0,10);
 
   const furos=f.filter(x=>x.furo);
-  const pecas=f.reduce((s,x)=>s+x.pecas,0), pcFuro=furos.reduce((s,x)=>s+x.pecas,0);
+  const pecas=pecasDistintas(f), pcFuro=pecasDistintas(furos);
 
   // Setores ordenados pelo que exige conversa primeiro.
   const porSetor={};
@@ -1550,9 +1587,9 @@ function montarImpresso(){
 
   const resumo=`<div class="doc-resumo">
       <div><div class="v">${furos.length}</div><div class="r">Apontamentos esquecidos</div></div>
-      <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças com registro esquecido</div></div>
-      <div><div class="v">${f.length}</div><div class="r">Operações sem registro</div></div>
-      <div><div class="v">${nf(pecas)}</div><div class="r">Peças sem registro no total</div></div>
+      <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças que passaram sem registro</div></div>
+      <div><div class="v">${f.length}</div><div class="r">Apontamentos a fazer</div></div>
+      <div><div class="v">${nf(pecas)}</div><div class="r">Peças sem apontamento</div></div>
       <div><div class="v">${setores.length}</div><div class="r">Setores envolvidos</div></div>
     </div>`;
 
