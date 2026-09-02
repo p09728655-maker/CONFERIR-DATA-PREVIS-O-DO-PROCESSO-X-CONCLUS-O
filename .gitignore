@@ -1,0 +1,22 @@
+# Vercel
+.vercel
+
+# Node (o projeto nao usa build, mas evita sujeira se alguem rodar npm)
+node_modules/
+package-lock.json
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# NUNCA versionar dados de producao
+*.pdf
+*.csv
+*.xlsx
+/dados/

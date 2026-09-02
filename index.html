@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conferência de Lotes de Produção — Patrimar</title>
+<style>
+:root{
+  /* Identidade Patrimar */
+  --marca:#DB2126; --bordeaux:#A8140F; --areia:#F7ECC0; --grafite:#1F2328;
+  /* Status — deliberadamente distintos do vermelho de marca */
+  --ok:#12693C; --ok-bg:#E7F4EC;
+  --atencao:#8A5A00; --atencao-bg:#FCF2DC;
+  --critico:#8E2F0B; --critico-bg:#FBE9E1;
+  --info:#1F4E79; --info-bg:#E8F0F7;
+  /* Neutros */
+  --bg:#F4F5F7; --surface:#FFFFFF; --borda:#DDE1E6; --texto:#1F2328; --mudo:#5F6B76;
+  --r:6px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--texto);
+  font-family:'Calibri','Carlito','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.45}
+header{background:var(--grafite);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header .bar{width:5px;height:30px;background:var(--marca);border-radius:2px}
+header h1{font-size:19px;margin:0;font-weight:600;letter-spacing:.2px}
+header .sub{font-size:13px;color:#B9C0C7;margin-left:auto}
+main{max-width:1500px;margin:0 auto;padding:18px 20px 60px}
+.card{background:var(--surface);border:1px solid var(--borda);border-radius:var(--r);margin-bottom:16px}
+.card h2{font-size:14px;margin:0;padding:11px 14px;border-bottom:1px solid var(--borda);
+  text-transform:uppercase;letter-spacing:.5px;color:var(--mudo);font-weight:700}
+.card .body{padding:14px}
+
+/* Dropzone */
+#drop{border:2px dashed #C3CAD1;border-radius:var(--r);background:var(--surface);
+  padding:26px;text-align:center;cursor:pointer;transition:.15s}
+#drop.hot{border-color:var(--marca);background:#FFF6F6}
+#drop strong{display:block;font-size:17px;margin-bottom:4px}
+#drop span{color:var(--mudo);font-size:13px}
+#arquivos{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:#EEF1F4;border:1px solid var(--borda);
+  border-radius:20px;padding:3px 6px 3px 12px;font-size:13px}
+.chip b{font-weight:600}
+.chip button{border:0;background:#D8DEE4;border-radius:50%;width:19px;height:19px;cursor:pointer;
+  line-height:1;color:#333;font-size:13px}
+.chip.erro{background:var(--critico-bg);border-color:#EBC4B4;color:var(--critico)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--borda);border-left:4px solid var(--mudo);
+  border-radius:var(--r);padding:12px 14px}
+.kpi .lbl{font-size:12px;color:var(--mudo);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+.kpi .val{font-size:27px;font-weight:700;line-height:1.15;margin-top:2px}
+.kpi .obs{font-size:12px;color:var(--mudo)}
+.kpi.critico{border-left-color:var(--critico)} .kpi.critico .val{color:var(--critico)}
+.kpi.atencao{border-left-color:var(--atencao)} .kpi.atencao .val{color:var(--atencao)}
+.kpi.ok{border-left-color:var(--ok)} .kpi.ok .val{color:var(--ok)}
+
+/* Filtros */
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:3px}
+.f label{font-size:12px;color:var(--mudo);font-weight:600}
+select,input[type=text],input[type=date]{border:1px solid var(--borda);border-radius:4px;padding:6px 8px;
+  font:inherit;font-size:14px;background:#fff;min-width:150px}
+.btn{border:1px solid var(--borda);background:#fff;border-radius:4px;padding:7px 13px;font:inherit;
+  font-size:14px;cursor:pointer}
+.btn:hover{background:#F0F2F4}
+.btn.pri{background:var(--marca);border-color:var(--marca);color:#fff;font-weight:600}
+.btn.pri:hover{background:var(--bordeaux);border-color:var(--bordeaux)}
+.check{display:flex;align-items:center;gap:6px;font-size:14px;padding-bottom:7px}
+
+/* Abas */
+.abas{display:flex;gap:2px;border-bottom:2px solid var(--borda);margin-bottom:14px;flex-wrap:wrap}
+.aba{border:0;background:none;padding:9px 15px;font:inherit;font-size:14px;font-weight:600;
+  color:var(--mudo);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.aba.on{color:var(--grafite);border-bottom-color:var(--marca)}
+.aba .n{background:#E4E8EC;border-radius:10px;padding:0 7px;font-size:12px;margin-left:6px}
+
+/* Tabelas */
+.wrap{overflow:auto;max-height:66vh}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{position:sticky;top:0;background:#EFF1F4;text-align:left;padding:8px 10px;border-bottom:2px solid var(--borda);
+  font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--mudo);white-space:nowrap;z-index:2}
+td{padding:6px 10px;border-bottom:1px solid #EDEFF2;vertical-align:top}
+tbody tr:hover{background:#F7F9FA}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mono{font-variant-numeric:tabular-nums}
+.tag{display:inline-block;padding:1px 8px;border-radius:11px;font-size:11.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.tag.critico{background:var(--critico-bg);color:var(--critico)}
+.tag.atencao{background:var(--atencao-bg);color:var(--atencao)}
+.tag.info{background:var(--info-bg);color:var(--info)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.neutro{background:#E9ECEF;color:var(--mudo)}
+tr.sev-critico td:first-child{box-shadow:inset 3px 0 0 var(--critico)}
+tr.sev-atencao td:first-child{box-shadow:inset 3px 0 0 var(--atencao)}
+tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--info)}
+.vazio{padding:34px;text-align:center;color:var(--mudo)}
+.aviso{background:var(--atencao-bg);border:1px solid #E8D5A8;color:#5C3D00;border-radius:var(--r);
+  padding:10px 13px;font-size:13.5px;margin-bottom:12px}
+.aviso.err{background:var(--critico-bg);border-color:#EBC4B4;color:var(--critico)}
+.legenda{font-size:12.5px;color:var(--mudo);margin-top:10px;line-height:1.6}
+.hide{display:none!important}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+#loading{font-size:14px;color:var(--mudo);margin-top:10px}
+.regras{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:6px 18px;font-size:13.5px}
+.regras label{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
+.regras small{color:var(--mudo);display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar"></div>
+  <h1>Conferência de Lotes de Produção</h1>
+  <div class="sub">Patrimar Móveis · PPCP · leitura local do PDF, nenhum dado sai do computador <span id="ver" style="opacity:.6"></span></div>
+</header>
+
+<main>
+
+<div class="card">
+  <div class="body">
+    <div id="drop">
+      <strong>Arraste os PDFs de "Situação do Lote de Produção"</strong>
+      <span>ou clique para selecionar — vários arquivos de uma vez</span>
+      <input type="file" id="file" accept="application/pdf" multiple hidden>
+    </div>
+    <div id="arquivos"></div>
+    <div id="loading"></div>
+  </div>
+</div>
+
+<div id="app" class="hide">
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <h2>Filtros e parâmetros</h2>
+    <div class="body">
+      <div class="filtros">
+        <div class="f"><label for="fLote">Lote</label><select id="fLote"></select></div>
+        <div class="f"><label for="fProduto">Produto / descrição</label><input type="text" id="fProduto" placeholder="ex.: 778.002 ou SLEEP"></div>
+        <div class="f"><label for="fOper">Operação</label><select id="fOper"></select></div>
+        <div class="f"><label for="fSev">Severidade</label><select id="fSev">
+          <option value="">Todas</option><option value="critico">Só crítico</option>
+          <option value="critico,atencao">Crítico + atenção</option></select></div>
+        <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef"></div>
+        <div class="check"><input type="checkbox" id="fEmb" checked><label for="fEmb" style="font-size:14px;color:var(--texto)">Ignorar EMBALAR sem apontamento em produto acabado</label></div>
+        <div class="acoes">
+          <button class="btn" id="btnCsvAch">CSV achados</button>
+          <button class="btn" id="btnCsvOrd">CSV ordens</button>
+          <button class="btn" id="btnCsvOp">CSV operações</button>
+        </div>
+      </div>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-size:13.5px;color:var(--mudo);font-weight:600">Regras de conferência ativas</summary>
+        <div class="regras" id="regras" style="margin-top:10px"></div>
+      </details>
+    </div>
+  </div>
+
+  <div class="abas" id="abas">
+    <button class="aba on" data-t="ach">Achados <span class="n" id="nAch">0</span></button>
+    <button class="aba" data-t="ord">Ordens <span class="n" id="nOrd">0</span></button>
+    <button class="aba" data-t="op">Operações <span class="n" id="nOp">0</span></button>
+    <button class="aba" data-t="ader">Aderência por processo</button>
+    <button class="aba" data-t="leit">Leitura dos arquivos</button>
+  </div>
+
+  <div class="card"><div id="painel"></div></div>
+
+</div>
+</main>
+
+<script src="vendor/pdf.min.js"></script>
+<script>
+/* ============================================================================
+   CONFIGURAÇÃO — ajuste aqui as convenções da Patrimar
+   ========================================================================== */
+const CFG = {
+  // produtos que, por convenção, não recebem apontamento de embalagem na própria OF
+  // (o apontamento acontece na OF do volume 501.x)
+  produtoAcabado: /^103\./,
+  operacaoEmbalagem: /^EMBAL/i,
+  // tolerância de quantidade (peças) para considerar divergência
+  tolQtd: 0.001,
+  // regras: id, rótulo, severidade, ativa
+  regras: [
+    ['OF_ABERTA_VENCIDA',     'Ordem em aberto com previsão vencida',                 'critico', true],
+    ['OF_SEM_OPERACOES',      'Ordem sem nenhuma operação no roteiro',                'critico', true],
+    ['OF_CONCL_SEM_APONTAR',  'Ordem concluída sem nenhum apontamento de operação',   'critico', true],
+    ['OF_CONCL_OP_PENDENTE',  'Ordem concluída com operação sem data de conclusão',   'critico', true],
+    ['OF_CONCL_OP_SALDO',     'Ordem concluída com saldo em operação',                'critico', true],
+    ['OF_CONCL_ANTES_PREV',   'Ordem concluída antes da previsão das operações',      'critico', true],
+    ['APONTADO_MAIOR',        'Apontado maior que a quantidade da ordem/operação',    'critico', true],
+    ['OP_VENCIDA',            'Operação vencida e não concluída',                     'atencao', true],
+    ['OP_SEM_PREVISAO',       'Operação sem previsão do processo',                    'atencao', true],
+    ['QTD_OP_DIVERGENTE',     'Quantidade da operação diferente da quantidade da OF', 'atencao', true],
+    ['SEQ_FORA_ORDEM',        'Operação concluída antes da operação anterior',        'atencao', true],
+    ['ROTEIRO_DIVERGENTE',    'Mesmo produto com roteiros diferentes',                'atencao', true],
+    ['OF_ATRASO',             'Ordem concluída com atraso',                           'info',    true],
+  ]
+};
+
+/* ============================================================================
+   PARSER — leitura posicional do relatório
+   ========================================================================== */
+const RE_OF=/^\d{5,7}$/, RE_PROD=/^\d{3}\.\d{3}\.\d{3}$/,
+      RE_DATE=/^(\d{2})\/(\d{2})\/(\d{2,4})$/, RE_NUM=/^-?[\d.]+,\d+$/, RE_SLASH=/^\/+$/;
+const SKIP=/PATRIMAR|CNPJ|Situa[çc][ãa]o do Lote|Opera[çc][õo]es|Descri[çc][ãa]o|Peso Bruto|Total M3|P[áa]gina|Status das Ordens/i;
+
+const toIso=t=>{const m=t.match(RE_DATE);if(!m)return null;let y=m[3];if(y.length===2)y=(+y>70?'19':'20')+y;return `${y}-${m[2]}-${m[1]}`;};
+const toNum=t=>Number(t.replace(/\./g,'').replace(',','.'));
+const br=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
+const nf=(v,c=0)=>v==null?'':v.toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
+const dias=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+
+function buildRows(items,yTol=4,gap=2.5){
+  const its=items.filter(i=>i.t!=='').sort((a,b)=>a.y-b.y||a.x0-b.x0);
+  const rows=[];let cur=[],anchor=null;
+  for(const it of its){
+    if(anchor===null||Math.abs(it.y-anchor)<=yTol){cur.push(it);if(anchor===null)anchor=it.y;}
+    else{rows.push(cur);cur=[it];anchor=it.y;}
+  }
+  if(cur.length)rows.push(cur);
+  return rows.map(r=>{
+    r.sort((a,b)=>a.x0-b.x0);
+    const out=[];
+    for(const it of r){
+      const last=out[out.length-1];
+      if(last&&it.x0-last.x1<gap){last.t+=it.t;last.x1=Math.max(last.x1,it.x1);}
+      else out.push({t:it.t,x0:it.x0,x1:it.x1});
+    }
+    return out.map(o=>({...o,t:o.t.replace(/;/g,'').trim()})).filter(o=>o.t!=='');
+  }).filter(r=>r.length);
+}
+
+function splitRow(tokens){
+  const vals=[],txt=[];let i=0;
+  while(i<tokens.length){
+    const tk=tokens[i];
+    if(RE_DATE.test(tk.t)){vals.push({k:'D',v:toIso(tk.t)});i++;continue;}
+    if(RE_NUM.test(tk.t)){vals.push({k:'N',v:toNum(tk.t)});i++;continue;}
+    if(RE_SLASH.test(tk.t)){while(i<tokens.length&&RE_SLASH.test(tokens[i].t))i++;vals.push({k:'D',v:null});continue;}
+    if(!vals.length)txt.push(tk.t);
+    i++;
+  }
+  return {desc:txt.join(' ').trim(),vals};
+}
+
+function parseDoc(pages,arquivo){
+  const doc={arquivo,lote:null,lt:null,descricao:null,dataInicio:null,dataPrevisao:null,
+             dataRelatorio:null,totalM3:null,totalPeso:null,ofs:[],avisos:[],ignoradas:0,paginas:pages.length};
+  let cur=null;
+  for(const items of pages){
+    for(const tokens of buildRows(items)){
+      const line=tokens.map(t=>t.t).join(' ');
+      if(!doc.dataRelatorio&&/Data:/.test(line)){
+        const m=line.match(/Data:\s*(\d{2}\/\d{2}\/\d{2,4})/);if(m)doc.dataRelatorio=toIso(m[1]);
+      }
+      if(/Lote\s*Nr\.?:/i.test(line)){
+        const m=line.match(/Nr\.?:\s*(\d+)\s*(?:LT\s*(\S+))?\s*(.*?)\s*(?:Status|$)/i);
+        if(m){doc.lote=m[1];doc.lt=m[2]||null;doc.descricao=(m[3]||'').trim()||null;}
+        continue;
+      }
+      if(/Data\s*Inicio/i.test(line)){
+        const ds=line.match(/\d{2}\/\d{2}\/\d{2,4}/g)||[];
+        if(ds[0])doc.dataInicio=toIso(ds[0]); if(ds[1])doc.dataPrevisao=toIso(ds[1]);
+        continue;
+      }
+      if(/Total\s*M3/i.test(line)||/Peso\s*Bruto/i.test(line)){
+        const ns=line.match(/[\d.]+,\d+/g)||[];
+        if(ns[0])doc.totalM3=toNum(ns[0]); if(ns[1])doc.totalPeso=toNum(ns[1]);
+        continue;
+      }
+      if(tokens.length>=2&&RE_OF.test(tokens[0].t)&&RE_PROD.test(tokens[1].t)){
+        cur={arquivo,lote:doc.lote,lt:doc.lt,of:tokens[0].t,produto:tokens[1].t,
+             descricao:tokens.slice(2).map(t=>t.t).join(' ').replace(/;+$/,'').trim(),
+             m3:null,previsao:null,conclusao:null,qtd:null,pronto:null,faltam:null,operacoes:[],_ok:false};
+        doc.ofs.push(cur);continue;
+      }
+      if(SKIP.test(line))continue;
+      const {desc,vals}=splitRow(tokens);
+      if(!vals.length)continue;
+
+      if(!desc&&cur&&!cur._ok&&vals.length>=4&&vals[0].k==='N'){
+        const [m3,pv,cc,q,p,f]=vals;
+        cur.m3=m3.v; cur.previsao=pv?pv.v:null; cur.conclusao=cc?cc.v:null;
+        cur.qtd=q?q.v:null; cur.pronto=p?p.v:null; cur.faltam=f?f.v:null; cur._ok=true;
+        continue;
+      }
+      if(desc&&cur&&vals.length>=4){
+        const [pv,cc,q,p,f]=vals;
+        cur.operacoes.push({seq:cur.operacoes.length+1,descricao:desc,
+          previsao:pv?pv.v:null,conclusao:cc?cc.v:null,
+          qtd:q?q.v:null,pronto:p?p.v:null,faltam:f?f.v:null});
+        continue;
+      }
+      doc.ignoradas++;
+    }
+  }
+  doc.ofs.forEach(o=>{o.lote=doc.lote;o.lt=doc.lt;delete o._ok;});
+  const soma=doc.ofs.reduce((s,o)=>s+(o.m3||0),0);
+  if(doc.totalM3!=null&&Math.abs(soma-doc.totalM3)>0.02)
+    doc.avisos.push(`Soma de M³ das ordens (${soma.toFixed(3)}) diverge do Total M3 do relatório (${doc.totalM3.toFixed(3)}). Confira o arquivo.`);
+  const semQ=doc.ofs.filter(o=>o.qtd==null).map(o=>o.of);
+  if(semQ.length)doc.avisos.push('Ordens sem linha de quantidade: '+semQ.join(', '));
+  if(doc.ignoradas)doc.avisos.push(doc.ignoradas+' linha(s) não reconhecida(s) — o layout pode ter mudado.');
+  if(!doc.ofs.length)doc.avisos.push('Nenhuma ordem reconhecida. Este PDF parece não ser o relatório "Situação do Lote de Produção".');
+  return doc;
+}
+
+async function lerPdf(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const pages=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const pg=await pdf.getPage(i);
+    const vp=pg.getViewport({scale:1});
+    const tc=await pg.getTextContent();
+    pages.push(tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
+      const tx=pdfjsLib.Util.transform(vp.transform,it.transform);
+      return {t:it.str.trim(),x0:tx[4],x1:tx[4]+it.width,y:tx[5]};
+    }));
+  }
+  return parseDoc(pages,file.name);
+}
+
+/* ============================================================================
+   MOTOR DE REGRAS
+   ========================================================================== */
+const regraOn={}; CFG.regras.forEach(([id,,,on])=>regraOn[id]=on);
+const regraInfo={}; CFG.regras.forEach(([id,lbl,sev])=>regraInfo[id]={lbl,sev});
+
+function ignoraEmbalagem(of,op,flagEmb){
+  return flagEmb && CFG.produtoAcabado.test(of.produto) && CFG.operacaoEmbalagem.test(op.descricao);
+}
+
+function analisar(docs,ref,flagEmb){
+  const ach=[];
+  const add=(id,of,op,det)=>{
+    if(!regraOn[id])return;
+    ach.push({id,sev:regraInfo[id].sev,regra:regraInfo[id].lbl,arquivo:of.arquivo,lote:of.lote,
+      of:of.of,produto:of.produto,descricao:of.descricao,operacao:op?op.descricao:'',detalhe:det});
+  };
+  const todas=docs.flatMap(d=>d.ofs);
+
+  for(const of of todas){
+    const ops=of.operacoes, q=of.qtd||0;
+    if(!ops.length) add('OF_SEM_OPERACOES',of,null,'A ordem não possui operações no relatório.');
+
+    if(!of.conclusao&&of.previsao&&of.previsao<ref)
+      add('OF_ABERTA_VENCIDA',of,null,`Previsão ${br(of.previsao)}, ${dias(of.previsao,ref)} dia(s) vencida. Faltam ${nf(q-(of.pronto||0))} pç.`);
+    if(of.conclusao&&of.previsao&&of.conclusao>of.previsao)
+      add('OF_ATRASO',of,null,`Previsão ${br(of.previsao)} · conclusão ${br(of.conclusao)} · ${dias(of.previsao,of.conclusao)} dia(s).`);
+    if((of.pronto||0)>q+CFG.tolQtd)
+      add('APONTADO_MAIOR',of,null,`Ordem: apontado ${nf(of.pronto)} para ${nf(q)} previsto.`);
+
+    if(of.conclusao&&ops.length){
+      const relevantes=ops.filter(o=>!ignoraEmbalagem(of,o,flagEmb));
+      const nenhum=relevantes.length>0&&relevantes.every(o=>!o.conclusao&&!(o.pronto>0));
+      if(nenhum) add('OF_CONCL_SEM_APONTAR',of,null,`Conclusão em ${br(of.conclusao)}, mas nenhuma das ${relevantes.length} operações foi apontada.`);
+      const prevMin=ops.map(o=>o.previsao).filter(Boolean).sort()[0];
+      if(prevMin&&of.conclusao<prevMin)
+        add('OF_CONCL_ANTES_PREV',of,null,`Conclusão ${br(of.conclusao)} anterior à primeira previsão de processo (${br(prevMin)}).`);
+      const pend=ops.filter(o=>!o.conclusao&&!ignoraEmbalagem(of,o,flagEmb));
+      if(pend.length&&!nenhum)
+        add('OF_CONCL_OP_PENDENTE',of,pend[0],`Concluída em ${br(of.conclusao)} com ${pend.length} operação(ões) sem conclusão: ${pend.map(o=>o.descricao).join(', ')}.`);
+      const saldo=ops.filter(o=>(o.pronto||0)<(o.qtd||0)-CFG.tolQtd&&!ignoraEmbalagem(of,o,flagEmb));
+      if(saldo.length&&!nenhum)
+        add('OF_CONCL_OP_SALDO',of,saldo[0],saldo.map(o=>`${o.descricao} ${nf(o.pronto)}/${nf(o.qtd)}`).join(' · '));
+    }
+
+    let anterior=null;
+    for(const op of ops){
+      if(!op.previsao) add('OP_SEM_PREVISAO',of,op,'Operação sem previsão do processo — roteiro sem programação.');
+      if(!of.conclusao&&!op.conclusao&&op.previsao&&op.previsao<ref&&!ignoraEmbalagem(of,op,flagEmb))
+        add('OP_VENCIDA',of,op,`Previsão ${br(op.previsao)}, ${dias(op.previsao,ref)} dia(s) vencida. Apontado ${nf(op.pronto)}/${nf(op.qtd)}.`);
+      if(op.qtd!=null&&of.qtd!=null&&Math.abs(op.qtd-of.qtd)>CFG.tolQtd)
+        add('QTD_OP_DIVERGENTE',of,op,`Operação ${nf(op.qtd)} pç × ordem ${nf(of.qtd)} pç.`);
+      if((op.pronto||0)>(op.qtd||0)+CFG.tolQtd)
+        add('APONTADO_MAIOR',of,op,`Apontado ${nf(op.pronto)} para ${nf(op.qtd)} previsto.`);
+      if(op.conclusao&&anterior&&anterior.conclusao&&op.conclusao<anterior.conclusao)
+        add('SEQ_FORA_ORDEM',of,op,`${op.descricao} concluída em ${br(op.conclusao)}, antes de ${anterior.descricao} (${br(anterior.conclusao)}).`);
+      if(op.conclusao)anterior=op;
+    }
+  }
+
+  // roteiros divergentes para o mesmo produto (inclusive entre arquivos)
+  if(regraOn['ROTEIRO_DIVERGENTE']){
+    const porProd={};
+    todas.forEach(o=>{
+      const k=o.produto,r=o.operacoes.map(x=>x.descricao).join(' > ');
+      (porProd[k]=porProd[k]||{}) [r]=(porProd[k][r]||[]).concat(o.of);
+    });
+    Object.entries(porProd).forEach(([prod,mapa])=>{
+      const rs=Object.keys(mapa); if(rs.length<2)return;
+      const of=todas.find(o=>o.produto===prod);
+      ach.push({id:'ROTEIRO_DIVERGENTE',sev:'atencao',regra:regraInfo['ROTEIRO_DIVERGENTE'].lbl,
+        arquivo:of.arquivo,lote:of.lote,of:'—',produto:prod,descricao:of.descricao,operacao:'',
+        detalhe:rs.map(r=>`[${mapa[r].join(', ')}] ${r||'(sem operações)'}`).join('  ||  ')});
+    });
+  }
+
+  const ordem={critico:0,atencao:1,info:2};
+  ach.sort((a,b)=>ordem[a.sev]-ordem[b.sev]||a.of.localeCompare(b.of)||a.regra.localeCompare(b.regra));
+  return ach;
+}
+
+/* ============================================================================
+   ESTADO E UI
+   ========================================================================== */
+const VERSAO='1.0.0';
+let DOCS=[], ACH=[], ABA='ach';
+const $=s=>document.querySelector(s);
+document.getElementById('ver').textContent='v'+VERSAO;
+
+const drop=$('#drop'), inp=$('#file');
+drop.onclick=()=>inp.click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('hot');};
+drop.ondragleave=()=>drop.classList.remove('hot');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('hot');carregar([...e.dataTransfer.files]);};
+inp.onchange=e=>carregar([...e.target.files]);
+
+async function carregar(files){
+  files=files.filter(f=>/\.pdf$/i.test(f.name));
+  if(!files.length)return;
+  if(typeof pdfjsLib==='undefined'){
+    $('#loading').innerHTML='<div class="aviso err">Não foi possível carregar a biblioteca de leitura de PDF (vendor/pdf.min.js). Confirme que a pasta <b>vendor</b> foi publicada junto com o index.html e recarregue a página.</div>';
+    return;
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
+  for(const f of files){
+    if(DOCS.some(d=>d.arquivo===f.name))continue;
+    $('#loading').textContent='Lendo '+f.name+'…';
+    try{ DOCS.push(await lerPdf(f)); }
+    catch(err){ DOCS.push({arquivo:f.name,ofs:[],avisos:['Falha ao ler o arquivo: '+err.message],erro:true,paginas:0}); }
+  }
+  $('#loading').textContent='';
+  montarFiltros(); renderChips(); recalc();
+}
+
+function renderChips(){
+  $('#arquivos').innerHTML=DOCS.map((d,i)=>
+    `<span class="chip${d.erro?' erro':''}"><b>${d.arquivo}</b>
+      ${d.erro?'falha':`lote ${d.lote||'?'} · ${d.ofs.length} ordens`}
+      <button data-i="${i}" title="Remover">×</button></span>`).join('');
+  $('#arquivos').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    DOCS.splice(+b.dataset.i,1);montarFiltros();renderChips();recalc();});
+}
+
+function montarFiltros(){
+  const lotes=[...new Set(DOCS.map(d=>d.lote).filter(Boolean))].sort();
+  const selLote=$('#fLote').value, selOper=$('#fOper').value;
+  $('#fLote').innerHTML='<option value="">Todos</option>'+lotes.map(l=>{
+    const d=DOCS.find(x=>x.lote===l); return `<option value="${l}">${l} — LT ${d.lt||''} ${d.descricao||''}</option>`;}).join('');
+  const ops=[...new Set(DOCS.flatMap(d=>d.ofs.flatMap(o=>o.operacoes.map(x=>x.descricao))))].sort();
+  $('#fOper').innerHTML='<option value="">Todas</option>'+ops.map(o=>`<option>${o}</option>`).join('');
+  if(lotes.includes(selLote))$('#fLote').value=selLote;
+  if(ops.includes(selOper))$('#fOper').value=selOper;
+  if(!$('#fRef').value){
+    const refs=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort();
+    $('#fRef').value=refs[refs.length-1]||new Date().toISOString().slice(0,10);
+  }
+  $('#regras').innerHTML=CFG.regras.map(([id,lbl,sev])=>
+    `<label><input type="checkbox" data-r="${id}" ${regraOn[id]?'checked':''}>
+      <span>${lbl} <small><span class="tag ${sev}">${sev}</span></small></span></label>`).join('');
+  $('#regras').querySelectorAll('input').forEach(c=>c.onchange=()=>{regraOn[c.dataset.r]=c.checked;recalc();});
+}
+
+['input','change'].forEach(ev=>document.addEventListener(ev,e=>{
+  if(e.target.closest('.filtros')) recalc();
+}));
+
+function filtros(){
+  return {lote:$('#fLote').value,prod:$('#fProduto').value.trim().toUpperCase(),
+          oper:$('#fOper').value,sev:$('#fSev').value.split(',').filter(Boolean),ref:$('#fRef').value};
+}
+const casaOf=(o,f)=>(!f.lote||o.lote===f.lote)&&(!f.prod||(o.produto+' '+o.descricao).toUpperCase().includes(f.prod));
+
+function ordensFiltradas(){
+  const f=filtros();
+  return DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
+    .filter(o=>!f.oper||o.operacoes.some(x=>x.descricao===f.oper));
+}
+function opsFiltradas(){
+  const f=filtros();
+  return DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
+    .flatMap(o=>o.operacoes.filter(x=>!f.oper||x.descricao===f.oper).map(x=>({of:o,op:x})));
+}
+function achFiltrados(){
+  const f=filtros();
+  return ACH.filter(a=>(!f.lote||a.lote===f.lote)
+    &&(!f.prod||(a.produto+' '+a.descricao).toUpperCase().includes(f.prod))
+    &&(!f.oper||a.operacao===f.oper)
+    &&(!f.sev.length||f.sev.includes(a.sev)));
+}
+
+function recalc(){
+  if(!DOCS.length){$('#app').classList.add('hide');return;}
+  $('#app').classList.remove('hide');
+  ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
+  renderKpis(); render();
+}
+
+function renderKpis(){
+  const ord=ordensFiltradas(), ach=achFiltrados();
+  const ref=$('#fRef').value;
+  const abertas=ord.filter(o=>!o.conclusao);
+  const vencidas=abertas.filter(o=>o.previsao&&o.previsao<ref);
+  const crit=[...new Set(ach.filter(a=>a.sev==='critico').map(a=>a.of))].filter(x=>x!=='—');
+  const conc=ord.filter(o=>o.conclusao);
+  const noPrazo=conc.filter(o=>o.previsao&&o.conclusao<=o.previsao).length;
+  const ader=conc.length?Math.round(noPrazo/conc.length*100):0;
+  const saldo=ord.reduce((s,o)=>s+Math.max(0,(o.qtd||0)-(o.pronto||0)),0);
+  $('#kpis').innerHTML=`
+    <div class="kpi ${crit.length?'critico':'ok'}"><div class="lbl">Ordens com achado crítico</div>
+      <div class="val">${crit.length}</div><div class="obs">de ${ord.length} ordens no filtro</div></div>
+    <div class="kpi ${vencidas.length?'critico':'ok'}"><div class="lbl">Em aberto e vencidas</div>
+      <div class="val">${vencidas.length}</div><div class="obs">${abertas.length} em aberto · ref. ${br(ref)}</div></div>
+    <div class="kpi ${ader>=90?'ok':ader>=70?'atencao':'critico'}"><div class="lbl">Aderência de prazo</div>
+      <div class="val">${ader}%</div><div class="obs">${noPrazo} de ${conc.length} concluídas no prazo</div></div>
+    <div class="kpi ${saldo?'atencao':'ok'}"><div class="lbl">Saldo a produzir</div>
+      <div class="val">${nf(saldo)}</div><div class="obs">peças em ordens do filtro</div></div>`;
+  $('#nAch').textContent=ach.length;
+  $('#nOrd').textContent=ord.length;
+  $('#nOp').textContent=opsFiltradas().length;
+}
+
+$('#abas').onclick=e=>{const b=e.target.closest('.aba');if(!b)return;
+  ABA=b.dataset.t;[...$('#abas').children].forEach(x=>x.classList.toggle('on',x===b));render();};
+
+function tabela(cols,linhas){
+  if(!linhas.length)return '<div class="vazio">Nada encontrado com os filtros atuais.</div>';
+  return `<div class="wrap"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="num"':''}>${c.h}</th>`).join('')}</tr></thead>
+    <tbody>${linhas.join('')}</tbody></table></div>`;
+}
+
+function render(){
+  const p=$('#painel');
+  if(ABA==='ach'){
+    const a=achFiltrados();
+    p.innerHTML=tabela(
+      [{h:'Sev.'},{h:'Regra'},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Operação'},{h:'Detalhe'},{h:'Lote'}],
+      a.map(x=>`<tr class="sev-${x.sev}"><td><span class="tag ${x.sev}">${x.sev}</span></td>
+        <td>${x.regra}</td><td class="mono">${x.of}</td><td class="mono">${x.produto}</td>
+        <td>${x.descricao||''}</td><td>${x.operacao||''}</td><td>${x.detalhe}</td><td class="mono">${x.lote||''}</td></tr>`))
+      +`<div class="legenda" style="padding:0 14px 14px">
+         <b>crítico</b> = dado inconsistente ou prazo estourado, exige ação. &nbsp;
+         <b>atenção</b> = divergência que precisa de conferência. &nbsp;
+         <b>info</b> = registro histórico, não exige ação imediata.</div>`;
+  }
+  if(ABA==='ord'){
+    const ref=$('#fRef').value;
+    p.innerHTML=tabela(
+      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Previsão'},{h:'Conclusão'},{h:'Desvio'},
+       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops'},{h:'Lote'}],
+      ordensFiltradas().map(o=>{
+        const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0));
+        let sit,cls;
+        if(o.conclusao){sit='Concluída';cls='ok';}
+        else if(o.previsao&&o.previsao<ref){sit='Vencida';cls='critico';}
+        else {sit='Em aberto';cls='neutro';}
+        const dv=o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):(!o.conclusao&&o.previsao?dias(o.previsao,ref):null);
+        const dvTxt=dv==null?'':(dv>0?'+'+dv:dv)+' d';
+        const feitas=o.operacoes.filter(x=>x.conclusao).length;
+        return `<tr><td class="mono">${o.of}</td><td class="mono">${o.produto}</td><td>${o.descricao}</td>
+          <td><span class="tag ${cls}">${sit}</span></td><td class="mono">${br(o.previsao)}</td>
+          <td class="mono">${br(o.conclusao)}</td>
+          <td class="num" style="color:${dv>0?'var(--critico)':dv<0?'var(--ok)':'inherit'}">${dvTxt}</td>
+          <td class="num">${nf(o.qtd)}</td><td class="num">${nf(o.pronto)}</td>
+          <td class="num" style="${saldo?'font-weight:700;color:var(--atencao)':''}">${saldo?nf(saldo):''}</td>
+          <td class="num">${feitas}/${o.operacoes.length}</td><td class="mono">${o.lote||''}</td></tr>`;}));
+  }
+  if(ABA==='op'){
+    const ref=$('#fRef').value;
+    p.innerHTML=tabela(
+      [{h:'Ordem'},{h:'Produto'},{h:'Seq'},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio'},
+       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
+      opsFiltradas().map(({of,op})=>{
+        const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
+        const dv=op.conclusao&&op.previsao?dias(op.previsao,op.conclusao):null;
+        let sit,cls;
+        if(op.conclusao){sit=dv>0?'Concluída c/ atraso':'Concluída';cls=dv>0?'atencao':'ok';}
+        else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
+        else {sit='Pendente';cls='neutro';}
+        return `<tr><td class="mono">${of.of}</td><td class="mono">${of.produto}</td><td class="num">${op.seq}</td>
+          <td>${op.descricao}</td><td class="mono">${br(op.previsao)}</td><td class="mono">${br(op.conclusao)}</td>
+          <td class="num" style="color:${dv>0?'var(--critico)':dv<0?'var(--ok)':'inherit'}">${dv==null?'':(dv>0?'+'+dv:dv)+' d'}</td>
+          <td class="num">${nf(op.qtd)}</td><td class="num">${nf(op.pronto)}</td>
+          <td class="num" style="${saldo?'font-weight:700;color:var(--atencao)':''}">${saldo?nf(saldo):''}</td>
+          <td><span class="tag ${cls}">${sit}</span></td></tr>`;}));
+  }
+  if(ABA==='ader'){
+    const ref=$('#fRef').value, m={};
+    opsFiltradas().forEach(({of,op})=>{
+      const k=op.descricao, r=m[k]=m[k]||{n:0,conc:0,prazo:0,soma:0,cnt:0,pend:0,venc:0,saldo:0};
+      r.n++;
+      if(op.conclusao){r.conc++;
+        if(op.previsao){const d=dias(op.previsao,op.conclusao);r.soma+=d;r.cnt++;if(d<=0)r.prazo++;}
+      }else{r.pend++;if(op.previsao&&op.previsao<ref)r.venc++;}
+      r.saldo+=Math.max(0,(op.qtd||0)-(op.pronto||0));
+    });
+    const lin=Object.entries(m).sort((a,b)=>b[1].venc-a[1].venc||b[1].n-a[1].n).map(([k,r])=>{
+      const ad=r.cnt?Math.round(r.prazo/r.cnt*100):null;
+      const med=r.cnt?(r.soma/r.cnt):null;
+      return `<tr><td><b>${k}</b></td><td class="num">${r.n}</td><td class="num">${r.conc}</td>
+        <td class="num">${r.pend}</td>
+        <td class="num" style="${r.venc?'font-weight:700;color:var(--critico)':''}">${r.venc||''}</td>
+        <td class="num">${ad==null?'':ad+'%'}</td>
+        <td class="num" style="color:${med>0?'var(--critico)':med<0?'var(--ok)':'inherit'}">${med==null?'':(med>0?'+':'')+med.toFixed(1)+' d'}</td>
+        <td class="num" style="${r.saldo?'font-weight:700;color:var(--atencao)':''}">${r.saldo?nf(r.saldo):''}</td></tr>`;});
+    p.innerHTML=tabela([{h:'Processo'},{h:'Operações',n:1},{h:'Concluídas',n:1},{h:'Pendentes',n:1},
+      {h:'Vencidas',n:1},{h:'No prazo',n:1},{h:'Desvio médio',n:1},{h:'Saldo (pç)',n:1}],lin)
+      +`<div class="legenda" style="padding:0 14px 14px">
+        <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas.
+        Valor positivo indica que o processo termina depois do programado.
+        <b>Vencidas</b> = operações sem conclusão com previsão anterior a ${br(ref)}.</div>`;
+  }
+  if(ABA==='leit'){
+    p.innerHTML=`<div class="body">`+DOCS.map(d=>`
+      <div style="border:1px solid var(--borda);border-radius:6px;padding:12px;margin-bottom:10px">
+        <b>${d.arquivo}</b><br>
+        <span style="font-size:13.5px;color:var(--mudo)">
+          Lote ${d.lote||'?'} — LT ${d.lt||'?'} ${d.descricao||''} · ${d.paginas} página(s) ·
+          início ${br(d.dataInicio)} · previsão ${br(d.dataPrevisao)} · relatório emitido em ${br(d.dataRelatorio)}<br>
+          ${d.ofs.length} ordens · ${d.ofs.reduce((s,o)=>s+o.operacoes.length,0)} operações ·
+          M³ lido ${nf(d.ofs.reduce((s,o)=>s+(o.m3||0),0),3)} · M³ do rodapé ${nf(d.totalM3,3)}
+          ${d.totalM3!=null&&Math.abs(d.ofs.reduce((s,o)=>s+(o.m3||0),0)-d.totalM3)<=0.02?'<span class="tag ok" style="margin-left:6px">confere</span>':''}
+        </span>
+        ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}" style="margin-top:8px">${a}</div>`).join('')}
+      </div>`).join('')+`
+      <div class="legenda">A conferência do total de M³ contra o rodapé do próprio relatório é a verificação
+      automática de que o arquivo foi lido por inteiro. Se aparecer divergência ou linha não reconhecida,
+      não confie nos números desta tela até revisar o PDF.</div></div>`;
+  }
+}
+
+/* ============================================================================
+   EXPORTAÇÃO CSV (; decimal vírgula, datas dd/mm/aaaa — Excel e Power BI pt-BR)
+   ========================================================================== */
+function csv(nome,cols,linhas){
+  const esc=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const txt='\uFEFF'+[cols.join(';'),...linhas.map(l=>l.map(esc).join(';'))].join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));
+  a.download=nome;a.click();URL.revokeObjectURL(a.href);
+}
+const dec=v=>v==null?'':String(v).replace('.',',');
+
+$('#btnCsvAch').onclick=()=>csv('achados.csv',
+  ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
+  achFiltrados().map(a=>[a.sev,a.regra,a.arquivo,a.lote,a.of,a.produto,a.descricao,a.operacao,a.detalhe]));
+
+$('#btnCsvOrd').onclick=()=>csv('ordens.csv',
+  ['Arquivo','Lote','LT','Ordem','Produto','Descricao','M3','Previsao','Conclusao','DesvioDias',
+   'QtdTotal','JaPronto','Saldo','OpsTotal','OpsConcluidas'],
+  ordensFiltradas().map(o=>[o.arquivo,o.lote,o.lt,o.of,o.produto,o.descricao,dec(o.m3),br(o.previsao),br(o.conclusao),
+    o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):'',dec(o.qtd),dec(o.pronto),
+    dec(Math.max(0,(o.qtd||0)-(o.pronto||0))),o.operacoes.length,o.operacoes.filter(x=>x.conclusao).length]));
+
+$('#btnCsvOp').onclick=()=>csv('operacoes.csv',
+  ['Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','Operacao','PrevisaoProcesso','Conclusao',
+   'DesvioDias','QtdTotal','JaPronto','Saldo'],
+  opsFiltradas().map(({of,op})=>[of.arquivo,of.lote,of.of,of.produto,of.descricao,op.seq,op.descricao,
+    br(op.previsao),br(op.conclusao),op.conclusao&&op.previsao?dias(op.previsao,op.conclusao):'',
+    dec(op.qtd),dec(op.pronto),dec(Math.max(0,(op.qtd||0)-(op.pronto||0)))]));
+</script>
+</body>
+</html>
