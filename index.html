@@ -436,6 +436,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.4.1 — 02/09/2026</h3>
+  <ul>
+    <li><b>Correção:</b> quando a biblioteca de leitura de PDF não carregava, o app ficava sem ler arquivo nenhum e culpava a pasta <code>vendor</code> por palpite.</li>
+    <li>Agora o app tenta buscar a biblioteca de novo por conta própria, ignorando o que estiver guardado no aparelho. Na maioria dos casos ele se recupera sozinho e você não percebe.</li>
+    <li>Quando não dá para recuperar, a tela diz o <b>motivo real</b> — o código que o servidor respondeu — e o que fazer.</li>
+    <li>A verificação acontece ao abrir o app, não só quando você seleciona o primeiro PDF.</li>
+  </ul>
   <h3>1.4.0 — 02/09/2026</h3>
   <ul>
     <li><b>Imprimir para os líderes</b>: gera uma folha agrupada por setor, com resumo, o motivo de cada pendência e uma coluna em branco para anotar a tratativa da reunião.</li>
@@ -473,7 +480,7 @@ dialog form{margin-top:var(--lg);text-align:right}
   <form method="dialog"><button type="submit" class="secundario">Fechar</button></form>
 </dialog>
 
-<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf.min.js" onerror="window.__pdfErro='o navegador não conseguiu carregar o arquivo'"></script>
 <script>
 /* ============================================================================
    CONFIGURAÇÃO — ajuste aqui as convenções da Patrimar
@@ -787,7 +794,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.4.0';
+const VERSAO='1.4.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -839,6 +846,16 @@ if(jaInstalado()){
 
 /* O service worker só existe sob http(s). Aberto direto do arquivo (file://)
    o registro lança exceção — e derrubaria o resto do script junto. */
+/* Verifica a biblioteca assim que a tela abre, não só quando o usuário
+   arrasta o primeiro PDF. Descobrir que o app não lê arquivo no meio de uma
+   conferência é tarde: aqui a recuperação acontece em silêncio, e o aviso,
+   quando é preciso, chega antes de o trabalho começar. */
+window.addEventListener('load',async()=>{
+  if(typeof pdfjsLib!=='undefined')return;
+  const motivo=await garantirPdfJs();
+  if(motivo)avisoPdf(motivo);
+});
+
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js').catch(err=>{
@@ -864,9 +881,80 @@ document.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)drop.classList.remove('hot');});
 document.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('hot');carregar([...e.dataTransfer.files]);});
 
+/**
+ * A BIBLIOTECA DE LEITURA PRECISA ESTAR LÁ — E, SE NÃO ESTIVER, PRECISA DIZER
+ * POR QUÊ.
+ *
+ * Sem o pdf.js o app não lê arquivo nenhum: é a única dependência externa que
+ * ele tem. Antes, se o <script> falhasse, a tela só dizia "não foi possível
+ * carregar" e mandava conferir a pasta — um palpite, que não ajuda quem está
+ * com o app instalado no chão de fábrica.
+ *
+ * Agora, quando o script não define pdfjsLib, esta função tenta de novo por
+ * conta própria, furando o cache do service worker e do navegador. Se um cache
+ * guardou uma resposta ruim, essa segunda tentativa resolve sozinha e o usuário
+ * nem percebe. Se falhar de novo, a tela mostra o motivo REAL — o código HTTP e
+ * o tipo de conteúdo que o servidor devolveu — que é o que permite consertar.
+ */
+let pdfPronto=null;
+function garantirPdfJs(){
+  if(typeof pdfjsLib!=='undefined')return Promise.resolve(null);
+  if(pdfPronto)return pdfPronto;
+  pdfPronto=(async()=>{
+    const url='vendor/pdf.min.js';
+    let diag='';
+    try{
+      // Fura o cache do service worker: se ele guardou uma resposta ruim, é
+      // exatamente essa cópia que precisa ser ignorada agora.
+      const r=await fetch(url+'?recarga='+Date.now(),{cache:'reload'});
+      const tipo=r.headers.get('content-type')||'sem tipo declarado';
+      if(!r.ok){ diag=`o servidor respondeu ${r.status} ${r.statusText||''}`.trim(); }
+      else if(!/javascript|ecmascript/i.test(tipo)){
+        diag=`o servidor devolveu o arquivo como "${tipo}", e o navegador recusa executá-lo assim`;
+      }else{
+        const codigo=await r.text();
+        // Executa no escopo global, como faria a tag <script>.
+        (0,eval)(codigo);
+        if(typeof pdfjsLib!=='undefined'){
+          // Deu certo na segunda tentativa: limpa a cópia ruim para a próxima
+          // abertura não repetir o problema.
+          if('caches' in window){
+            try{ for(const n of await caches.keys()){ const c=await caches.open(n); await c.delete(url); } }catch{}
+          }
+          return null;
+        }
+        diag='o arquivo carregou mas não é a biblioteca esperada';
+      }
+    }catch(err){
+      diag=navigator.onLine===false
+        ? 'o aparelho está sem internet e o app ainda não guardou uma cópia da biblioteca'
+        : 'a requisição falhou ('+err.message+')';
+    }
+    return diag||window.__pdfErro||'motivo desconhecido';
+  })();
+  return pdfPronto;
+}
+
+function avisoPdf(motivo){
+  $('#status').innerHTML=`<div class="aviso err">
+    <summary><span class="ico" aria-hidden="true">!</span>
+    <span><b>A biblioteca de leitura de PDF não carregou</b> — ${esc(motivo)}.</span></summary>
+    <ul>
+      <li>Recarregue a página segurando <b>Ctrl</b> (ou <b>Cmd</b>) — isso ignora o que estiver guardado no aparelho.</li>
+      <li>Se o problema continuar, abra <b>vendor/pdf.min.js</b> no endereço do app e confira se o arquivo aparece.
+          Se der erro ali, a pasta <b>vendor</b> não subiu no servidor.</li>
+    </ul></div>`;
+}
+
 async function carregar(files){
   files=files.filter(f=>/\.pdf$/i.test(f.name));
   if(!files.length)return;
+  if(typeof pdfjsLib==='undefined'){
+    $('#status').textContent='Carregando a biblioteca de leitura…';
+    const motivo=await garantirPdfJs();
+    if(motivo){ avisoPdf(motivo); return; }
+    $('#status').textContent='';
+  }
   if(typeof pdfjsLib==='undefined'){
     $('#status').innerHTML='<div class="aviso err"><summary><span class="ico" aria-hidden="true">!</span>Não foi possível carregar a biblioteca de leitura de PDF (vendor/pdf.min.js). Confirme que a pasta <b>vendor</b> foi publicada junto com o index.html e recarregue a página.</summary></div>';
     return;

@@ -52,6 +52,43 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.4.1] — 2026-09-02
+
+### Corrigido
+
+- **O app podia ficar sem ler PDF nenhum, e culpava a pasta `vendor` por palpite.**
+  Quando a tag `<script>` do pdf.js não carregava — por uma falha de rede, uma cópia ruim
+  guardada no aparelho ou um problema no servidor — o app ficava inútil e exibia sempre a
+  mesma mensagem, que mandava conferir a publicação. Um chute, que não ajuda quem está com
+  o app instalado.
+
+  Agora:
+  - O app **busca a biblioteca de novo por conta própria**, ignorando o que estiver guardado
+    no cache do service worker e do navegador. Na maioria dos casos ele se recupera sozinho
+    e o usuário não percebe nada. Se a segunda tentativa der certo, a cópia ruim é apagada
+    para a próxima abertura não repetir o problema.
+  - Quando não dá para recuperar, a tela mostra o **motivo real** — o código HTTP que o
+    servidor respondeu, ou o tipo de conteúdo que veio no lugar do script — com os dois
+    passos que resolvem.
+  - A verificação passou a acontecer **ao abrir o app**, não só quando o usuário seleciona o
+    primeiro PDF. Descobrir que o app não lê arquivo no meio de uma conferência é tarde.
+
+- **Service worker: uma cópia ruim não fica presa para sempre.**
+  - Só entra no cache o que veio íntegro (`ok` e sem redirecionamento). Meia cópia é pior que
+    nenhuma, porque a estratégia cache-first a serviria indefinidamente sem tentar a rede.
+  - Uma resposta guardada só é servida se estiver íntegra; um erro que tenha entrado no cache
+    por engano deixa de bloquear o app.
+  - Falha de rede sem cópia local passou a devolver `Response.error()` em vez de um `504`
+    vazio. Um 504 vazio para um `<script>` é tratado pelo navegador como script vazio: a
+    biblioteca sumia sem nenhum sinal, e era exatamente isso que escondia o problema.
+
+### Verificado
+
+Quatro cenários, com perfis de navegador limpos: falha só na primeira tentativa (recupera
+sozinho), arquivo ausente com 404 (diz o código), tipo de conteúdo errado (diz o tipo), e
+tudo certo (nenhum aviso). Mais a regressão completa — regras, impressão, PWA, uso offline e
+atualização de versão do service worker.
+
 ## [1.4.0] — 2026-09-02
 
 ### Adicionado
