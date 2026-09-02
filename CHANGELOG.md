@@ -52,6 +52,45 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.6.0] — 2026-09-02
+
+### O prazo da ordem passa a ser julgado pelo roteiro
+
+A ordem tem uma previsão própria — a data de entrega, na capa — e cada operação tem a sua
+**Previsão do Processo**, que é o que o PPCP de fato programou por fase. As duas divergem, e
+julgar pela capa produzia número falso.
+
+O caso que expôs o problema, num lote real: a ordem **803963** foi fechada em **02/09**, seis
+dias **antes** de a primeira fase do roteiro estar prevista (08/09), com **0 de 6 operações
+apontadas**. O app exibia **−12 d** — como se tivesse sido entregue adiantada — e a contava
+como cumprida. Não é adiantamento: é fechamento antes de a produção existir.
+
+Era isso que levava a **Aderência de prazo a 100%** num lote com 52 apontamentos esquecidos.
+
+### Alterado
+
+- `prazoOrdem()` é agora a **única fonte** do critério de prazo, usada pela tela, pelo
+  indicador e pelos achados — para os três nunca discordarem do mesmo dado.
+  - Referência de prazo: a **última** Previsão do Processo, porque a ordem termina quando a
+    última fase termina. Sem roteiro programado, cai para a previsão da ordem (e a tela diz).
+  - **Inconsistente**: concluída antes da **primeira** Previsão do Processo.
+- `OF_ABERTA_VENCIDA` e `OF_ATRASO` passam a medir contra a previsão do processo, e informam
+  no detalhe qual das duas datas foi usada.
+- `OF_ATRASO` não dispara em ordem inconsistente — esse caso já é reportado por
+  `OF_CONCL_ANTES_PREV`, e dois achados sobre o mesmo fato viram ruído.
+- A aba **Ordens** mostra `Prev. processo` e `Prev. ordem` lado a lado, e substitui o desvio
+  por *"fechada antes do roteiro"* nas inconsistentes.
+- A **aderência** exclui as inconsistentes e declara a base: `0% · 0/1`, com as excluídas
+  contadas à parte. Um indicador que não diz sobre quantos foi calculado não é auditável.
+
+### Verificado
+
+No caso reproduzido do relatório real (layout de 5 colunas, sem "Faltam"): o parser lê as
+datas corretamente — o defeito era de julgamento, não de leitura. Depois da correção, as duas
+ordens fechadas antes do roteiro saem de "−12 d adiantada / no prazo" para "Inconsistente /
+fora da conta", e uma ordem que parecia no prazo pela capa (0 d) aparece como **+1 d** pelo
+roteiro. Aderência caiu de 100% para 0% de 1 ordem julgável — que é o número verdadeiro.
+
 ## [1.5.0] — 2026-09-02
 
 ### Adicionado
