@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#14171A">
 <meta name="description" content="RitmoPatrimar — Estudo de Datas de Produção. Conferência de previsão × conclusão das ordens de um lote, Patrimar Móveis.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RitmoPatrimar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>RitmoPatrimar — Estudo de Datas de Produção</title>
 <style>
 /* ============================================================================
@@ -281,7 +286,16 @@ dialog form{margin-top:var(--lg);text-align:right}
     <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
   </div>
 
-  <div class="rodape">Leitura local do PDF. Nenhum dado sai deste computador.</div>
+  <div class="bloco hide" id="blocoInstalar">
+    <div class="grupo">Aplicativo</div>
+    <div class="grupo-dica">Abre pelo ícone e funciona sem internet</div>
+    <button type="button" class="item" id="btnInstalar"><span class="t">Instalar no aparelho</span></button>
+  </div>
+
+  <div class="rodape">
+    <div id="estadoApp"></div>
+    Leitura local do PDF. Nenhum dado sai deste computador.
+  </div>
 </nav>
 
 <main class="conteudo">
@@ -336,6 +350,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.3.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>Instalação no aparelho</b>: o app pode ser instalado no computador, tablet ou celular e abre pelo ícone, como qualquer programa.</li>
+    <li><b>Funciona sem internet</b> depois de instalado — inclusive a leitura dos PDFs, que já acontecia dentro do navegador.</li>
+    <li>Correções publicadas continuam chegando: o app busca a versão nova sempre que há rede, e só usa a cópia local quando não há.</li>
+    <li>O contador de "Painel por setor" mostrava 0 até alguém abrir a seção.</li>
+  </ul>
   <h3>1.2.0 — 02/09/2026</h3>
   <ul>
     <li>Nova seção <b>Sem apontamento</b>, que abre por padrão: lista cada operação sem registro, com a quantidade de peças e o setor responsável.</li>
@@ -673,7 +694,65 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.2.0';
+const VERSAO='1.3.0';
+
+/* ============================================================================
+   INSTALAÇÃO E USO OFFLINE
+   ==========================================================================
+   O app instalado abre pelo ícone e funciona sem internet, que é o estado
+   normal em boa parte do chão de fábrica. Os PDFs já eram lidos dentro do
+   navegador — instalado, nem o carregamento do app depende mais da rede.
+
+   O botão só aparece quando o navegador de fato oferece a instalação. Botão
+   que promete o que o navegador não faz é pior que botão nenhum: no iPhone a
+   instalação é manual, pelo menu Compartilhar, então lá a lateral mostra a
+   instrução em vez de um botão que não funcionaria. */
+let promptInstalar=null;
+
+function estadoApp(txt){ const e=document.getElementById('estadoApp'); if(e)e.textContent=txt||''; }
+
+const jaInstalado=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+const ehIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+
+window.addEventListener('beforeinstallprompt',ev=>{
+  ev.preventDefault(); promptInstalar=ev;
+  document.getElementById('blocoInstalar').classList.remove('hide');
+});
+
+window.addEventListener('appinstalled',()=>{
+  promptInstalar=null;
+  document.getElementById('blocoInstalar').classList.add('hide');
+  estadoApp('Aplicativo instalado. ');
+});
+
+document.getElementById('btnInstalar').onclick=async()=>{
+  if(!promptInstalar)return;
+  promptInstalar.prompt();
+  const {outcome}=await promptInstalar.userChoice;
+  // O prompt guardado só serve uma vez; guardá-lo daria um botão morto.
+  promptInstalar=null;
+  if(outcome==='accepted')document.getElementById('blocoInstalar').classList.add('hide');
+};
+
+if(jaInstalado()){
+  estadoApp('Rodando como aplicativo. ');
+}else if(ehIOS()){
+  // Safari não dispara beforeinstallprompt: aqui a instalação é manual.
+  const b=document.getElementById('blocoInstalar');
+  b.classList.remove('hide');
+  b.querySelector('.grupo-dica').textContent='No iPhone/iPad: Compartilhar → Adicionar à Tela de Início';
+  document.getElementById('btnInstalar').remove();
+}
+
+/* O service worker só existe sob http(s). Aberto direto do arquivo (file://)
+   o registro lança exceção — e derrubaria o resto do script junto. */
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>{
+      console.warn('Service worker não registrado — o app segue funcionando com rede:',err.message);
+    });
+  });
+}
 let DOCS=[], ACH=[], ABA='apont';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -840,6 +919,12 @@ function renderResposta(){
     ['Relatório emitido em',br(DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop())||'—']];
   $('#contexto').innerHTML=ctx.map(([r,v])=>`<div class="i"><span>${r}</span><b class="num">${v}</b></div>`).join('');
 
+  // Contadores do menu saem daqui, nao do desenho de cada seção: escritos só
+  // ao desenhar, o do painel ficava em "0" até alguém abrir o painel.
+  const setoresTodos=new Set(opsFiltradas().map(({op})=>op.descricao));
+  $('#nSet').textContent=setoresTodos.size;
+  $('#nSet').classList.toggle('alerta',falt.some(x=>x.furo));
+
   $('#nApont').textContent=falt.length;
   $('#nApont').classList.toggle('alerta',furos.length>0);
   $('#nApont').title=furos.length?`${furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
@@ -987,9 +1072,6 @@ function desenhar(){
       return {k,r,estado,rotulo,
         ord:(r.furos?3:r.venc?2:r.pend?1:0)*1e12 + r.furos*1e9 + r.venc*1e6 + r.saldo};
     }).sort((a,b)=>b.ord-a.ord||b.r.n-a.r.n);
-
-    $('#nSet').textContent=setores.length;
-    $('#nSet').classList.toggle('alerta',setores.some(x=>x.estado==='critico'));
 
     const cartoes=setores.map(({k,r,estado,rotulo})=>{
       const avanco=r.n?Math.round(r.conc/r.n*100):0;

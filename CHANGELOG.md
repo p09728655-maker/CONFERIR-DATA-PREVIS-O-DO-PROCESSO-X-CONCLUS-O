@@ -52,6 +52,41 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.3.0] — 2026-09-02
+
+### Adicionado
+
+- **Instalação no aparelho (PWA)**: `manifest.webmanifest`, ícones 192/512 e um ícone
+  *maskable* com margem de segurança para o recorte circular do Android. O botão
+  **Instalar no aparelho** aparece na lateral só quando o navegador realmente oferece a
+  instalação; no iPhone e iPad, onde o Safari não expõe esse evento, a lateral mostra o
+  caminho manual (Compartilhar → Adicionar à Tela de Início) em vez de um botão que não
+  funcionaria. Instalado, o app se identifica no rodapé e para de oferecer instalação.
+- **Uso offline** via service worker: `index.html`, `vendor/pdf.min.js`,
+  `vendor/pdf.worker.min.js` e os ícones ficam disponíveis sem rede. Como os PDFs já eram
+  lidos dentro do navegador, o app passa a funcionar inteiro sem internet — que é o estado
+  normal em boa parte do chão de fábrica.
+
+### Estratégia de cache, e por quê
+
+- `index.html` usa **rede primeiro**, cache como reserva. É onde moram as regras de
+  conferência: servir do cache primeiro faria a correção de uma regra demorar dias para
+  chegar, e o usuário estaria conferindo lote com regra velha sem saber.
+- `vendor/` e ícones usam **cache primeiro**: são grandes e imutáveis.
+- O cache é nomeado pela versão; ao publicar, os caches de versões anteriores são apagados.
+- `sw.js` e `manifest.webmanifest` respondem com `must-revalidate` no `vercel.json`.
+  Service worker cacheado é aplicativo congelado.
+
+### Corrigido
+
+- O contador de **Painel por setor** ficava em `0` até a seção ser aberta pela primeira vez.
+
+### Verificado
+
+Com servidor HTTP local e Chromium: service worker ativo, manifest válido com 3 ícones,
+9 arquivos em cache, app abrindo e **lendo PDF com a rede cortada**, e o teste de
+atualização — publicada uma versão nova, o usuário já instalado a recebe ao reabrir.
+
 ## [1.2.0] — 2026-09-02
 
 ### O que mudou de propósito

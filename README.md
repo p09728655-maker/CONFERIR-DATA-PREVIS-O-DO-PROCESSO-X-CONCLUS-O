@@ -67,6 +67,18 @@ primeira cobrança errada.
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
 Não há backend, não há banco, não há log de uso.
 
+### Instalar no aparelho
+
+A ferramenta pode ser instalada no computador, tablet ou celular e passa a abrir pelo ícone,
+como qualquer programa. Instalada, **funciona sem internet** — inclusive a leitura dos PDFs.
+
+- **Chrome / Edge (Windows, Android):** o item **Instalar no aparelho** aparece na lateral.
+- **iPhone / iPad:** o Safari não oferece o botão. Use **Compartilhar → Adicionar à Tela de
+  Início**; a própria lateral mostra essa instrução no iOS.
+
+Correções continuam chegando: o app busca a versão publicada sempre que há rede e só usa a
+cópia local quando não há. Uma regra de conferência corrigida não fica presa no aparelho.
+
 ### Data de referência
 
 O que conta como "vencido" é medido contra a **data de emissão do relatório**, lida do cabeçalho do próprio
@@ -213,6 +225,11 @@ Arquivo único, sem etapa de build, sem framework, sem backend.
 ```
 .
 ├── index.html                 # aplicação inteira (HTML + CSS + JS)
+├── sw.js                      # service worker: uso offline
+├── manifest.webmanifest       # instalação no aparelho
+├── icone-192.png              # ícones do app instalado
+├── icone-512.png
+├── icone-maskable.png         # com margem para o recorte circular do Android
 ├── favicon.svg
 ├── vendor/
 │   ├── pdf.min.js             # pdf.js 3.11.174 (Apache-2.0)
