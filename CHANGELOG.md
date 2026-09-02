@@ -52,6 +52,48 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.2.0] — 2026-09-02
+
+### O que mudou de propósito
+
+A pergunta que a ferramenta responde passou a ser **onde a produção não foi apontada**.
+A conferência de datas continua inteira, mas deixou de ser o eixo: virou o meio.
+
+### Adicionado
+
+- Seção **Sem apontamento**, primeira do menu e aberta por padrão. Uma linha por operação
+  sem registro, com a quantidade de peças, o setor e o motivo.
+- Regra `APONT_FURADO` (crítico) — **apontamento esquecido**. Dispara quando uma fase
+  posterior do roteiro já tem apontamento, ou quando a ordem foi dada como concluída.
+  A peça não pula fase: se a seguinte foi apontada, a anterior foi executada. É prova
+  lógica de apontamento esquecido, não suspeita de falta de produção.
+- Regra `APONT_SEM_QTD` (crítico) — fase com data de conclusão e quantidade zerada.
+- Regra `OP_SEM_APONTAMENTO` (atenção) — operação vencida sem nenhum registro, sem prova
+  de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde.
+- Painel por setor com **Sem apontar**, **Esquecidos** e **Pç sem registro**, saindo da
+  mesma função da seção nova — painel e lista nunca discordam do mesmo dado.
+- Exportação **CSV sem apontamento**, para a cobrança por setor.
+
+### Alterado
+
+- Cartão do topo lidera com apontamento esquecido e peças sem registro. Saldo e aderência
+  de prazo desceram para a linha de contexto.
+- `OP_VENCIDA` passou a significar operação **começada e parada no meio**: quando não há
+  nenhum apontamento, o achado é `OP_SEM_APONTAMENTO` ou `APONT_FURADO`. Os três são
+  mutuamente exclusivos, para não gerar dois achados sobre a mesma operação.
+
+### Corrigido
+
+- Nome do setor quebrava letra a letra no cartão quando o selo era longo.
+- `pdf.min.js`, `pdf.worker.min.js` e `LICENSE-pdfjs.txt` estavam duplicados na raiz do
+  repositório, além da pasta `vendor/` que o app realmente usa. Removidos da raiz.
+
+### Limitação que continua valendo
+
+O relatório mostra ausência de **registro**. Sem a prova do furo de roteiro, ausência de
+registro não distingue "não produziu" de "produziu e não apontou" — quem responde é o
+chão de fábrica.
+
 ## [1.0.0] — 2026-09-02
 
 ### Adicionado

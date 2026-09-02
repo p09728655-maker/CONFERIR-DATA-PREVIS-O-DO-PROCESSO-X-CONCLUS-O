@@ -1,8 +1,11 @@
 # RitmoPatrimar — Estudo de Datas de Produção
 
-Ferramenta de conferência dos relatórios **"Situação do Lote de Produção"** emitidos pelo ERP Industrial (Lógica).
-Lê vários PDFs de uma vez, consolida ordens e operações, e aplica um conjunto de regras que aponta
-inconsistências de apontamento, quebras de roteiro e desvios de prazo.
+Ferramenta que lê os relatórios **"Situação do Lote de Produção"** emitidos pelo ERP Industrial (Lógica)
+e responde uma pergunta: **onde a produção não foi apontada.**
+
+Lê vários PDFs de uma vez, consolida ordens e operações, e aponta cada fase sem registro — com a
+quantidade de peças e o setor responsável. A conferência de previsão × conclusão continua inteira,
+como o meio que sustenta essa resposta.
 
 Área responsável: **PPCP**.
 
@@ -17,8 +20,25 @@ operação. Conferir isso a olho, lote a lote, em PDFs de 10 a 20 páginas, é i
 A ferramenta faz três coisas:
 
 1. **Lê o PDF por posição** e devolve os dados estruturados (ordem, produto, operação, datas, quantidades).
-2. **Aplica regras de conferência** e lista o que exige atenção, priorizado por severidade.
-3. **Exporta CSV** de achados, ordens e operações para Excel e Power BI.
+2. **Aponta onde falta apontamento**, separando o que é certeza do que é suspeita, e lista as demais
+   inconsistências por severidade.
+3. **Exporta CSV** de faltas de apontamento, achados, ordens e operações para Excel e Power BI.
+
+### O achado central: apontamento esquecido
+
+O relatório mostra ausência de **registro**. Ausência de registro tem duas causas — não produziu, ou
+produziu e não apontou — e, olhando uma operação isolada, o relatório **não separa as duas**.
+
+Existe um caso em que separa, e é o que dá valor a esta ferramenta: quando uma fase **posterior** do
+roteiro já tem apontamento. A peça não pula fase — se foi lixada, foi cortada antes. Então o apontamento
+da fase anterior foi **esquecido**, não é falta de produção. O mesmo vale quando a própria ordem foi dada
+como concluída. Isso é prova lógica, e a ferramenta marca como `esquecido`.
+
+Sem essa prova, a operação sem registro e com previsão vencida fica marcada como `pendente`: pode ser o
+setor que não apontou ou o lote que não chegou lá. **Quem responde é o chão de fábrica, não o relatório.**
+
+A separação entre as duas é deliberada. Tratar suspeita como certeza queima a confiança na ferramenta na
+primeira cobrança errada.
 
 ### O que a ferramenta NÃO é
 
@@ -38,8 +58,10 @@ A ferramenta faz três coisas:
 1. No ERP, emita o relatório **Situação do Lote de Produção** com *Status das Ordens: Todas*.
 2. Salve em PDF.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
-4. Comece por **Achados** — é a lista do que exige ação, ordenada por severidade.
-5. Use **Painel por setor** para saber onde o lote está travado, e **Ordens** / **Operações** para o detalhe.
+4. Comece por **Sem apontamento** — abre por padrão. É a lista de fases sem registro, com a
+   quantidade de peças e o setor. O que estiver marcado como `esquecido` é cobrança direta.
+5. Use **Achados** para as demais inconsistências e **Painel por setor** para ver onde o lote
+   está travado. **Ordens** e **Operações** trazem o detalhe.
 6. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
@@ -57,6 +79,9 @@ O campo pode ser alterado manualmente na tela.
 
 | ID | Severidade | O que verifica | Por que importa |
 |---|---|---|---|
+| `APONT_FURADO` | crítico | Fase sem apontamento com a fase seguinte já apontada, ou em ordem concluída | A peça passou por ali. O apontamento existe para ser feito — cobrança direta com o setor |
+| `APONT_SEM_QTD` | crítico | Fase com data de conclusão e quantidade apontada zerada | O setor fechou a fase sem registrar o que produziu |
+| `OP_SEM_APONTAMENTO` | atenção | Operação vencida sem nenhum registro, sem prova de que a peça passou | Pode ser falta de apontamento ou de produção; confirmar no setor |
 | `OF_ABERTA_VENCIDA` | crítico | Ordem sem conclusão e previsão anterior à data de referência | Ordem parada no plano; impacta a data de corte do lote |
 | `OF_SEM_OPERACOES` | crítico | Ordem sem nenhuma operação no relatório | Roteiro vazio ou fase órfã; a ordem não pode ser apontada |
 | `OF_CONCL_SEM_APONTAR` | crítico | Ordem concluída e nenhuma operação apontada | Fechamento manual sem produção registrada |
@@ -64,7 +89,7 @@ O campo pode ser alterado manualmente na tela.
 | `OF_CONCL_OP_SALDO` | crítico | Ordem concluída com `Já Pronto < Qtd. Total` em alguma operação | Saldo perdido; risco de faltar peça na montagem/embalagem |
 | `OF_CONCL_ANTES_PREV` | crítico | Conclusão da ordem anterior à primeira previsão de processo do roteiro | Ordem fechada antes de existir programação — furo de dado |
 | `APONTADO_MAIOR` | crítico | `Já Pronto > Qtd. Total` na ordem ou na operação | Apontamento acima do previsto; distorce estoque e eficiência |
-| `OP_VENCIDA` | atenção | Operação sem conclusão com previsão vencida (em ordem aberta) | Localiza em qual processo o lote travou |
+| `OP_VENCIDA` | atenção | Operação começada e parada no meio, com previsão vencida | Localiza em qual processo o lote travou, com saldo já apontado |
 | `OP_SEM_PREVISAO` | atenção | Operação sem previsão do processo | Fase existe no roteiro mas não foi programada |
 | `QTD_OP_DIVERGENTE` | atenção | Quantidade da operação diferente da quantidade da ordem | Estrutura ou roteiro com multiplicador errado |
 | `SEQ_FORA_ORDEM` | atenção | Operação concluída antes da operação anterior do roteiro | Sequência real diverge do roteiro cadastrado |
@@ -169,6 +194,7 @@ investiga no chão de fábrica.
 
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
+| CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |
 | CSV achados | `achados.csv` | Uma linha por achado, com severidade, regra e detalhe |
 | CSV ordens | `ordens.csv` | Uma linha por ordem de fabricação |
 | CSV operações | `operacoes.csv` | Uma linha por operação de roteiro |
