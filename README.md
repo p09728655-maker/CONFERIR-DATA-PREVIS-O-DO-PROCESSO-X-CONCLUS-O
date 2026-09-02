@@ -1,4 +1,4 @@
-# Conferência de Lotes de Produção — Patrimar Móveis
+# RitmoPatrimar — Estudo de Datas de Produção
 
 Ferramenta de conferência dos relatórios **"Situação do Lote de Produção"** emitidos pelo ERP Industrial (Lógica).
 Lê vários PDFs de uma vez, consolida ordens e operações, e aplica um conjunto de regras que aponta
@@ -38,8 +38,9 @@ A ferramenta faz três coisas:
 1. No ERP, emita o relatório **Situação do Lote de Produção** com *Status das Ordens: Todas*.
 2. Salve em PDF.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
-4. Comece pela aba **Achados**. Depois use **Ordens**, **Operações** e **Aderência por processo**.
-5. Antes de tirar conclusão, confira a aba **Leitura dos arquivos** (ver seção 5).
+4. Comece por **Achados** — é a lista do que exige ação, ordenada por severidade.
+5. Use **Painel por setor** para saber onde o lote está travado, e **Ordens** / **Operações** para o detalhe.
+6. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
 Não há backend, não há banco, não há log de uso.
@@ -130,6 +131,40 @@ relatório. Se divergir, ou se alguma linha não for reconhecida, a aba **Leitur
 
 ---
 
+## 5.1 Painel por setor
+
+Setor, aqui, é o **processo do roteiro** — o centro de trabalho onde a operação é apontada
+(CORTAR, FURAR, PINTAR UV, COLAR FITA, EMBALAR). A seção existe para responder a pergunta do
+começo do dia: **onde o lote está travado agora.**
+
+Cada setor é um cartão, ordenado por gravidade (atrasado antes de em andamento, e dentro disso
+por operações vencidas e saldo). O cartão traz:
+
+| Campo | O que significa | Como usar |
+|---|---|---|
+| Vencidas | Operações sem conclusão, previsão anterior à data de referência, **em ordem ainda em aberto** | É a fila real do setor. Só este número define "atrasado" |
+| Pendentes | Operações sem conclusão, qualquer que seja a situação da ordem | Carga que ainda vai passar pelo setor |
+| Saldo pç | Peças ainda não apontadas nas operações do setor | Quanto de produto está preso ali |
+| Desvio médio | Média de (conclusão − previsão do processo) nas operações já concluídas | Positivo = o setor entrega depois do programado. É o sinal de gargalo estrutural, não pontual |
+| Avanço | Operações concluídas sobre o total | Leitura rápida de progresso |
+| Mais parada | A ordem que está há mais tempo vencida naquele setor | É por ela que se começa a puxar |
+
+**O critério de "vencida" é o mesmo do achado `OP_VENCIDA`**, de propósito: operação isenta pela
+convenção de embalagem e operação pendente em ordem já concluída não entram na conta. A primeira
+não é atraso; a segunda é inconsistência de apontamento, e aparece nos Achados como tal. Painel e
+Achados que discordam do mesmo dado destroem a confiança nos dois.
+
+Abaixo dos cartões fica a tabela **Aderência por setor**, com o número exato por trás de cada um.
+
+### O que o painel não é
+
+Não é medição de capacidade nem de eficiência do setor. Ele lê **datas de um relatório**, não
+apontamento de hora, ritmo ou parada. Um setor com desvio médio alto pode estar sem capacidade,
+sem material, sem programação — ou apenas sem apontar. O painel diz onde olhar; a causa se
+investiga no chão de fábrica.
+
+---
+
 ## 6. Exportação
 
 | Botão | Arquivo | Conteúdo |
@@ -152,6 +187,7 @@ Arquivo único, sem etapa de build, sem framework, sem backend.
 ```
 .
 ├── index.html                 # aplicação inteira (HTML + CSS + JS)
+├── favicon.svg
 ├── vendor/
 │   ├── pdf.min.js             # pdf.js 3.11.174 (Apache-2.0)
 │   ├── pdf.worker.min.js
@@ -167,13 +203,28 @@ rede instável ou bloqueio de domínio externo, cenário real na fábrica.
 
 ### Identidade visual
 
-Segue o padrão Patrimar: vermelho `#DB2126`, bordeaux `#A8140F`, grafite `#1F2328`, tipografia Calibri.
-As cores de status são **deliberadamente distintas do vermelho de marca**, para que "identidade" e
-"problema" não se confundam na tela.
+Segue o sistema visual do **RitmoPatrimar** (repositório `crono-analise`), com os mesmos tokens:
+
+- Marca: vermelho `#DB2126`, bordeaux `#A8140F`, areia `#F7ECC0`, grafite `#1F2328`.
+- Status: verde `#15803D`, âmbar `#B45309`, laranja queimado `#C2410C`, neutro `#64748B`.
+- Tipografia Calibri no texto; `Roboto Mono` tabular em todo número, data e código.
+- Escala de espaçamento 4/8/12/16/24/32/48/64 e escala tipográfica de razão ~1,2.
+
+Duas decisões herdadas, com o motivo:
+
+**O vermelho da marca é identidade, nunca status.** Se `#DB2126` também sinalizasse erro, o usuário
+perderia a capacidade de distinguir "isto é da Patrimar" de "isto está com problema". Estado crítico
+usa laranja queimado, sempre acompanhado de texto — a cor nunca informa sozinha.
+
+**Lateral escura, conteúdo claro.** A navegação nunca vai para a impressora nem para o Excel;
+o conteúdo, sim. Escurecer o menu separa navegação de conteúdo com a coisa mais barata que existe,
+a cor do fundo, e devolve o branco inteiro para o trabalho.
 
 ### Compatibilidade
 
-Chrome, Edge e Firefox atuais. Uso previsto em desktop — a tela é densa e não foi projetada para celular.
+Chrome, Edge e Firefox atuais. Uso previsto em desktop — a tela é densa, com tabelas de até doze
+colunas. Em tela estreita o layout se reorganiza (lateral acima, conteúdo abaixo) e as tabelas rolam
+dentro do próprio bloco, mas conferir um lote no celular continua sendo trabalho ruim.
 
 ---
 
@@ -181,16 +232,8 @@ Chrome, Edge e Firefox atuais. Uso previsto em desktop — a tela é densa e nã
 
 ### 8.1 Repositório
 
-Organização GitHub: `p09728655-maker`. Repositório sugerido: `conferencia-lotes-patrimar`.
-
-```bash
-git init
-git add .
-git commit -m "feat: conferencia de lotes de producao v1.0.0"
-git branch -M main
-git remote add origin https://github.com/p09728655-maker/conferencia-lotes-patrimar.git
-git push -u origin main
-```
+Organização GitHub: `p09728655-maker`.
+Repositório: `CONFERIR-DATA-PREVIS-O-DO-PROCESSO-X-CONCLUS-O`.
 
 ### 8.2 Vercel
 
@@ -207,8 +250,10 @@ Não há variável de ambiente. Não há secret. Não há chave de API.
 
 ### 8.3 Após o deploy
 
-- Confirme que `https://<projeto>.vercel.app/vendor/pdf.min.js` responde 200.
-  Se a pasta `vendor` não subir, a ferramenta não lê PDF nenhum e exibe a mensagem de erro correspondente.
+- **Confirme que `https://<projeto>.vercel.app/vendor/pdf.min.js` responde 200.**
+  Sem a pasta `vendor` a ferramenta não lê PDF nenhum — foi exatamente o que aconteceu no primeiro
+  deploy, quando o repositório subiu só com o `index.html`. A tela exibe a mensagem de erro
+  correspondente, mas o problema é de publicação, não de arquivo.
 - Faça um teste de ponta a ponta com um lote já conhecido antes de divulgar o link.
 
 ### 8.4 Acesso
@@ -240,7 +285,11 @@ localmente pelo usuário e nunca trafegam. Ainda assim, se a política interna e
 4. **Sem verificação de estrutura de produto.** A ferramenta confere roteiro e apontamento, não a árvore
    de componentes.
 5. **A ferramenta lê o relatório, não a realidade.** Se o apontamento não foi feito no ERP, o achado aponta
-   falta de apontamento — não necessariamente falta de produção.
+   falta de apontamento — não necessariamente falta de produção. Vale igualmente para o Painel por setor:
+   ele mede datas, não capacidade.
+6. **O parser depende da posição das colunas.** A partir da v1.1.0 um valor só é aceito na coluna cujo
+   tipo ele tem, e divergência vira aviso — mas a defesa é contra ler errado em silêncio, não contra
+   uma mudança de layout, que continua exigindo ajuste no código.
 
 ---
 
@@ -251,4 +300,12 @@ Ao alterar qualquer regra de conferência ou o parser:
 1. Rode um lote **já encerrado e conhecido** e confira se os achados batem com o que se sabe do chão de fábrica.
 2. Rode um lote **em andamento** e verifique se não há falso positivo.
 3. Confirme na aba **Leitura dos arquivos** que o M³ confere e que não há linha ignorada.
-4. Atualize a constante `VERSAO` no `index.html` e registre a mudança no `CHANGELOG.md`.
+4. Atualize a constante `VERSAO` no `index.html`, acrescente a entrada no diálogo de histórico
+   (`#dlgVersao`, no próprio `index.html`) e registre a mudança no `CHANGELOG.md`.
+
+### Teste de ponta a ponta
+
+Não há suíte automatizada no repositório. O teste da v1.1.0 foi feito no navegador com um PDF
+sintético que reproduz o layout do relatório e dispara cada uma das 13 regras. Ao mexer no parser,
+o mínimo é: abrir um lote conhecido, conferir o M³ contra o rodapé, e verificar que nenhuma coluna
+escorregou (data onde deveria haver data, número onde deveria haver número).
