@@ -301,6 +301,24 @@ dialog form{margin-top:var(--lg);text-align:right}
   /* Onde o líder escreve o que vai fazer. A linha existe para ser preenchida. */
   .doc-tratativa{border-bottom:.5pt solid #000;min-width:34mm;display:block;height:4mm}
 
+  /* A LISTA BRUTA — muitas colunas, deitada, sem largura fixa.
+     Aqui a tabela vem clonada da tela: deixar o navegador distribuir as
+     colunas pelo conteúdo é melhor que impor uma grade que não conhece os
+     dados. Os selos coloridos da tela viram texto simples com contorno,
+     porque o papel é preto e branco. */
+  .doc-lista table{table-layout:auto;font-size:7.5pt}
+  .doc-lista th{background:transparent;color:#000;border-bottom:1pt solid #000}
+  /* Tudo preto no papel: a tela usa cinza para hierarquia, mas impresso em
+     P&B o cinza vira quase invisível. Nenhum realce de linha sobrevive
+     também — na tela ele orienta, no papel só suja. */
+  .doc-lista td,.doc-lista td *,.doc-lista td.cod,.doc-lista td.n{padding:1mm 1.5mm;color:#000}
+  .doc-lista tbody tr{background:transparent!important}
+  .doc-lista .selo{border:.5pt solid #000;background:transparent!important;color:#000!important;
+    padding:.2mm 1mm;font-size:6pt;font-weight:700;white-space:nowrap}
+  /* A barra colorida da severidade não sobrevive à impressão P&B. */
+  .doc-lista tr td:first-child{box-shadow:none!important}
+  .doc-lista .c-critico,.doc-lista .c-atencao,.doc-lista .c-ok{color:#000!important;font-weight:700}
+
   .doc-rodape{margin-top:6mm;padding-top:2.5mm;border-top:1pt solid #000;font-size:7.5pt;line-height:1.5}
   .doc-rodape p{margin:0 0 1.5mm}
   .doc-assina{display:flex;gap:10mm;margin-top:7mm}
@@ -356,6 +374,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="grupo">Reunião</div>
     <div class="grupo-dica">Uma folha por setor, com espaço para a tratativa</div>
     <button type="button" class="item" id="btnImprimir"><span class="t">Imprimir para os líderes</span></button>
+    <button type="button" class="item" id="btnImprimirLista"><span class="t">Imprimir a lista da tela</span></button>
   </div>
 
   <div class="bloco hide" id="navExportar">
@@ -436,6 +455,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.5.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>Quadro de responsabilidade por setor</b> no topo da folha da reunião: quem deixou de apontar, quantas operações e quantas peças, do pior para o menor.</li>
+    <li><b>Imprimir a lista da tela</b>: leva a tabela que você está vendo, deitada no papel, para quando alguém questionar o resumo.</li>
+    <li>O papel passa a <b>declarar o recorte</b> — qual filtro estava aplicado, ou que não havia nenhum. Uma folha filtrada que não diz o filtro faz o problema parecer menor do que é.</li>
+    <li>Só é declarado o filtro que realmente vale para aquela lista: severidade filtra Achados, não Operações.</li>
+  </ul>
   <h3>1.4.1 — 02/09/2026</h3>
   <ul>
     <li><b>Correção:</b> quando a biblioteca de leitura de PDF não carregava, o app ficava sem ler arquivo nenhum e culpava a pasta <code>vendor</code> por palpite.</li>
@@ -794,7 +820,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.4.1';
+const VERSAO='1.5.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1338,6 +1364,91 @@ function desenhar(){
 // para o papel engordaria o arquivo à toa.
 const LOGO=document.querySelector('.marca img').src;
 
+/**
+ * OS FILTROS PRECISAM IR NO PAPEL.
+ *
+ * Uma folha que mostra 12 linhas quando o lote tem 195 operações, sem dizer
+ * que estava filtrada, faz o líder concluir que o problema é pequeno. O
+ * cabeçalho impresso declara o recorte; quando não há filtro, diz isso também,
+ * porque "sem filtro" é informação tanto quanto o filtro.
+ */
+function filtrosNoPapel(secao){
+  const f=filtros(), t=[];
+  if(f.lote) t.push(`lote ${f.lote}`);
+  if(f.prod) t.push(`produto ou descrição contendo "${f.prod}"`);
+  if(f.oper) t.push(`somente o setor ${f.oper}`);
+  // Severidade só filtra a lista de Achados. Declará-la numa folha de Ordens
+  // ou Operações faria o leitor descontar linhas que nunca foram descartadas —
+  // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
+  if(f.sev.length&&secao==='ach') t.push('severidade: '+f.sev.map(x=>x==='critico'?'crítico':x==='atencao'?'atenção':x).join(' e '));
+  if(!$('#fEmb').checked) t.push('sem a isenção de EMBALAR em produto acabado');
+  return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
+}
+
+/**
+ * QUEM NÃO APONTOU, EM UMA TABELA SÓ.
+ *
+ * O corpo do documento já separa as pendências por setor, mas quem abre a
+ * folha numa reunião precisa ver a responsabilidade consolidada antes de
+ * entrar no detalhe: qual setor concentra o problema e qual é só respingo.
+ * Ordenado por apontamento esquecido, que é o que tem prova.
+ */
+function quadroSetores(faltas){
+  const m={};
+  faltas.forEach(x=>{
+    const r=m[x.op.descricao]=m[x.op.descricao]||{n:0,furos:0,pecas:0,pcFuro:0,ordens:new Set()};
+    r.n++; r.pecas+=x.pecas; r.ordens.add(x.of.of);
+    if(x.furo){ r.furos++; r.pcFuro+=x.pecas; }
+  });
+  const linhas=Object.entries(m)
+    .sort((a,b)=>b[1].furos-a[1].furos||b[1].pcFuro-a[1].pcFuro||b[1].pecas-a[1].pecas);
+  if(!linhas.length)return '';
+  return `<section class="doc-setor">
+    <h2>Responsabilidade por setor <span>quem deixou de apontar, e quanto</span></h2>
+    <table>
+      <colgroup><col style="width:26%"><col style="width:13%"><col style="width:16%"><col style="width:13%">
+        <col style="width:16%"><col style="width:16%"></colgroup>
+      <thead><tr><th>Setor</th><th class="n">Esquecidos</th><th class="n">Peças esquecidas</th>
+        <th class="n">Sem registro</th><th class="n">Peças no total</th><th class="n">Ordens</th></tr></thead>
+      <tbody>${linhas.map(([nome,r])=>`<tr>
+        <td><b>${esc(nome)}</b></td>
+        <td class="n">${r.furos?`<b>${r.furos}</b>`:'—'}</td>
+        <td class="n">${r.pcFuro?`<b>${nf(r.pcFuro)}</b>`:'—'}</td>
+        <td class="n">${r.n}</td>
+        <td class="n">${nf(r.pecas)}</td>
+        <td class="n">${r.ordens.size}</td></tr>`).join('')}</tbody>
+    </table>
+  </section>`;
+}
+
+/* Imprime a LISTA QUE ESTÁ NA TELA, com o mesmo recorte que o usuário está
+   vendo. Serve para levar a evidência bruta quando alguém questiona o
+   resumo — a tabela inteira, do jeito que o app leu o relatório. */
+function montarImpressoLista(){
+  const tabela=document.querySelector('#painel table');
+  const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
+  const hoje=new Date().toISOString().slice(0,10);
+  const linhas=tabela?tabela.querySelectorAll('tbody tr').length:0;
+  $('#impresso').innerHTML=`
+    <div class="doc-topo">
+      <div class="doc-marca">
+        <img src="${LOGO}" alt="Patrimar Móveis">
+        <h1 class="doc-titulo">${esc(SECOES[ABA]||'Conferência')}</h1>
+        <p class="doc-sub">
+          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br($('#fRef').value)}</b><br>
+          Recorte impresso: <b>${esc(filtrosNoPapel(ABA))}</b> · ${linhas} linha(s)
+        </p>
+      </div>
+      <div class="doc-carimbo">RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${br(hoje)}</div>
+    </div>
+    ${tabela?`<section class="doc-setor doc-lista">${tabela.outerHTML}</section>`
+            :'<div class="doc-vazio">Nada para imprimir nesta seção com os filtros atuais.</div>'}
+    <div class="doc-rodape">
+      <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
+      Esta folha reproduz a lista exatamente como está na tela, com o recorte declarado acima.</p>
+    </div>`;
+}
+
 function montarImpresso(){
   const f=faltasFiltradas(), ref=$('#fRef').value;
   const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
@@ -1363,7 +1474,8 @@ function montarImpresso(){
         <h1 class="doc-titulo">Apontamentos pendentes por setor</h1>
         <p class="doc-sub">
           ${lotes.length?`Lote <b>${esc(lotes.join(', '))}</b>${desc.length?' — '+esc(desc.join(' · ')):''}<br>`:''}
-          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b>
+          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b><br>
+          Recorte impresso: <b>${esc(filtrosNoPapel('apont'))}</b>
         </p>
       </div>
       <div class="doc-carimbo">
@@ -1410,7 +1522,7 @@ function montarImpresso(){
       </table>
     </section>`).join('');
 
-  $('#impresso').innerHTML=cab+resumo+blocos+rodape(ref);
+  $('#impresso').innerHTML=cab+resumo+quadroSetores(f)+blocos+rodape(ref);
 }
 
 function rodape(ref){
@@ -1431,7 +1543,17 @@ function rodape(ref){
   </div>`;
 }
 
-$('#btnImprimir').onclick=()=>{ montarImpresso(); window.print(); };
+/* A orientação do papel muda com o documento: o da reunião cabe em retrato,
+   a lista bruta tem colunas demais e só fica legível deitada. @page não aceita
+   condicional, então a regra é trocada antes de chamar a impressão. */
+function orientar(modo){
+  let st=document.getElementById('orientacao');
+  if(!st){ st=document.createElement('style'); st.id='orientacao'; document.head.appendChild(st); }
+  st.textContent=`@media print{@page{size:A4 ${modo};margin:${modo==='landscape'?'10mm':'12mm'}}}`;
+}
+
+$('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); window.print(); };
+$('#btnImprimirLista').onclick=()=>{ orientar('landscape'); montarImpressoLista(); window.print(); };
 
 /* ============================================================================
    EXPORTAÇÃO CSV (; decimal vírgula, datas dd/mm/aaaa — Excel e Power BI pt-BR)

@@ -52,6 +52,38 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.5.0] — 2026-09-02
+
+### Adicionado
+
+- **Quadro de responsabilidade por setor**, no topo da folha da reunião. O corpo do documento
+  já separava as pendências por setor, mas quem abre a folha precisa ver a responsabilidade
+  consolidada antes do detalhe: qual setor concentra o problema e qual é só respingo.
+  Ordenado por apontamento esquecido, que é o que tem prova.
+- **Imprimir a lista da tela** — leva a tabela que está sendo vista (Operações, Ordens,
+  Achados) para o papel, deitada em A4 paisagem. Serve quando alguém questiona o resumo e é
+  preciso mostrar a evidência bruta, do jeito que o app leu o relatório.
+
+### O papel passa a declarar o recorte
+
+O cabeçalho impresso diz qual filtro estava aplicado — e, quando não havia nenhum, diz isso
+também. Uma folha que mostra 12 linhas de um lote com 195 operações, sem declarar que estava
+filtrada, faz o líder concluir que o problema é pequeno.
+
+Só é declarado o filtro que **de fato vale** para aquela lista: severidade filtra Achados,
+não Operações nem Ordens. Anunciar um filtro que não foi aplicado faria o leitor descontar
+linhas que nunca foram descartadas — engana tanto quanto omitir.
+
+### Decisões de impressão
+
+- A orientação do papel muda com o documento: o da reunião cabe em retrato; a lista bruta tem
+  colunas demais e só fica legível deitada. `@page` não aceita condicional, então a regra é
+  trocada antes de chamar a impressão.
+- Na lista, as colunas têm largura automática: a tabela vem clonada da tela, e deixar o
+  navegador distribuí-la pelo conteúdo é melhor que impor uma grade que não conhece os dados.
+- Tudo preto, sem realce de linha e sem selo colorido. A tela usa cinza para hierarquia; em
+  P&B o cinza quase desaparece e o realce só suja.
+
 ## [1.4.1] — 2026-09-02
 
 ### Corrigido
