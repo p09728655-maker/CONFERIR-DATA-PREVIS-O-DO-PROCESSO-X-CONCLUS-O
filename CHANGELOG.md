@@ -52,6 +52,83 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.3.0] — 2026-09-02
+
+### Adicionado
+
+- **Instalação no aparelho (PWA)**: `manifest.webmanifest`, ícones 192/512 e um ícone
+  *maskable* com margem de segurança para o recorte circular do Android. O botão
+  **Instalar no aparelho** aparece na lateral só quando o navegador realmente oferece a
+  instalação; no iPhone e iPad, onde o Safari não expõe esse evento, a lateral mostra o
+  caminho manual (Compartilhar → Adicionar à Tela de Início) em vez de um botão que não
+  funcionaria. Instalado, o app se identifica no rodapé e para de oferecer instalação.
+- **Uso offline** via service worker: `index.html`, `vendor/pdf.min.js`,
+  `vendor/pdf.worker.min.js` e os ícones ficam disponíveis sem rede. Como os PDFs já eram
+  lidos dentro do navegador, o app passa a funcionar inteiro sem internet — que é o estado
+  normal em boa parte do chão de fábrica.
+
+### Estratégia de cache, e por quê
+
+- `index.html` usa **rede primeiro**, cache como reserva. É onde moram as regras de
+  conferência: servir do cache primeiro faria a correção de uma regra demorar dias para
+  chegar, e o usuário estaria conferindo lote com regra velha sem saber.
+- `vendor/` e ícones usam **cache primeiro**: são grandes e imutáveis.
+- O cache é nomeado pela versão; ao publicar, os caches de versões anteriores são apagados.
+- `sw.js` e `manifest.webmanifest` respondem com `must-revalidate` no `vercel.json`.
+  Service worker cacheado é aplicativo congelado.
+
+### Corrigido
+
+- O contador de **Painel por setor** ficava em `0` até a seção ser aberta pela primeira vez.
+
+### Verificado
+
+Com servidor HTTP local e Chromium: service worker ativo, manifest válido com 3 ícones,
+9 arquivos em cache, app abrindo e **lendo PDF com a rede cortada**, e o teste de
+atualização — publicada uma versão nova, o usuário já instalado a recebe ao reabrir.
+
+## [1.2.0] — 2026-09-02
+
+### O que mudou de propósito
+
+A pergunta que a ferramenta responde passou a ser **onde a produção não foi apontada**.
+A conferência de datas continua inteira, mas deixou de ser o eixo: virou o meio.
+
+### Adicionado
+
+- Seção **Sem apontamento**, primeira do menu e aberta por padrão. Uma linha por operação
+  sem registro, com a quantidade de peças, o setor e o motivo.
+- Regra `APONT_FURADO` (crítico) — **apontamento esquecido**. Dispara quando uma fase
+  posterior do roteiro já tem apontamento, ou quando a ordem foi dada como concluída.
+  A peça não pula fase: se a seguinte foi apontada, a anterior foi executada. É prova
+  lógica de apontamento esquecido, não suspeita de falta de produção.
+- Regra `APONT_SEM_QTD` (crítico) — fase com data de conclusão e quantidade zerada.
+- Regra `OP_SEM_APONTAMENTO` (atenção) — operação vencida sem nenhum registro, sem prova
+  de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde.
+- Painel por setor com **Sem apontar**, **Esquecidos** e **Pç sem registro**, saindo da
+  mesma função da seção nova — painel e lista nunca discordam do mesmo dado.
+- Exportação **CSV sem apontamento**, para a cobrança por setor.
+
+### Alterado
+
+- Cartão do topo lidera com apontamento esquecido e peças sem registro. Saldo e aderência
+  de prazo desceram para a linha de contexto.
+- `OP_VENCIDA` passou a significar operação **começada e parada no meio**: quando não há
+  nenhum apontamento, o achado é `OP_SEM_APONTAMENTO` ou `APONT_FURADO`. Os três são
+  mutuamente exclusivos, para não gerar dois achados sobre a mesma operação.
+
+### Corrigido
+
+- Nome do setor quebrava letra a letra no cartão quando o selo era longo.
+- `pdf.min.js`, `pdf.worker.min.js` e `LICENSE-pdfjs.txt` estavam duplicados na raiz do
+  repositório, além da pasta `vendor/` que o app realmente usa. Removidos da raiz.
+
+### Limitação que continua valendo
+
+O relatório mostra ausência de **registro**. Sem a prova do furo de roteiro, ausência de
+registro não distingue "não produziu" de "produziu e não apontou" — quem responde é o
+chão de fábrica.
+
 ## [1.0.0] — 2026-09-02
 
 ### Adicionado
