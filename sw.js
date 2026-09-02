@@ -22,7 +22,7 @@
  * activate apaga todos os caches de nome diferente — não sobra resto de
  * versão antiga ocupando espaço nem sendo servido por engano.
  */
-const VERSAO = '1.4.0';
+const VERSAO = '1.4.1';
 const CACHE = 'ritmopatrimar-datas-v' + VERSAO;
 
 const ESTATICOS = [
@@ -42,8 +42,14 @@ self.addEventListener('install', (e) => {
     const cache = await caches.open(CACHE);
     // Um arquivo que falhe não pode abortar a instalação inteira: sem isto,
     // um 404 em qualquer item deixaria o app sem service worker nenhum.
-    await Promise.all(ESTATICOS.map(u =>
-      cache.add(new Request(u, { cache: 'reload' })).catch(() => {})));
+    // Guarda-se só o que veio íntegro — meia cópia é pior que nenhuma, porque
+    // o cache-first a serviria para sempre sem nunca tentar a rede de novo.
+    await Promise.all(ESTATICOS.map(async (u) => {
+      try {
+        const resp = await fetch(new Request(u, { cache: 'reload' }));
+        if (resp && resp.ok && !resp.redirected) await cache.put(u, resp);
+      } catch {}
+    }));
     self.skipWaiting();
   })());
 });
@@ -88,15 +94,26 @@ self.addEventListener('fetch', (e) => {
 
   e.respondWith((async () => {
     const cacheado = await caches.match(req);
-    if (cacheado) return cacheado;
+    // Uma cópia guardada só serve se estiver íntegra. Um 4xx/5xx que tenha
+    // entrado no cache por engano deixaria o app quebrado para sempre, porque
+    // cache-first nunca mais iria à rede buscar o certo.
+    if (cacheado && cacheado.ok) return cacheado;
+
     try {
       const resp = await fetch(req);
       if (resp && resp.ok && resp.type === 'basic') {
         (await caches.open(CACHE)).put(req, resp.clone());
+      } else if (cacheado) {
+        // A rede respondeu, mas mal. A cópia velha ainda é melhor que nada.
+        return cacheado;
       }
       return resp;
     } catch (err) {
-      return new Response('', { status: 504 });
+      if (cacheado) return cacheado;
+      // Devolver um 504 vazio para um <script> faz o navegador tratá-lo como
+      // script vazio e seguir em frente: a biblioteca some sem nenhum sinal.
+      // Um erro de rede de verdade faz o onerror disparar, e a tela avisa.
+      return Response.error();
     }
   })());
 });
