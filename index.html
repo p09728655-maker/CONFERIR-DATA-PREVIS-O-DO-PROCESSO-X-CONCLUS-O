@@ -643,6 +643,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.3.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Correção: produto acabado aparecia como conjunto, e pior, como COMPLETO.</b> PAINEL 106, KIT 103 e MESA 108 entravam na lista com 0% pronto e selo <b>completo</b>. A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento — sem fase para contar, "todas as fases fecharam" virava verdade por não haver fase nenhuma. Isso inflava o total de produtos do veredito (dizia "3 de 6") e o contador de completos.</li>
+    <li><b>Só componente entra no conjunto.</b> Acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele. O filtro é por tipo de produto, não pela isenção: mesmo desmarcando "Ignorar EMBALAR", o acabado continua sendo resultado.</li>
+    <li>A tela declara quantas ordens de cada tipo ficaram fora do agrupamento, na tela e no recorte impresso.</li>
+    <li>Novo estado <b>sem fase apontável</b>, em bloco à parte: conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Não vira completo nem quebrado — não dá para afirmar nada sobre kit completo, e a tela diz isso em vez de inventar um estado.</li>
+  </ul>
   <h3>3.3.0 — 03/09/2026</h3>
   <ul>
     <li><b>Tela nova: Conjunto incompleto.</b> Responde a terceira pergunta do PPCP — <b>o produto fecha?</b> O lote não fecha produto por produto: o ERP carimba a mesma data em todas as fases de todas as ordens, nada é prioridade, o líder sequencia pelo que economiza setup (junta cor, junta chapa) — o que é racional — e o resultado é todo produto 70% pronto, nenhum conjunto fechado e a EMBALAR sem o que embalar.</li>
@@ -1388,7 +1395,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.3.0';
+const VERSAO='3.3.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1789,11 +1796,21 @@ const travadasAtrasadas=()=>ordensTravadas().filter(x=>x.pos.atrasada)
    peça dentro dele (387.010 = FRENTE GAV, e a descrição confirma com "MDP
    10"); o 3º é a cor (.116 CINAMOMO, .006 OFF WHITE, .001 BRANCO REAL).
 
-   VOLUME FICA FORA. Todo volume começa em 501, então agrupar pelo 1º bloco
-   jogaria os volumes de TODOS os produtos num grupo só — pior que não
-   agrupar. E o volume não é peça do conjunto: é o resultado dele. Sua EMBALAR
-   é isenta de apontamento, logo não informa nada sobre kit completo. A tela
-   declara quantos ficaram de fora. */
+   SÓ COMPONENTE ENTRA. O conjunto é o que precisa fechar JUNTO para o produto
+   existir — e isso são os componentes. Acabado (1…) e volume (5…) são o
+   RESULTADO do conjunto, não peça dele:
+
+   - Volume: todo volume começa em 501, então agrupar pelo 1º bloco jogaria os
+     volumes de TODOS os produtos num grupo só, pior que não agrupar.
+   - Acabado: a ordem do acabado tem praticamente só EMBALAR no roteiro, que é
+     isenta de apontamento. Sem fase para contar, ela entrava aqui como um
+     "produto" de 0% que a conta declarava COMPLETO — porque "todas as fases
+     fecharam" é verdade por vacuidade quando não há fase nenhuma. Isso inflava
+     o total de produtos do veredito e o contador de completos.
+
+   O filtro é por TIPO, não pela isenção: mesmo com a caixa "Ignorar EMBALAR"
+   desmarcada, o acabado continua sendo resultado e não peça. A tela declara
+   quantas ordens ficaram de fora, de cada tipo. */
 const prefixoProduto=cod=>((cod||'').split('.')[0]||'').trim()||'—';
 
 /* Nome legível do conjunto: a descrição da peça começa pelo produto ("SPACE
@@ -1830,7 +1847,7 @@ function rotuloConjunto(ofs){
 function conjuntos(){
   const flagEmb=$('#fEmb').checked;
   const g=new Map();
-  ordensFiltradas().filter(o=>tipoProduto(o.produto)!=='volume').forEach(o=>{
+  ordensFiltradas().filter(o=>tipoProduto(o.produto)==='componente').forEach(o=>{
     const k=prefixoProduto(o.produto);
     if(!g.has(k))g.set(k,[]);
     g.get(k).push(o);
@@ -1883,8 +1900,14 @@ function conjuntos(){
     return {cod, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
       pf, pfTotal, pct:pfTotal?pf/pfTotal:0,
       ordens:ofs.length, pecas:ofs.reduce((s,o)=>s+(o.qtd||0),0),
-      naoComecou:fases.every(x=>x.passou===0),
-      completo:!proxima,
+      /* SEM FASE APONTÁVEL: todo o roteiro do conjunto está fora da conta
+         (setor que não aponta, EMBALAR isenta). Não dá para afirmar nada sobre
+         kit completo, e chamar de "completo" seria a vacuidade que colocava
+         produto acabado de 0% na lista como COMPLETO. Sai da lista, declarado
+         no cabeçalho. */
+      semFase:!fases.length,
+      naoComecou:fases.length>0&&fases.every(x=>x.passou===0),
+      completo:fases.length>0&&!proxima,
       /* DISPERSO é o estado que dói: parte do conjunto andou, parte não. O
          setor da frente vê peça chegando e não consegue montar o produto.
          Conjunto INTEIRO parado na mesma fase NÃO é dispersão — está junto, e
@@ -2301,12 +2324,16 @@ const ordensFaltantes=(x,max=6)=>x.faltam.slice(0,max).map(o=>esc(o.of)).join(',
   +(x.faltam.length>max?` <small>+${x.faltam.length-max}</small>`:'');
 
 function desenharConjuntos(p,ref){
-  const cs=conjuntos();
+  const todos=conjuntos();
+  const cs=todos.filter(c=>!c.semFase);
+  const semFase=todos.filter(c=>c.semFase);
   const emCurso=cs.filter(c=>!c.completo&&!c.naoComecou);
   const quebrados=cs.filter(c=>c.disperso);
   const juntos=emCurso.filter(c=>!c.disperso);
   const completos=cs.filter(c=>c.completo);
-  const volumes=ordensFiltradas().filter(o=>tipoProduto(o.produto)==='volume').length;
+  const fora=ordensFiltradas().reduce((a,o)=>{const t=tipoProduto(o.produto);if(t!=='componente')a[t]=(a[t]||0)+1;return a;},{});
+  const foraTxt=[fora.acabado?`${fora.acabado} de produto acabado`:'',fora.volume?`${fora.volume} de volume`:'']
+    .filter(Boolean).join(' e ');
 
   /* Os cartões são só os quebrados, e o texto diz o que fazer: fechar a fase
      que quebrou. Cartão para conjunto que está junto ou completo ocuparia a
@@ -2362,13 +2389,19 @@ function desenharConjuntos(p,ref){
     </div>`;
 
   p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Conjunto incompleto</h2>
-      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${volumes?` · ${volumes} ordem(ns) de volume fora do agrupamento`:''}</span></div>
+      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}</span></div>
     ${cartoes?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
       <th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th><th class="n">% pronto</th>
       <th>Roda inteiro até</th><th>Trava em</th><th class="n">Correram na frente</th><th class="n">Falta fechar</th>
       <th>Quais ordens</th><th>Estado</th></tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
       :'<div class="vazio">Nenhuma ordem de componente com os filtros atuais.</div>'}
+    ${semFase.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
+      <summary>Sem fase apontável <small>${semFase.length} produto(s) — todo o roteiro está fora da conta, não dá para afirmar se o conjunto fecha</small></summary>
+      <div class="wrap"><table><thead><tr><th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th></tr></thead>
+      <tbody>${semFase.map(c=>`<tr><td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
+        <td class="n">${c.ordens}</td><td class="n">${nf(c.pecas)}</td></tr>`).join('')}</tbody></table></div>
+    </details></div>`:''}
     ${cs.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
       <summary>Roteiro de cada conjunto <small>fase por fase, quantas ordens já passaram</small></summary>
       <div style="padding:var(--md) 0">${cs.map(c=>`<div class="linha" style="margin-bottom:var(--sm)">
@@ -2382,8 +2415,10 @@ function desenharConjuntos(p,ref){
       <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
       <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
       <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
-      <b>Ordens de volume</b> (código 5…) ficam fora do agrupamento: todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só. O volume é o resultado do conjunto, não peça dele.
-      Fase fora da conta (setor que não aponta, EMBALAR isenta) não bloqueia conjunto.</div>`;
+      <b>Só componente entra.</b> Produto acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele, e ficam fora do agrupamento — a tela declara quantas ordens de cada tipo.
+      A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento; e todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só.
+      <b>Sem fase apontável</b> = conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Sai da lista porque não dá para afirmar nada sobre kit completo — "todas as fases fecharam" seria verdade só por não haver fase nenhuma.
+      Fase fora da conta não bloqueia conjunto.</div>`;
 }
 
 /* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
@@ -2565,8 +2600,8 @@ function filtrosNoPapel(secao){
      recorte estrutural da tela. Somado à lista, fazia "nenhum filtro" sumir e
      a folha parecer filtrada quando não estava. */
   if(secao==='conj'){
-    const v=ordensFiltradas().filter(o=>tipoProduto(o.produto)==='volume').length;
-    if(v) return `${base} · ${v} ordem(ns) de volume fora do agrupamento por produto`;
+    const n=ordensFiltradas().filter(o=>tipoProduto(o.produto)!=='componente').length;
+    if(n) return `${base} · ${n} ordem(ns) de produto acabado e volume fora do agrupamento por componente`;
   }
   return base;
 }

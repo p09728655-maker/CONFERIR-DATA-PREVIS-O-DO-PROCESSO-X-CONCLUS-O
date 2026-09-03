@@ -3,6 +3,37 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.3.1] — 2026-09-03
+
+### Corrigido
+
+- **Produto acabado entrava na tela "Conjunto incompleto" — e era declarado COMPLETO.**
+  PAINEL `106`, KIT `103` e MESA `108` apareciam na lista com `0%` pronto, "nenhuma fase
+  fechada" e selo **completo**.
+
+  Causa: a ordem do produto acabado tem praticamente só `EMBALAR` no roteiro, e `EMBALAR` em
+  acabado é isenta de apontamento desde a v3.2.0. Com toda a única fase fora da conta, `fases`
+  ficava **vazio** — e `completo = !proxima` é verdadeiro por vacuidade quando não existe fase
+  nenhuma para não fechar. Efeito prático: o veredito dizia "3 de **6** produtos não fecham"
+  contra um denominador inflado, e o cabeçalho contava 3 completos que não existiam.
+
+- **Só componente entra no conjunto.** Acabado (`1…`) e volume (`5…`) são o **resultado** do
+  conjunto, não peça dele. O filtro passou a ser por **tipo de produto**, não pela isenção de
+  EMBALAR: mesmo com a caixa "Ignorar EMBALAR" desmarcada, o acabado continua sendo resultado
+  e não peça — corrigir só a isenção teria deixado o bug de pé nesse caso.
+
+- Guarda contra a vacuidade, independente do filtro de tipo: `completo` e `naoComecou` agora
+  exigem `fases.length > 0`. Um componente cujo roteiro inteiro esteja fora da conta (todas as
+  fases num setor que não aponta) caía no mesmo falso "completo".
+
+### Adicionado
+
+- Estado **sem fase apontável**, em bloco à parte com ordens e peças: conjunto cujo roteiro
+  inteiro está fora da conta. Não vira completo nem quebrado, porque não dá para afirmar nada
+  sobre kit completo — a tela diz isso em vez de inventar um estado.
+- O cabeçalho declara quantas ordens de **cada tipo** ficaram fora do agrupamento
+  ("3 de produto acabado e 1 de volume"), e o recorte impresso também. Antes só citava volume.
+
 ## [3.3.0] — 2026-09-03
 
 ### Adicionado
