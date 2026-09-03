@@ -621,6 +621,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.3.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Correção de leitura: um PDF pode trazer vários lotes.</b> O ERP emite a Situação do Lote por LT, e o LT 162/26 veio com dois lotes no mesmo arquivo. O app rotulava toda ordem com o último lote lido e acusava "M³ diverge" e "71 linhas não reconhecidas" sem motivo. Agora cada lote é lido com o próprio cabeçalho, previsão e conferência.</li>
+    <li>A linha <b>"Qtd. Concluída na Fase"</b> do relatório passa a ser lida e aparece em "Onde travou" como <b>Fase concluída (ERP)</b>: a posição da ordem segundo o próprio ERP, contraprova do "Está em".</li>
+    <li>"Onde travou" conta <b>setores atrás</b>, não linhas do roteiro: três passes de PINTAR PU seguidos de PINTAR UV são um setor atrás, não quatro.</li>
+    <li><b>"Inconsistente" refinado:</b> ordem fechada um dia antes do programado, com toda a produção apontada, não é furo de dado — é adiantamento. Só vale quando não há apontamento que sustente o fechamento, ou quando a operação foi concluída depois de a ordem já estar fechada.</li>
+    <li>M³ sai da tela. Ele nunca serviu de indicador; fica só como conferência silenciosa de que o PDF foi lido inteiro ("leitura conferida").</li>
+  </ul>
   <h3>2.2.0 — 03/09/2026</h3>
   <ul>
     <li><b>Seção nova: "Onde travou".</b> Responde <i>por que</i> a ordem ficou para trás: onde ela <b>deveria estar</b> hoje pela previsão do processo e onde ela <b>está</b> (a fase seguinte à última apontada). Ex.: prevista para EMBALAR hoje, ainda na COLAR BORDA desde 28/08 — 2 fases atrás, 3 dias úteis parada, 100 peças.</li>
@@ -903,12 +911,19 @@ function splitRow(tokens){
 /* Um valor so' e' aceito na coluna cujo TIPO ele tem. Antes, um numero caindo
    na coluna de data era gravado como data e a tela exibia lixo sem avisar —
    que e' o pior modo de falhar num app de conferencia. */
+/* UM ARQUIVO PODE TRAZER VÁRIOS LOTES. O ERP emite a "Situação do Lote" por
+   LT, e um LT tem um lote por produto: o PDF do LT 162/26 veio com o lote
+   025136 (mesa cabeceira) nas páginas 1–12 e o 025137 (penteadeira) nas
+   13–45, cada um com o próprio cabeçalho e o próprio Total M3. Tratar o
+   arquivo como um lote só rotulava toda ordem com o último lote lido e
+   comparava a soma dos dois com o rodapé de um — os dois avisos de leitura
+   que apareceram no primeiro lote real. O cabeçalho se repete em toda
+   página; só um NÚMERO DE LOTE diferente abre um lote novo. */
 function parseDoc(pages,arquivo){
-  const doc={arquivo,lote:null,lt:null,descricao:null,dataInicio:null,dataPrevisao:null,
-             dataRelatorio:null,totalM3:null,totalPeso:null,ofs:[],avisos:[],ignoradas:0,suspeitas:0,paginas:pages.length};
+  const doc={arquivo,lotes:[],dataRelatorio:null,ofs:[],avisos:[],ignoradas:0,suspeitas:0,paginas:pages.length};
   const dt=s=>{if(!s)return null;if(s.k==='D')return s.v;doc.suspeitas++;return null;};
   const nm=s=>{if(!s)return null;if(s.k==='N')return s.v;doc.suspeitas++;return null;};
-  let cur=null;
+  let cur=null, lote=null;
   for(const items of pages){
     for(const tokens of buildRows(items)){
       const line=tokens.map(t=>t.t).join(' ');
@@ -917,24 +932,40 @@ function parseDoc(pages,arquivo){
       }
       if(/Lote\s*Nr\.?:/i.test(line)){
         const m=line.match(/Nr\.?:\s*(\d+)\s*(?:LT\s*(\S+))?\s*(.*?)\s*(?:Status|$)/i);
-        if(m){doc.lote=m[1];doc.lt=m[2]||null;doc.descricao=(m[3]||'').trim()||null;}
+        if(m){
+          if(!lote||lote.lote!==m[1]){
+            lote={lote:m[1],lt:null,descricao:null,dataInicio:null,dataPrevisao:null,totalM3:null,totalPeso:null,ofs:[]};
+            doc.lotes.push(lote);
+          }
+          lote.lt=m[2]||null; lote.descricao=(m[3]||'').trim()||null;
+        }
         continue;
       }
       if(/Data\s*Inicio/i.test(line)){
         const ds=line.match(/\d{2}\/\d{2}\/\d{2,4}/g)||[];
-        if(ds[0])doc.dataInicio=toIso(ds[0]); if(ds[1])doc.dataPrevisao=toIso(ds[1]);
+        if(lote){ if(ds[0])lote.dataInicio=toIso(ds[0]); if(ds[1])lote.dataPrevisao=toIso(ds[1]); }
         continue;
       }
       if(/Total\s*M3/i.test(line)||/Peso\s*Bruto/i.test(line)){
         const ns=line.match(/[\d.]+,\d+/g)||[];
-        if(ns[0])doc.totalM3=toNum(ns[0]); if(ns[1])doc.totalPeso=toNum(ns[1]);
+        if(lote){ if(ns[0])lote.totalM3=toNum(ns[0]); if(ns[1])lote.totalPeso=toNum(ns[1]); }
         continue;
       }
       if(tokens.length>=2&&RE_OF.test(tokens[0].t)&&RE_PROD.test(tokens[1].t)){
-        cur={arquivo,lote:doc.lote,lt:doc.lt,of:tokens[0].t,produto:tokens[1].t,
+        cur={arquivo,lote:lote?lote.lote:null,lt:lote?lote.lt:null,previsaoLote:lote?lote.dataPrevisao:null,
+             of:tokens[0].t,produto:tokens[1].t,
              descricao:tokens.slice(2).map(t=>t.t).join(' ').replace(/;+$/,'').trim(),
-             m3:null,previsao:null,conclusao:null,qtd:null,pronto:null,faltam:null,operacoes:[],_ok:false};
-        doc.ofs.push(cur);continue;
+             m3:null,previsao:null,conclusao:null,qtd:null,pronto:null,faltam:null,faseConcluida:null,operacoes:[],_ok:false};
+        doc.ofs.push(cur); if(lote)lote.ofs.push(cur); continue;
+      }
+      // "Qtd. Concluída na Fase: USINAGEM 50,000" — o ERP diz, por ordem, a
+      // última FASE (grupo de operações) que a peça completou e quantas
+      // peças. É a posição da ordem segundo o próprio ERP; serve de
+      // contraprova para "Onde travou".
+      if(/Qtd\.?\s*Conclu[ií]da\s*na\s*Fase/i.test(line)){
+        const m=line.match(/Fase:\s*(.+?)\s+([\d.]+,\d+)\s*$/i);
+        if(m&&cur) cur.faseConcluida={fase:m[1].trim(),qtd:toNum(m[2])};
+        continue;
       }
       if(SKIP.test(line))continue;
       const {desc,vals}=splitRow(tokens);
@@ -956,12 +987,14 @@ function parseDoc(pages,arquivo){
       doc.ignoradas++;
     }
   }
-  // A previsão do LOTE vai junto de cada ordem: é contra ela que se identifica
-  // a ordem de reposição, criada depois e com datas próprias.
-  doc.ofs.forEach(o=>{o.lote=doc.lote;o.lt=doc.lt;o.previsaoLote=doc.dataPrevisao;delete o._ok;});
-  const soma=doc.ofs.reduce((s,o)=>s+(o.m3||0),0);
-  if(doc.totalM3!=null&&Math.abs(soma-doc.totalM3)>0.02)
-    doc.avisos.push(`Soma de M³ das ordens (${soma.toFixed(3)}) diverge do Total M3 do relatório (${doc.totalM3.toFixed(3)}). Confira o arquivo.`);
+  doc.ofs.forEach(o=>{delete o._ok;});
+  // A conferência de M³ é POR LOTE: cada um tem o próprio rodapé.
+  doc.lotes.forEach(l=>{
+    l.somaM3=l.ofs.reduce((s,o)=>s+(o.m3||0),0);
+    l.confere=l.totalM3!=null&&Math.abs(l.somaM3-l.totalM3)<=0.02;
+    if(l.totalM3!=null&&!l.confere)
+      doc.avisos.push(`Lote ${l.lote}: leitura incompleta — a soma das ordens lidas não bate com o rodapé do relatório (conferência por M³: ${l.somaM3.toFixed(3)} × ${l.totalM3.toFixed(3)}). Podem faltar ordens ou páginas.`);
+  });
   const semQ=doc.ofs.filter(o=>o.qtd==null).map(o=>o.of);
   if(semQ.length)doc.avisos.push('Ordens sem linha de quantidade: '+semQ.join(', '));
   if(doc.ignoradas)doc.avisos.push(doc.ignoradas+' linha(s) não reconhecida(s) — o layout pode ter mudado.');
@@ -1089,8 +1122,9 @@ const ehReposicao=of=>!!(of.previsaoLote&&of.previsao&&of.previsao>of.previsaoLo
  *             com uma posterior apontada NÃO é posição: é apontamento
  *             esquecido (faltasApontamento) — a peça já passou dali.
  *
- *   atrasada — está numa fase anterior à que deveria (`fasesAtras` > 0), ou
- *             na própria fase com a previsão dela vencida.
+ *   atrasada — está num setor anterior ao que deveria (`fasesAtras` > 0,
+ *             contado em setores distintos), ou na própria fase com a
+ *             previsão dela vencida.
  *   roteiroPronto — todas as fases apontadas e a ordem ainda em aberto: não
  *             é atraso de produção, é ordem por fechar.
  *
@@ -1109,7 +1143,11 @@ function posicaoOrdem(of,ref,flagEmb){
   let iUlt=-1; ops.forEach((x,i)=>{ if(apontada(x.op)) iUlt=i; });
   const parcial=iUlt>=0&&!ops[iUlt].op.conclusao&&saldoOp(ops[iUlt].op)>0;
   const esta=ops[parcial?iUlt:iUlt+1]||null;
-  const fasesAtras=esta&&deveria?Math.max(0,deveria.seq-esta.seq):0;
+  // Distância em SETORES, não em linhas do roteiro: três passes de PINTAR PU
+  // seguidos de PINTAR UV são um setor atrás, não quatro. É assim que o
+  // líder conta, e é o número que se fala na reunião.
+  const fasesAtras=esta&&deveria&&deveria.seq>esta.seq
+    ?new Set(todas.filter(x=>x.seq>=esta.seq&&x.seq<=deveria.seq).map(x=>x.op.descricao)).size-1:0;
   const vencidaNaFase=!!(esta&&esta.op.previsao&&esta.op.previsao<ref);
   return {
     esta, deveria, fasesAtras, parcial,
@@ -1134,7 +1172,9 @@ function posicaoOrdem(of,ref,flagEmb){
  *   ref  — a data em que a ordem deveria estar pronta segundo o roteiro: a
  *          ÚLTIMA previsão de processo, porque a ordem termina quando a última
  *          fase termina. Sem roteiro programado, resta a previsão da ordem.
- *   inconsistente — concluída antes da PRIMEIRA previsão de processo. Isso não
+ *   inconsistente — concluída antes da PRIMEIRA previsão de processo e sem
+ *          produção que sustente isso: nenhuma operação apontada, ou operação
+ *          concluída depois de a ordem já estar fechada. Isso não
  *          é desempenho e não pode entrar em indicador de prazo: é dado a
  *          corrigir, e aparece nos Achados como tal.
  */
@@ -1146,7 +1186,14 @@ function prazoOrdem(of){
     ref: fim||of.previsao||null,
     doProcesso: !!fim,
     // Reposição fechada antes do roteiro é o fluxo dela, não furo de dado.
-    inconsistente: !!(of.conclusao&&ini&&of.conclusao<ini&&!ehReposicao(of)),
+    // Fechada antes da primeira previsão E sem produção que sustente o
+    // fechamento: nenhuma operação apontada, ou operação concluída DEPOIS de
+    // a ordem já estar fechada. Só a data não basta: no lote real uma ordem
+    // cortada e fechada um dia antes do programado, com as 975 peças
+    // apontadas no mesmo dia, caía aqui como "inconsistente" — isso é
+    // adiantamento, não furo de dado.
+    inconsistente: !!(of.conclusao&&ini&&of.conclusao<ini&&!ehReposicao(of)
+      &&(!of.operacoes.some(apontada)||of.operacoes.some(o=>o.conclusao&&o.conclusao>of.conclusao))),
     reposicao: ehReposicao(of),
   };
 }
@@ -1180,7 +1227,7 @@ function analisar(docs,ref,flagEmb){
       const nenhum=relevantes.length>0&&relevantes.every(o=>!o.conclusao&&!(o.pronto>0));
       if(nenhum) add('OF_CONCL_SEM_APONTAR',of,null,`Conclusão em ${br(of.conclusao)}, mas nenhuma das ${relevantes.length} operações foi apontada.`);
       const prevMin=ops.map(o=>o.previsao).filter(Boolean).sort()[0];
-      if(prevMin&&of.conclusao<prevMin)
+      if(pz.inconsistente)
         add('OF_CONCL_ANTES_PREV',of,null,`Conclusão ${br(of.conclusao)} anterior à primeira previsão de processo (${br(prevMin)}).`);
       const pend=ops.filter(o=>!o.conclusao&&!ignoraEmbalagem(of,o,flagEmb));
       if(pend.length&&!nenhum)
@@ -1244,7 +1291,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='2.2.0';
+const VERSAO='2.3.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1427,7 +1474,7 @@ function renderArquivos(){
     <div class="arquivo">
       <div class="info">
         <span class="nome" title="${esc(d.arquivo)}">${esc(d.arquivo)}</span>
-        <span class="meta${d.erro?' erro':''}">${d.erro?'falha na leitura':`lote ${esc(d.lote||'?')} · ${d.ofs.length} ordens`}</span>
+        <span class="meta${d.erro?' erro':''}">${d.erro?'falha na leitura':`${d.lotes.length>1?'lotes':'lote'} ${esc(d.lotes.map(l=>l.lote).join(', ')||'?')} · ${d.ofs.length} ordens`}</span>
       </div>
       <button type="button" data-i="${i}" title="Remover arquivo" aria-label="Remover ${esc(d.arquivo)}">×</button>
     </div>`).join('');
@@ -1436,10 +1483,11 @@ function renderArquivos(){
 }
 
 function montarFiltros(){
-  const lotes=[...new Set(DOCS.map(d=>d.lote).filter(Boolean))].sort();
+  const todos=DOCS.flatMap(d=>d.lotes);
+  const lotes=[...new Set(todos.map(l=>l.lote))].sort();
   const selLote=$('#fLote').value, selOper=$('#fOper').value;
   $('#fLote').innerHTML='<option value="">Todos</option>'+lotes.map(l=>{
-    const d=DOCS.find(x=>x.lote===l); return `<option value="${esc(l)}">${esc(l)} — LT ${esc(d.lt||'')} ${esc(d.descricao||'')}</option>`;}).join('');
+    const d=todos.find(x=>x.lote===l); return `<option value="${esc(l)}">${esc(l)} — LT ${esc(d.lt||'')} ${esc(d.descricao||'')}</option>`;}).join('');
   const ops=[...new Set(DOCS.flatMap(d=>d.ofs.flatMap(o=>o.operacoes.map(x=>x.descricao))))].sort();
   $('#fOper').innerHTML='<option value="">Todas</option>'+ops.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
   if(lotes.includes(selLote))$('#fLote').value=selLote;
@@ -1740,7 +1788,7 @@ function renderCartoes(g){
 
 /* ---- CONTEXTO: o tamanho do recorte, para o leitor saber de que universo fala ---- */
 function renderContexto(g){
-  const lotes=new Set(DOCS.map(d=>d.lote).filter(Boolean));
+  const lotes=new Set(DOCS.flatMap(d=>d.lotes.map(l=>l.lote)));
   const ctx=[['Arquivos',DOCS.length],['Lotes',lotes.size],['Ordens',g.ord.length],['Operações',g.ops.length],
     ['Achados',g.ach.length],['Saldo a produzir',nf(g.saldo)+' pç'],
     ['Aderência (previsão do processo)',(g.ader==null?'—':g.ader+'%')+` · ${g.noPrazo}/${g.julgaveis.length}`],
@@ -1981,7 +2029,7 @@ function desenharTravadas(p,ref){
       <div class="numeros">
         <span class="n1"><span class="v c-critico">${r.n}</span><span class="r">${r.n>1?'Ordens':'Ordem'}</span></span>
         <span class="n1"><span class="v">${nf(r.pecas)}</span><span class="r">Peças paradas</span></span>
-        <span class="n1"><span class="v ${r.fases?'c-critico':''}">${r.fases||'—'}</span><span class="r">Fases atrás (máx.)</span></span>
+        <span class="n1"><span class="v ${r.fases?'c-critico':''}">${r.fases||'—'}</span><span class="r">Setores atrás (máx.)</span></span>
       </div>
       ${r.pior?`<div class="linha">Há mais tempo: ordem <b>${esc(r.pior.of)}</b> — ${esc(r.pior.peca)}, <b>${r.pior.d}</b> dia(s) útil(eis) parada</div>`
               :'<div class="linha">Atrasadas, mas ainda dentro da previsão desta fase</div>'}
@@ -1994,6 +2042,7 @@ function desenharTravadas(p,ref){
       <td>${esc(x.of.descricao)}</td><td class="cod">${esc(x.of.produto)}</td>
       <td>${faseTxt(x.pos.deveria)}</td>
       <td>${faseTxt(x.pos.esta)} ${situacao(x)}</td>
+      <td>${x.of.faseConcluida?`${esc(x.of.faseConcluida.fase)} <small class="cod">${nf(x.of.faseConcluida.qtd)} pç</small>`:'—'}</td>
       <td class="n ${x.pos.fasesAtras?'c-critico':''}"><b>${x.pos.fasesAtras||'—'}</b></td>
       <td class="n">${x.pos.diasParada!=null?`<span class="c-critico">${x.pos.diasParada} d</span>`:'—'}</td>
       <td class="n"><b>${nf(x.pos.pecas)}</b></td>
@@ -2004,8 +2053,8 @@ function desenharTravadas(p,ref){
       <span class="meta">${atr.length} ${atr.length===1?'ordem':'ordens'} em aberto atrás do programado · de ${abertas} em aberto · referência ${br(ref)}</span></div>
     ${setores.length?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
-      <th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th><th>Está em</th>
-      <th class="n">Fases atrás</th><th class="n">Parada há (d.ú.)</th><th class="n">Peças na fase</th><th>Lote</th>
+      <th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th><th>Está em</th><th>Fase concluída (ERP)</th>
+      <th class="n">Setores atrás</th><th class="n">Parada há (d.ú.)</th><th class="n">Peças na fase</th><th>Lote</th>
       </tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
       :'<div class="vazio">Nenhuma ordem em aberto atrás do programado com os filtros atuais.</div>'}
     ${prontas.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
@@ -2017,8 +2066,9 @@ function desenharTravadas(p,ref){
     <div class="nota"><b>Deveria estar em</b> = a última fase do roteiro com previsão do processo até ${br(ref)}: até hoje o PPCP programou a ordem chegar aí.
       <b>Está em</b> = a fase seguinte à última apontada — fase anterior em branco com uma posterior apontada é apontamento esquecido (seção "Sem apontamento"), não posição; a peça já passou.
       <b>Parcial</b> = a fase começou, tem quantidade lançada e não terminou. <b>Não começou</b> = nenhuma fase apontada.
-      <b>Fases atrás</b> = quantas fases separam onde está de onde deveria estar; "—" com dias parada = atrasada na própria fase.
+      <b>Setores atrás</b> = quantos setores separam onde está de onde deveria estar (três passes de pintura no mesmo setor contam um); "—" com dias parada = atrasada na própria fase.
       <b>Peças na fase</b> = saldo ainda não apontado na fase onde está. Só ordens em aberto; a EMBALAR isenta por convenção não conta como posição.
+      <b>Fase concluída (ERP)</b> = a linha "Qtd. Concluída na Fase" do próprio relatório: a última fase que o ERP dá como completa e quantas peças. Se discordar de "Está em", confira a ordem.
       Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.</div>`;
 }
 
@@ -2197,22 +2247,27 @@ function desenharPainel(p,ref){
 
 /* ---- LEITURA DOS ARQUIVOS: a prova de que o PDF foi lido inteiro ---- */
 function desenharLeitura(p){
-  const m3=d=>d.ofs.reduce((s,o)=>s+(o.m3||0),0);
   const cards=DOCS.map(d=>{
-    const confere=d.totalM3!=null&&Math.abs(m3(d)-d.totalM3)<=0.02;
+    const confere=d.lotes.length>0&&d.lotes.every(l=>l.confere);
     const cls=d.erro?'erro':d.avisos.length?'atencao':'ok';
+    // Um arquivo pode trazer vários lotes; cada um tem o próprio rodapé de
+    // M³, então a conferência é dita lote a lote.
+    // O M³ não interessa ao PPCP; ele só serve para a conferência de leitura
+    // (soma das ordens × rodapé do lote), que aparece como selo, não como número.
+    const lotes=d.lotes.map(l=>`<br>Lote <b>${esc(l.lote)}</b> — LT ${esc(l.lt||'?')} ${esc(l.descricao||'')} ·
+          início ${br(l.dataInicio)} · previsão ${br(l.dataPrevisao)} ·
+          <span class="num">${l.ofs.length}</span> ordens · <span class="num">${l.ofs.reduce((s,o)=>s+o.operacoes.length,0)}</span> operações
+          ${l.confere?'<span class="selo ok">leitura conferida</span>':l.totalM3==null?'<span class="selo atencao">sem rodapé para conferir</span>':'<span class="selo critico">leitura incompleta</span>'}`).join('');
     return `<div class="cartao ${cls}">
-        <div class="nome">${esc(d.arquivo)} ${confere?'<span class="selo ok">M³ confere</span>':''}</div>
-        <div class="det">Lote ${esc(d.lote||'?')} — LT ${esc(d.lt||'?')} ${esc(d.descricao||'')} · ${d.paginas} página(s) ·
-          início ${br(d.dataInicio)} · previsão ${br(d.dataPrevisao)} · relatório emitido em ${br(d.dataRelatorio)}<br>
-          <span class="num">${d.ofs.length}</span> ordens · <span class="num">${d.ofs.reduce((s,o)=>s+o.operacoes.length,0)}</span> operações ·
-          M³ lido <span class="num">${nf(m3(d),3)}</span> · M³ do rodapé <span class="num">${nf(d.totalM3,3)}</span></div>
+        <div class="nome">${esc(d.arquivo)} ${confere?'<span class="selo ok">leitura conferida</span>':''}</div>
+        <div class="det">${d.paginas} página(s) · ${d.lotes.length} lote(s) · <span class="num">${d.ofs.length}</span> ordens ·
+          relatório emitido em ${br(d.dataRelatorio)}${lotes}</div>
         ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}">${esc(a)}</div>`).join('')}
       </div>`;});
   p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
       <div class="leitura">${cards.join('')}</div>
-      <div class="nota">A conferência do total de M³ contra o rodapé do próprio relatório é a verificação automática de que o arquivo foi lido por inteiro.
-      Se aparecer divergência ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
+      <div class="nota"><b>Leitura conferida</b> = a soma do M³ das ordens lidas bate com o rodapé de cada lote no próprio relatório — a verificação automática de que o arquivo foi lido por inteiro (o M³ em si não é usado para nada além disso).
+      Se aparecer leitura incompleta ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
 }
 
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
@@ -2298,7 +2353,7 @@ function montarImpresso(soSetor){
   const f=faltasFiltradas().filter(x=>!soSetor||x.op.descricao===soSetor), ref=$('#fRef').value;
   const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
   const lotes=[...new Set(f.map(x=>x.of.lote).filter(Boolean))];
-  const desc=DOCS.filter(d=>lotes.includes(d.lote)).map(d=>[d.lt?'LT '+d.lt:'',d.descricao].filter(Boolean).join(' ')).filter(Boolean);
+  const desc=DOCS.flatMap(d=>d.lotes).filter(l=>lotes.includes(l.lote)).map(l=>[l.lt?'LT '+l.lt:'',l.descricao].filter(Boolean).join(' ')).filter(Boolean);
   const hoje=new Date().toISOString().slice(0,10);
 
   const furos=f.filter(x=>x.furo);
@@ -2453,10 +2508,11 @@ $('#btnCsvApont').onclick=()=>csvFaltas('sem-apontamento.csv',faltasFiltradas())
 
 $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
   ['Arquivo','Lote','Ordem','Produto','Descricao','Reposicao','DeveriaEstarEm','PrevisaoDeveria','EstaEm','PrevisaoEsta',
-   'Situacao','FasesAtras','DiasParadaUteis','PecasNaFase'],
+   'Situacao','SetoresAtras','DiasParadaUteis','PecasNaFase','FaseConcluidaERP','QtdFaseConcluidaERP'],
   travadasAtrasadas().map(({of,pos})=>[of.arquivo,of.lote,of.of,of.produto,of.descricao,ehReposicao(of)?'Sim':'Nao',
     pos.deveria.op.descricao,br(pos.deveria.op.previsao),pos.esta.op.descricao,br(pos.esta.op.previsao),
-    pos.naoComecou?'Nao comecou':pos.parcial?'Parcial':'Aguardando',pos.fasesAtras,pos.diasParada==null?'':pos.diasParada,dec(pos.pecas)]));
+    pos.naoComecou?'Nao comecou':pos.parcial?'Parcial':'Aguardando',pos.fasesAtras,pos.diasParada==null?'':pos.diasParada,dec(pos.pecas),
+    of.faseConcluida?of.faseConcluida.fase:'',of.faseConcluida?dec(of.faseConcluida.qtd):'']));
 
 $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
