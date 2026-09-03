@@ -597,6 +597,11 @@ dialog form{margin-top:var(--lg);text-align:right}
         <option value="acabado">Produto acabado (código 1…)</option>
         <option value="volume">Volume (código 5…)</option>
         <option value="componente">Componentes (demais)</option></select></div>
+      <div class="f"><label for="fRepo">Ordens de reposição</label><select id="fRepo"
+        title="Ordens criadas a partir de perda, com previsão posterior à do lote">
+        <option value="">Incluir</option>
+        <option value="so">Só as de reposição</option>
+        <option value="sem">Ocultar reposição</option></select></div>
       <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (código 1…)</label>
       </div>
       <details>
@@ -619,6 +624,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.1.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Ordens de reposição</b> — abertas a partir de perda — passam a ser reconhecidas e marcadas. Elas nascem depois do lote e trazem previsão própria, então o prazo delas não se compara com o das demais.</li>
+    <li>Reposição concluída antes do roteiro <b>deixa de ser "inconsistente"</b>: na reposição a peça costuma ser feita antes de a programação formal existir, e isso é o fluxo normal dela.</li>
+    <li>Ficam <b>fora do cálculo de aderência</b>, mas continuam nos achados de apontamento: reposição é produção real e precisa de registro.</li>
+    <li>Filtro novo para incluir, isolar ou ocultar as ordens de reposição.</li>
+    <li><b>Texto de "Esquecido" reescrito.</b> Agora diz o que importa: como a peça não pula fase, <b>faltou o registro, não a produção</b>.</li>
+  </ul>
   <h3>2.0.0 — 03/09/2026</h3>
   <ul>
     <li><b>Uma tela por setor.</b> Os setores viraram navegação na lateral, com ponto de estado e as peças pendentes de cada um. Clicar abre a tela daquele processo.</li>
@@ -932,7 +945,9 @@ function parseDoc(pages,arquivo){
       doc.ignoradas++;
     }
   }
-  doc.ofs.forEach(o=>{o.lote=doc.lote;o.lt=doc.lt;delete o._ok;});
+  // A previsão do LOTE vai junto de cada ordem: é contra ela que se identifica
+  // a ordem de reposição, criada depois e com datas próprias.
+  doc.ofs.forEach(o=>{o.lote=doc.lote;o.lt=doc.lt;o.previsaoLote=doc.dataPrevisao;delete o._ok;});
   const soma=doc.ofs.reduce((s,o)=>s+(o.m3||0),0);
   if(doc.totalM3!=null&&Math.abs(soma-doc.totalM3)>0.02)
     doc.avisos.push(`Soma de M³ das ordens (${soma.toFixed(3)}) diverge do Total M3 do relatório (${doc.totalM3.toFixed(3)}). Confira o arquivo.`);
@@ -1021,6 +1036,33 @@ function faltasApontamento(ordens,ref,flagEmb){
 }
 
 /**
+ * ORDEM DE REPOSIÇÃO — criada a partir de perda, com datas próprias.
+ *
+ * Quando uma peça é perdida ou refugada, o ERP abre uma ordem nova para
+ * repor. Ela nasce depois do lote e traz previsão posterior à dele, porque a
+ * contagem começa na criação da ordem, não no início do lote.
+ *
+ * Isso torna dois julgamentos inválidos para ela:
+ *   - comparar seu prazo com o do lote não diz nada, e
+ *   - "concluída antes da primeira previsão de processo" deixa de ser furo de
+ *     dado: na reposição a peça costuma ser feita antes de a programação
+ *     formal existir, e isso é o fluxo normal, não inconsistência.
+ *
+ * O que NÃO muda: a falta de apontamento continua valendo. Reposição é
+ * produção real e precisa de registro como qualquer outra.
+ */
+/* A referência é a PREVISÃO DO LOTE, lida do cabeçalho do relatório: ela é a
+   data-limite do lote, e uma ordem com previsão além dela nasceu fora do
+   planejamento original.
+   
+   Tentei antes usar a data mais repetida entre as ordens, imaginando que o
+   cabeçalho pudesse vir contaminado pela própria reposição. O teste desmentiu:
+   num lote normal cada ordem tem a sua data escalonada, a mais repetida não
+   representa o prazo do lote, e 6 de 7 ordens legítimas eram acusadas de
+   reposição. O cabeçalho erra menos. */
+const ehReposicao=of=>!!(of.previsaoLote&&of.previsao&&of.previsao>of.previsaoLote);
+
+/**
  * A ORDEM É JULGADA PELO ROTEIRO, NÃO PELA CAPA.
  *
  * A ordem tem uma previsão própria — a data de entrega — e cada operação tem a
@@ -1044,7 +1086,9 @@ function prazoOrdem(of){
     ini, fim,
     ref: fim||of.previsao||null,
     doProcesso: !!fim,
-    inconsistente: !!(of.conclusao&&ini&&of.conclusao<ini),
+    // Reposição fechada antes do roteiro é o fluxo dela, não furo de dado.
+    inconsistente: !!(of.conclusao&&ini&&of.conclusao<ini&&!ehReposicao(of)),
+    reposicao: ehReposicao(of),
   };
 }
 
@@ -1098,7 +1142,7 @@ function analisar(docs,ref,flagEmb){
       if(!op.previsao) add('OP_SEM_PREVISAO',of,op,'Operação sem previsão do processo — roteiro sem programação.');
 
       if(falta&&falta.tipo==='furo')
-        add('APONT_FURADO',of,op,`${nf(op.qtd)} pç sem apontamento nesta fase, mas ${falta.prova} — a peça passou por aqui e o apontamento não foi feito.`);
+        add('APONT_FURADO',of,op,`${nf(op.qtd)} pç sem registro nesta fase, mas ${falta.prova} — faltou apontar, não faltou produzir.`);
       else if(falta&&falta.tipo==='pendente'&&falta.vencida&&!of.conclusao)
         add('OP_SEM_APONTAMENTO',of,op,`${nf(op.qtd)} pç sem nenhum apontamento. Previsão ${br(op.previsao)}, ${dias(op.previsao,ref)} dia(s) vencida. Pode ser falta de apontamento ou de produção — confirmar no setor.`);
       else if(!of.conclusao&&!op.conclusao&&op.previsao&&op.previsao<ref&&!isento)
@@ -1143,7 +1187,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='2.0.0';
+const VERSAO='2.1.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1360,14 +1404,15 @@ function montarFiltros(){
 function filtros(){
   return {lote:$('#fLote').value,prod:$('#fProduto').value.trim().toUpperCase(),
           oper:$('#fOper').value,sev:$('#fSev').value.split(',').filter(Boolean),
-          tipo:$('#fTipo')?$('#fTipo').value:'',ref:$('#fRef').value};
+          tipo:$('#fTipo')?$('#fTipo').value:'',repo:$('#fRepo')?$('#fRepo').value:'',ref:$('#fRef').value};
 }
 /* Tipo pelo primeiro dígito do código: 1 acabado, 5 volume, o resto componente. */
 const tipoProduto=cod=>CFG.produtoAcabado.test(cod||'')?'acabado'
   :CFG.produtoVolume.test(cod||'')?'volume':'componente';
 const casaOf=(o,f)=>(!f.lote||o.lote===f.lote)
   &&(!f.prod||(o.produto+' '+o.descricao).toUpperCase().includes(f.prod))
-  &&(!f.tipo||tipoProduto(o.produto)===f.tipo);
+  &&(!f.tipo||tipoProduto(o.produto)===f.tipo)
+  &&(!f.repo||(f.repo==='so'?ehReposicao(o):!ehReposicao(o)));
 
 function ordensFiltradas(){
   const f=filtros();
@@ -1498,8 +1543,11 @@ function renderResposta(){
   // Aderência julgada pelo ROTEIRO e sem as inconsistentes: uma ordem fechada
   // antes de a primeira fase estar prevista não é entrega no prazo, e contá-la
   // como tal levava a aderência a 100% num lote cheio de apontamento esquecido.
-  const julgaveis=conc.filter(o=>{const z=prazoOrdem(o);return z.ref&&!z.inconsistente;});
+  // Reposição fora da aderência: o prazo dela nasce na criação da ordem, não no
+  // início do lote, e misturá-la com as demais compara coisas diferentes.
+  const julgaveis=conc.filter(o=>{const z=prazoOrdem(o);return z.ref&&!z.inconsistente&&!z.reposicao;});
   const inconsist=conc.filter(o=>prazoOrdem(o).inconsistente).length;
+  const nRepo=ord.filter(ehReposicao).length;
   const noPrazo=julgaveis.filter(o=>o.conclusao<=prazoOrdem(o).ref).length;
   const ader=julgaveis.length?Math.round(noPrazo/julgaveis.length*100):null;
   const saldo=ord.reduce((s,o)=>s+Math.max(0,(o.qtd||0)-(o.pronto||0)),0);
@@ -1535,7 +1583,7 @@ function renderResposta(){
     ? `${falt.length} apontamento${falt.length>1?'s':''} pendente${falt.length>1?'s':''} em ${rank.length} setor${rank.length>1?'es':''}`
     : 'Nenhum apontamento pendente';
   const detalhe=falt.length
-    ? `${nf(pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${furos.length?' — há prova de que a peça passou por lá.':'.'}`
+    ? `${nf(pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${furos.length?' — nos esquecidos, faltou apontar, não produzir.':'.'}`
     : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
   /* Na tela de um setor, o veredito GERAL sai: ele fala do lote inteiro (62
      peças) enquanto o cabeçalho do setor fala do setor (42). Dois títulos com
@@ -1566,7 +1614,7 @@ function renderResposta(){
 
   $('#resposta').innerHTML=
     bloco('Apontamento esquecido',furos.length,'op.',
-      `${nf(pcFuro)} peça(s) com prova de que passaram pelo setor`,furos.length?'c-critico':'c-ok')+
+      `${nf(pcFuro)} peça(s) produzidas sem registro no sistema`,furos.length?'c-critico':'c-ok')+
     bloco('Peças sem apontamento',nf(pcFalt),'pç',
       `peças distintas · ${falt.length} apontamento(s) a fazer em ${setores.length} setor(es)`,pcFalt?'c-atencao':'c-ok')+
     bloco('Ordens com achado crítico',crit.length,'',`de ${ord.length} ordens no filtro`,crit.length?'c-critico':'')+
@@ -1577,6 +1625,7 @@ function renderResposta(){
     ['Achados',ach.length],['Saldo a produzir',nf(saldo)+' pç'],
     ['Aderência (previsão do processo)',(ader==null?'—':ader+'%')+` · ${noPrazo}/${julgaveis.length}`],
     ...(inconsist?[['Fora da conta (fechada antes do roteiro)',inconsist]]:[]),
+    ...(nRepo?[['Ordens de reposição',nRepo]]:[]),
     ['Relatório emitido em',br(DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop())||'—']];
   $('#contexto').innerHTML=ctx.map(([r,v])=>`<div class="i"><span>${r}</span><b class="num">${v}</b></div>`).join('');
 
@@ -1663,7 +1712,7 @@ function desenhar(){
     const d=dadosDoSetor(SETOR_SEL);
     const estado=d.furos?'critico':(d.faltas.length||d.parado.length)?'atencao':'ok';
     const frase=d.furos
-      ? `<b>${d.furos} apontamento${d.furos>1?'s':''} esquecido${d.furos>1?'s':''}</b> — a peça passou por aqui e o registro não foi feito.`
+      ? `<b>${d.furos} apontamento${d.furos>1?'s':''} esquecido${d.furos>1?'s':''}</b> — faltou o registro, não a produção.`
       : d.faltas.length
       ? `<b>${d.faltas.length} apontamento${d.faltas.length>1?'s':''} pendente${d.faltas.length>1?'s':''}</b> — sem prova de que a peça passou; confirmar no setor.`
       : d.parado.length
@@ -1739,8 +1788,8 @@ function desenhar(){
         ?'<div class="vazio">Nenhuma operação deste setor com os filtros atuais.</div>':''}
 
       <div class="nota" style="border:1px solid var(--borda);border-radius:var(--r-lg);background:var(--papel)">
-        Prazos em <b>dias úteis</b>. <b>Esquecido</b> = a fase seguinte do roteiro já foi apontada, ou a ordem foi
-        dada como concluída: a peça passou por aqui, logo o apontamento existe para ser feito.
+        Prazos em <b>dias úteis</b>. <b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi
+        fechada. Como a peça não pula fase, faltou o <b>registro</b>, não a produção.
         <b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou.
         <b>Parado no setor</b> = a fase começou, tem apontamento parcial e não terminou.</div>`;
 
@@ -1764,7 +1813,7 @@ function desenhar(){
         <td class="cod">${br(x.op.previsao)}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
         <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td>
         <td class="cod">${esc(x.of.lote)}</td></tr>`),
-      '<b>Esquecido</b> = a fase seguinte já foi apontada, ou a ordem foi dada como concluída. A peça passou por aqui, logo o apontamento existe para ser feito — é cobrança direta com o setor. '+
+      '<b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada. Como a peça não pula fase, faltou o <b>registro</b>, não a produção. '+
       '<b>Sem quantidade</b> = a fase tem data de conclusão mas nenhuma peça lançada; o setor fechou sem apontar o que produziu. '+
       '<b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde. '+
       'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
@@ -1790,6 +1839,7 @@ function desenhar(){
         const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
         let sit,cls;
         if(pz.inconsistente){sit='Inconsistente';cls='critico';}
+        else if(pz.reposicao){sit=concl?'Reposição concluída':'Reposição';cls=concl?'ok':'neutro';}
         else if(concl){sit='Concluída';cls='ok';}
         else if(pz.ref&&pz.ref<ref){sit='Vencida';cls='critico';}
         else {sit='Em aberto';cls='neutro';}
@@ -1812,7 +1862,8 @@ function desenhar(){
       '<b>Todo prazo desta tela é contado em DIAS ÚTEIS</b> — segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado. '+
       '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
       '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
-      '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência.');
+      '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência. '+
+      '<b>Reposição</b> = ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.');
   }
   if(ABA==='op'){
     const ops=opsFiltradas();
@@ -1973,6 +2024,7 @@ function filtrosNoPapel(secao){
   if(f.oper) t.push(`somente o setor ${f.oper}`);
   if(f.tipo) t.push(f.tipo==='acabado'?'somente produto acabado (código 1…)'
     :f.tipo==='volume'?'somente volume (código 5…)':'somente componentes');
+  if(f.repo) t.push(f.repo==='so'?'somente ordens de reposição':'sem as ordens de reposição');
   // Severidade só filtra a lista de Achados. Declará-la numa folha de Ordens
   // ou Operações faria o leitor descontar linhas que nunca foram descartadas —
   // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
@@ -2161,8 +2213,8 @@ function montarImpresso(soSetor){
 
 function rodape(ref){
   return `<div class="doc-rodape">
-    <p><b>ESQUECIDO</b> — a fase seguinte do roteiro já foi apontada, ou a ordem foi dada como concluída.
-    A peça passou por este setor, então o apontamento existe para ser feito. Não é dúvida.</p>
+    <p><b>ESQUECIDO</b> — a fase seguinte já tem apontamento, ou a ordem foi fechada. Como a peça não
+    pula fase, ela passou por este setor: faltou o <b>registro</b>, não a produção.</p>
     <p><b>SEM QTD</b> — a fase tem data de conclusão mas nenhuma peça lançada: foi fechada sem apontar o que produziu.</p>
     <p><b>PENDENTE</b> — nada apontado e a previsão venceu, sem prova de que a peça passou.
     Pode ser falta de apontamento ou de produção; é o que esta reunião precisa esclarecer.</p>
