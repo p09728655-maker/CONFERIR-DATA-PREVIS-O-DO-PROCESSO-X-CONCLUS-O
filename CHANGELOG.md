@@ -3,6 +3,85 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.5.0] — 2026-09-03
+
+### Corrigido
+
+- **Ordem de reposição derrubava a integridade do conjunto inteiro.** Achado nos dados reais do
+  LT 163: o CORTAR estava **99,98% pronto** (faltavam **5 peças em 20.168**) e a tela dizia que
+  INTENSE e SPACE não rodavam inteiros a partir de **nenhuma** fase.
+
+  As responsáveis eram 3 ordens de reposição de 1 e 2 peças (`804037`, `803971`, `803970`),
+  abertas depois por refugo. Ninguém para a serra para cortar 1 peça — é racional — mas o
+  indicador binário `Roda inteiro até` virava mentira sobre as outras 20.163.
+
+  **O argumento não é conveniência, é o próprio plano:** o ERP deu a essas ordens previsão
+  15 e 16/09, contra 03/09 do lote. Ele já declara que não são para hoje, e travar o conjunto
+  por elas era a tela ignorando o plano. É a mesma razão pela qual a reposição já ficava fora
+  da aderência: o prazo dela começa na criação da ordem, não no início do lote.
+
+- A reposição sai da conta de **fases** e do **% pronto**, não da tela: fica declarada na coluna
+  Ordens como `+N rep` (com peças no title), no cabeçalho da seção e no CSV
+  (`OrdensReposicaoFora`, `PecasReposicaoFora`). Se o recorte tiver **só** reposição, ela volta
+  a valer — senão o conjunto sumiria da lista.
+
+- O padrão passa a mostrar o que antes só aparecia marcando **"Ocultar reposição"** à mão. Um
+  indicador que precisa de filtro manual para não mentir vai mentir na maioria das vezes que
+  alguém olhar.
+
+### Notas
+
+- Conferido contra o LT 163 real (113 ordens, 3 lotes, 32 páginas, M³ confere): INTENSE passa de
+  "inteiro até NENHUMA" para **inteiro até CORTAR, trava em FURAR 41/43** — 2 ordens e 2.000 pç
+  atrás. `% pronto` (63%) não mudou, porque sempre contou a história certa; o binário é que era
+  sensível demais.
+- `avancoPorLote` (tela do setor) **não** muda: ali a reposição é trabalho real que o setor tem
+  de fazer, e a conta em peças já a dilui sozinha (o CORTAR aparece 100% com 2 ordens abertas).
+
+## [3.4.0] — 2026-09-03
+
+### Adicionado
+
+- **Avanço por lote na tela de cada setor.** O líder do CORTAR abre a tela dele e lê
+  `lote 025139 — 100%`, `lote 025140 — 80%`, `lote 025141 — 0%`, com as ordens que faltam em
+  cada um. A regra de despacho fica escrita no cabeçalho do bloco: **feche o lote mais
+  adiantado antes de começar outro**, e uma frase nomeia qual lote, quantas ordens e quantas
+  peças faltam.
+
+  Existe para o problema que a v3.3.0 mediu e não resolvia: o ERP carimba a mesma data em todas
+  as ordens do lote, nada é prioridade, o setor sequencia pelo que economiza setup e começa o
+  lote seguinte antes de fechar o atual.
+
+- **A conta é em peças (peça-fase), não em ordens.** Duas ordens de 44 podem ser 20% das peças;
+  contar ordens faz o resto parecer pequeno, e é exatamente por isso que ele fica para trás. As
+  duas aparecem lado a lado — `fechadas 2/3` e `80% pronto` — porque a diferença entre elas é a
+  informação.
+
+- **Ordenação = ordem de fazer**, não número do lote: o mais adiantado que ainda **não** fechou
+  vem primeiro, porque é o que fecha com menos esforço e libera o setor da frente. Lote fechado
+  vai para o fim, como conferência.
+
+- Cabeçalho em **atenção** quando há mais de um lote aberto no mesmo setor, dizendo quantos são.
+  Novo `.setorBloco.atencao` no CSS — só existia `.critico`.
+
+- O mesmo bloco sai na **folha impressa do setor**, reusando a grade do ranking (já testada em
+  preto e branco): barra cheia = lote fechado, barra hachurada = lote aberto. Aparece também
+  quando o setor não tem nenhum apontamento pendente, caso em que a folha antes saía vazia.
+
+### Alterado
+
+- `pctBarra` virou declaração de função: `desenharSetor` está acima dela no arquivo e passou a
+  usá-la. Mesmo tratamento dado a `tipoProduto` na v3.2.0.
+
+### Notas
+
+- "Feito" segue a regra do resto da tela: fase com conclusão conta cheia, senão vale a
+  quantidade em Já Pronto. Um setor que aparece duas vezes no roteiro (dois passes de COLAR
+  BORDA) soma os dois passes — é o trabalho total que ele deve para aquele lote.
+- Fase fora da conta (setor que não aponta, EMBALAR isenta) não entra na conta do lote.
+- Só na folha de **um** setor. Na folha geral isso seria uma matriz setor × lote, que é outro
+  documento — e a folha geral já foi enxugada uma vez por repetir a mesma conclusão.
+
 ## [3.3.1] — 2026-09-03
 
 ### Corrigido

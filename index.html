@@ -196,6 +196,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   display:flex;justify-content:space-between;align-items:baseline;gap:var(--md);flex-wrap:wrap}
 .setorBloco>h2 small{font-weight:400;font-size:12px;color:var(--texto-fraco)}
 .setorBloco.critico>h2{background:var(--critico-fundo)}
+.setorBloco.atencao>h2{background:var(--atencao-fundo)}
 .setorBloco .acoes{padding:var(--md) var(--xl);display:flex;gap:var(--sm);flex-wrap:wrap;
   border-top:1px solid var(--borda);background:#FAFBFC}
 .setorBloco summary{padding:var(--md) var(--xl);cursor:pointer;font-size:15px;font-weight:700;
@@ -643,6 +644,22 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.5.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Ordem de reposição deixa de derrubar o conjunto.</b> No LT 163 o CORTAR estava <b>99,98% pronto</b> — faltavam 5 peças em 20.168 — e a tela dizia que INTENSE e SPACE não saíam inteiros de <b>nenhuma</b> fase. As responsáveis eram 3 ordens de reposição de 1 e 2 peças, abertas por refugo. Ninguém para a serra para cortar 1 peça, e o indicador virava mentira sobre as outras 20.163.</li>
+    <li><b>O argumento não é conveniência, é o próprio plano:</b> o ERP deu a essas ordens previsão 15 e 16/09, contra 03/09 do lote. Ele já diz que não são para hoje — travar o conjunto por elas era a tela ignorando o plano. Mesma razão pela qual a reposição já ficava fora da aderência.</li>
+    <li>A reposição sai da conta de fases e do % pronto, <b>não da tela</b>: fica declarada na coluna Ordens como <b>+N rep</b>, no cabeçalho e no CSV. Se o recorte tiver só reposição, ela volta a valer — senão o conjunto sumiria.</li>
+    <li>Com isso o padrão passa a mostrar o que antes só aparecia marcando "Ocultar reposição" à mão. Um indicador que precisa de filtro manual para não mentir vai mentir na maioria das vezes que alguém olhar.</li>
+  </ul>
+  <h3>3.4.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Avanço por lote na tela de cada setor.</b> O CORTAR abre a tela dele e lê <b>lote 025139 — 100%</b>, <b>lote 025140 — 80%</b>, <b>lote 025141 — 0%</b>. A regra de despacho fica escrita no cabeçalho: <b>feche o mais adiantado antes de começar outro</b>, com a frase dizendo qual lote e quantas peças faltam.</li>
+    <li><b>Conta em peças, não em ordens.</b> Duas ordens de 44 podem ser 20% das peças — contar ordens faz o resto parecer pequeno, e é justamente por isso que ele fica para trás. As duas contas aparecem: "fechadas 2/3" e "80% pronto".</li>
+    <li><b>Ordenado pela ordem de fazer</b>, não pelo número do lote: o mais adiantado que ainda não fechou vem primeiro, porque é o que fecha com menos esforço e libera o setor da frente. Lote fechado vai para o fim, como conferência.</li>
+    <li>Quando há <b>mais de um lote aberto no mesmo setor</b>, o cabeçalho fica em atenção e diz quantos são. É o estado que dói: começar o próximo antes de fechar o atual.</li>
+    <li>O mesmo bloco sai na <b>folha impressa do setor</b> — é ela que chega no chão. Barra cheia é lote fechado, barra hachurada é lote aberto, legível em preto e branco.</li>
+    <li>Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes: é o trabalho total que ele deve para aquele lote.</li>
+  </ul>
   <h3>3.3.1 — 03/09/2026</h3>
   <ul>
     <li><b>Correção: produto acabado aparecia como conjunto, e pior, como COMPLETO.</b> PAINEL 106, KIT 103 e MESA 108 entravam na lista com 0% pronto e selo <b>completo</b>. A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento — sem fase para contar, "todas as fases fecharam" virava verdade por não haver fase nenhuma. Isso inflava o total de produtos do veredito (dizia "3 de 6") e o contador de completos.</li>
@@ -1395,7 +1412,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.3.1';
+const VERSAO='3.5.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1685,6 +1702,50 @@ function dadosDoSetor(nome){
   };
 }
 
+/**
+ * AVANÇO POR LOTE NESTE SETOR — a regra de despacho virada em número.
+ *
+ * O ERP carimba a mesma data em todas as ordens do lote, então nada é
+ * prioridade e o setor sequencia pelo que economiza setup. O resultado é
+ * começar o lote seguinte antes de fechar o atual, e nenhum lote sai inteiro.
+ *
+ * Duas contas, e a diferença entre elas é o ponto:
+ *   ordens  — quantas ordens deste lote o setor já fechou;
+ *   PEÇAS   — quanto do trabalho, em peça-fase. É a régua, porque 2 ordens de
+ *             44 podem ser 20% das peças: contar ordens faz o resto parecer
+ *             pequeno e é exatamente por isso que ele fica para trás.
+ *
+ * "Feito" segue a regra do resto da tela: fase com conclusão conta cheia,
+ * senão vale a quantidade em Já Pronto. Um setor que aparece duas vezes no
+ * roteiro (dois passes de COLAR BORDA) soma os dois passes — é o trabalho
+ * total que ele deve para aquele lote.
+ *
+ * Ordenação = a ordem de fazer: o lote mais adiantado que AINDA NÃO fechou vem
+ * primeiro, porque é o que fecha com menos esforço e libera o setor da frente.
+ * Lote fechado vai para o fim, como conferência.
+ */
+function avancoPorLote(nome){
+  const f=filtros(), flagEmb=$('#fEmb').checked;
+  const m=new Map();
+  DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f)).forEach(of=>{
+    const ops=of.operacoes.filter(op=>op.descricao===nome&&!foraDaConta(of,op,flagEmb));
+    if(!ops.length) return;
+    const k=of.lote||'—';
+    let r=m.get(k);
+    if(!r){ r={lote:k,lt:of.lt||null,ordens:0,feitas:0,pf:0,pfTotal:0,faltam:[]}; m.set(k,r); }
+    r.ordens++;
+    ops.forEach(op=>{
+      r.pfTotal+=(op.qtd||0);
+      r.pf+=op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
+    });
+    if(ops.every(apontada)) r.feitas++; else r.faltam.push(of);
+  });
+  return [...m.values()]
+    .map(r=>({...r,pct:r.pfTotal?r.pf/r.pfTotal:0,pecasFaltam:Math.max(0,r.pfTotal-r.pf),
+              completo:r.ordens>0&&r.feitas===r.ordens}))
+    .sort((a,b)=>(a.completo?1:0)-(b.completo?1:0)||b.pct-a.pct||String(a.lote).localeCompare(String(b.lote)));
+}
+
 const setoresDisponiveis=()=>{
   const f=filtros();
   const n=new Set();
@@ -1852,7 +1913,23 @@ function conjuntos(){
     if(!g.has(k))g.set(k,[]);
     g.get(k).push(o);
   });
-  return [...g.entries()].map(([cod,ofs])=>{
+  return [...g.entries()].map(([cod,todas])=>{
+    /* REPOSIÇÃO NÃO DECIDE A INTEGRIDADE DO CONJUNTO.
+       No LT 163 o CORTAR estava 99,98% pronto — faltavam 5 peças em 20.168 — e
+       o conjunto aparecia como "inteiro até NENHUMA fase". As responsáveis eram
+       3 ordens de reposição de 1 e 2 peças, abertas depois por refugo. Ninguém
+       para a serra para cortar 1 peça, e o indicador virava mentira sobre as
+       outras 20.163.
+       O argumento não é conveniência: o ERP deu a essas ordens previsão 15 e
+       16/09, contra 03/09 do lote. O próprio plano diz que elas não são para
+       hoje — travar o conjunto por elas é a tela ignorando o plano. É a mesma
+       razão pela qual a reposição já fica fora da aderência: o prazo dela
+       começa na criação da ordem, não no início do lote.
+       Elas saem da conta, não da tela: ficam declaradas com ordens e peças. Se
+       o recorte só tiver reposição, ela volta a valer — senão o conjunto
+       sumiria. */
+    const repo=todas.filter(ehReposicao);
+    const ofs=(repo.length&&repo.length<todas.length)?todas.filter(o=>!ehReposicao(o)):todas;
     const naConta=(o,nome)=>o.operacoes.filter(op=>op.descricao===nome&&!foraDaConta(o,op,flagEmb));
     const soma={}, cont={};
     ofs.forEach(o=>o.operacoes.forEach((op,i)=>{
@@ -1899,6 +1976,9 @@ function conjuntos(){
 
     return {cod, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
       pf, pfTotal, pct:pfTotal?pf/pfTotal:0,
+      // Reposição fora da conta acima, declarada aqui.
+      repo:ofs===todas?0:repo.length,
+      repoPecas:ofs===todas?0:repo.reduce((s,o)=>s+(o.qtd||0),0),
       ordens:ofs.length, pecas:ofs.reduce((s,o)=>s+(o.qtd||0),0),
       /* SEM FASE APONTÁVEL: todo o roteiro do conjunto está fora da conta
          (setor que não aponta, EMBALAR isenta). Não dá para afirmar nada sobre
@@ -2130,6 +2210,31 @@ function desenharSetor(p,ref){
   else if(d.faltas.length) partes.push(`<b>${d.faltas.length} ${plural(d.faltas.length,'apontamento')} a confirmar</b>`);
   const frase=partes.length?partes.join(' · ')+'.':'Nada parado e nada por apontar neste setor, com os filtros atuais.';
 
+  /* O bloco que responde "qual lote eu fecho agora". Mais de um lote aberto no
+     mesmo setor é o estado que dói, e o cabeçalho diz isso com o número. */
+  const lotes=avancoPorLote(d.nome);
+  const abertos=lotes.filter(l=>!l.completo);
+  const alvo=abertos[0];
+  const blocoLotes=lotes.length?`<div class="setorBloco ${abertos.length>1?'atencao':''}">
+      <h2>Avanço por lote
+        <small>${abertos.length>1
+          ? `<b>${abertos.length} lotes abertos aqui ao mesmo tempo</b> — feche o mais adiantado antes de começar outro`
+          : abertos.length===1 ? 'um lote aberto neste setor' : 'todos os lotes deste setor estão fechados'}</small></h2>
+      ${alvo?`<div class="linha" style="padding:var(--md) var(--xl);border-bottom:1px solid var(--borda)">
+        Feche primeiro o <b>lote ${esc(alvo.lote)}</b>: está <b>${Math.round(alvo.pct*100)}%</b> pronto aqui,
+        faltam <b>${alvo.faltam.length}</b> ordem(ns) e <b>${nf(alvo.pecasFaltam)}</b> peça(s).</div>`:''}
+      <div class="wrap"><table><thead><tr><th>Lote</th><th class="n">Ordens aqui</th><th class="n">Fechadas</th>
+        <th class="n">% pronto (peças)</th><th class="n">Peças a fazer</th><th>Ordens que faltam</th><th>Estado</th></tr></thead>
+        <tbody>${lotes.map(l=>`<tr>
+          <td class="forte">${esc(l.lote)}${l.lt?` <small class="cod">LT ${esc(l.lt)}</small>`:''}</td>
+          <td class="n">${l.ordens}</td>
+          <td class="n">${l.feitas}/${l.ordens}</td>
+          <td class="n">${pctBarra(l.pct)}</td>
+          <td class="n ${l.pecasFaltam?'c-critico':''}">${l.pecasFaltam?nf(l.pecasFaltam):'—'}</td>
+          <td class="cod">${l.faltam.slice(0,5).map(o=>esc(o.of)).join(', ')}${l.faltam.length>5?` <small>+${l.faltam.length-5}</small>`:''}</td>
+          <td><span class="selo ${l.completo?'ok':'critico'}">${l.completo?'fechado':'aberto'}</span></td></tr>`).join('')}</tbody></table></div>
+    </div>`:'';
+
   const linhaSeg=x=>`<tr>
       <td class="cod">${esc(x.of.of)}${ehReposicao(x.of)?' <span class="selo neutro">reposição</span>':''}</td>
       <td>${esc(x.of.descricao)}</td><td class="cod">${esc(x.of.produto)}</td>
@@ -2159,6 +2264,8 @@ function desenharSetor(p,ref){
         <div class="n"><div class="v">${d.ordens}</div><div class="s">Ordens que passam aqui</div></div>
       </div>
 
+      ${blocoLotes}
+
       ${d.seguradas.length?`<div class="setorBloco critico">
         <h2>Parado aqui <small>${d.seguradas.length} ordem(ns) atrás do programado · ${nf(d.pecasParadas)} peças · é o que segura o lote</small></h2>
         <div class="wrap"><table><thead><tr><th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th>
@@ -2184,7 +2291,10 @@ function desenharSetor(p,ref){
       <div class="nota" style="border:1px solid var(--borda);border-radius:var(--r-lg);background:var(--papel)">
         Prazos em <b>dias úteis</b>. <b>Parado aqui</b> = a ordem está atrás do programado e a próxima fase a apontar é deste setor.
         <b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada: a peça passou, faltou o <b>registro</b>.
-        <b>A confirmar</b> = nada apontado e a previsão venceu, sem prova de que a peça passou — só o setor responde.</div>`;
+        <b>A confirmar</b> = nada apontado e a previsão venceu, sem prova de que a peça passou — só o setor responde.
+        <b>Avanço por lote</b> = quanto deste setor cada lote já tem apontado, em <b>peças</b> (peça-fase): duas passagens do mesmo setor no roteiro somam as duas.
+        Conta em peças, não em ordens, porque 2 ordens de 44 podem ser 20% das peças — contar ordens faz o resto parecer pequeno, e é por isso que ele fica para trás.
+        Ordenado pela <b>ordem de fazer</b>: o lote mais adiantado que ainda não fechou vem primeiro, porque é o que fecha com menos esforço e libera o setor da frente.</div>`;
 
   const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
   const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
@@ -2315,11 +2425,13 @@ const faixaFases=c=>c.fases.map(x=>{
 
 /* PCT: número à esquerda, barra à direita. A cor é semáforo de avanço, não de
    prazo — quem julga prazo é "Onde travou". */
-const pctBarra=v=>{
+/* Declaração de função, não const: `desenharSetor` está acima no arquivo e
+   também usa isto. Hoisting resolve, e a ordem no arquivo deixa de importar. */
+function pctBarra(v){
   const p=Math.round(v*100);
   const cls=p>=100?'':p>=50?'meio':'baixo';
   return `<span class="pct"><b>${p}%</b><span class="b"><i class="${cls}" style="width:${p}%"></i></span></span>`;
-};
+}
 const ordensFaltantes=(x,max=6)=>x.faltam.slice(0,max).map(o=>esc(o.of)).join(', ')
   +(x.faltam.length>max?` <small>+${x.faltam.length-max}</small>`:'');
 
@@ -2331,6 +2443,7 @@ function desenharConjuntos(p,ref){
   const quebrados=cs.filter(c=>c.disperso);
   const juntos=emCurso.filter(c=>!c.disperso);
   const completos=cs.filter(c=>c.completo);
+  const totRepo=cs.reduce((a,c)=>a+c.repo,0);
   const fora=ordensFiltradas().reduce((a,o)=>{const t=tipoProduto(o.produto);if(t!=='componente')a[t]=(a[t]||0)+1;return a;},{});
   const foraTxt=[fora.acabado?`${fora.acabado} de produto acabado`:'',fora.volume?`${fora.volume} de volume`:'']
     .filter(Boolean).join(' e ');
@@ -2363,7 +2476,7 @@ function desenharConjuntos(p,ref){
       :c.disperso?['critico','quebrado']:['neutro','junto'];
     return `<tr>
       <td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
-      <td class="n">${c.ordens}</td>
+      <td class="n">${c.ordens}${c.repo?` <small class="cod" title="${c.repo} ordem(ns) de reposição, ${nf(c.repoPecas)} pç, fora da conta de integridade">+${c.repo} rep</small>`:''}</td>
       <td class="n">${nf(c.pecas)}</td>
       <td class="n">${pctBarra(c.pct)}</td>
       <td>${c.fechada?`<b>${esc(c.fechada.nome)}</b>`:'<small>nenhuma fase fechada</small>'}</td>
@@ -2389,7 +2502,7 @@ function desenharConjuntos(p,ref){
     </div>`;
 
   p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Conjunto incompleto</h2>
-      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}</span></div>
+      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}${totRepo?` · ${totRepo} ordem(ns) de reposição fora da conta de integridade`:''}</span></div>
     ${cartoes?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
       <th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th><th class="n">% pronto</th>
@@ -2415,6 +2528,9 @@ function desenharConjuntos(p,ref){
       <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
       <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
       <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
+      <b>Ordem de reposição não decide integridade.</b> Ela é aberta depois, por refugo, e o ERP dá a ela previsão posterior à do lote — o próprio plano diz que não é para hoje, e travar o conjunto por ela seria ignorar o plano.
+      Fica fora da conta de fases e do % pronto, declarada na coluna Ordens como <b>+N rep</b>. É a mesma razão pela qual a reposição já fica fora da aderência: o prazo dela começa na criação da ordem, não no início do lote.
+      Se o recorte tiver <b>só</b> reposição, ela volta a valer — senão o conjunto sumiria.
       <b>Só componente entra.</b> Produto acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele, e ficam fora do agrupamento — a tela declara quantas ordens de cada tipo.
       A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento; e todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só.
       <b>Sem fase apontável</b> = conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Sai da lista porque não dá para afirmar nada sobre kit completo — "todas as fases fecharam" seria verdade só por não haver fase nenhuma.
@@ -2665,8 +2781,31 @@ function montarImpresso(soSetor){
       </div>
     </div>`;
 
+  /* AVANÇO POR LOTE NA FOLHA DO SETOR. É esta folha que chega no chão, e é
+     nela que a regra tem que estar escrita: feche o lote mais adiantado antes
+     de começar outro. Reusa a grade do ranking, que já é testada em preto e
+     branco — barra cheia = lote fechado, barra hachurada = lote aberto.
+     Só na folha de um setor: na folha geral isso seria uma matriz setor × lote,
+     outro documento. */
+  const loteHtml=soSetor?(()=>{
+    const ls=avancoPorLote(soSetor);
+    if(!ls.length) return '';
+    const abertos=ls.filter(l=>!l.completo);
+    return `<div class="doc-rank">
+      <div class="tit">Avanço por lote neste setor — ${abertos.length>1
+        ? `${abertos.length} lotes abertos ao mesmo tempo: feche o mais adiantado antes de começar outro`
+        : 'na ordem de fazer'}</div>
+      <div class="grade">${ls.map(l=>`<div class="l">
+        <span class="nome">Lote ${esc(l.lote)}</span>
+        <span class="barra"><i class="${l.completo?'':'pend'}" style="width:${Math.max(2,Math.round(l.pct*100))}%"></i></span>
+        <span class="qtd">${Math.round(l.pct*100)}%</span>
+        <span class="marca">${l.completo?'fechado':`faltam ${nf(l.pecasFaltam)} pç`}</span>
+      </div>`).join('')}</div>
+    </div>`;
+  })():'';
+
   if(!f.length){
-    $('#impresso').innerHTML=cab+
+    $('#impresso').innerHTML=cab+loteHtml+
       `<div class="doc-vazio">Nenhuma operação sem apontamento nos filtros selecionados.</div>`+rodape(ref);
     return;
   }
@@ -2724,7 +2863,7 @@ function montarImpresso(soSetor){
      reforça — faz o leitor procurar qual das quatro é a certa, que é
      exatamente o oposto de entender em dois segundos. Ficam o veredito (a
      conclusão), o ranking (a comparação) e o detalhe por setor (a ação). */
-  $('#impresso').innerHTML=cab+veredito+rankHtml+blocos+rodape(ref);
+  $('#impresso').innerHTML=cab+veredito+loteHtml+rankHtml+blocos+rodape(ref);
 }
 
 function rodape(ref){
@@ -2808,11 +2947,11 @@ $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
    é feito aqui — sem ele sai "0,6666666666666666" em toda linha. */
 const pct4=v=>dec(Math.round((v||0)*10000)/10000);
 $('#btnCsvConj').onclick=()=>csv('conjuntos.csv',
-  ['Produto','CodigoProduto','Ordens','Pecas','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
+  ['Produto','CodigoProduto','Ordens','Pecas','OrdensReposicaoFora','PecasReposicaoFora','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
    'RodaInteiroAte','TravaEm','Fase','SeqFase','OrdensNaFase','OrdensQuePassaram','PctPassouFase',
    'PecasQuePassaram','OrdensAtras','PecasAFazer','FaseFechada','OrdensFaltantes'],
   conjuntos().flatMap(c=>c.fases.map((x,i)=>[
-    c.rotulo,c.cod,c.ordens,dec(c.pecas),
+    c.rotulo,c.cod,c.ordens,dec(c.pecas),c.repo,dec(c.repoPecas),
     c.completo?'completo':c.naoComecou?'nao comecou':c.disperso?'quebrado':'junto',
     pct4(c.pct),dec(c.pf),dec(c.pfTotal),
     c.fechada?c.fechada.nome:'',c.proxima?c.proxima.nome:'',
