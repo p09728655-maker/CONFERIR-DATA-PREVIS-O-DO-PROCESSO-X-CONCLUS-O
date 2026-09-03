@@ -455,6 +455,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.8.0 — 02/09/2026</h3>
+  <ul>
+    <li><b>Todo prazo passa a ser contado em dias úteis</b> — segunda a sexta, descontando feriados. Antes eram dias corridos, o que inflava todo atraso que cruzava um fim de semana: uma ordem prevista para sexta e concluída na segunda aparecia com 3 dias de atraso quando a produção perdeu 1.</li>
+    <li>Feriados nacionais e do estado de <b>São Paulo</b>, incluindo os que dependem da Páscoa (Carnaval, Sexta-feira Santa e Corpus Christi), calculados automaticamente para qualquer ano.</li>
+    <li>Feriado municipal e parada coletiva podem ser acrescentados em <code>CFG.feriadosExtras</code>.</li>
+    <li>As colunas de desvio e o CSV passam a dizer que a contagem é em dias úteis.</li>
+  </ul>
   <h3>1.7.0 — 02/09/2026</h3>
   <ul>
     <li><b>Correção importante nos totais de peças.</b> Uma peça que passou por três fases sem apontamento era contada três vezes. Num lote real isso deu 18.394 peças sem registro contra um saldo de 3.933 no lote inteiro — quase cinco vezes mais peças do que existem.</li>
@@ -532,6 +539,9 @@ const CFG = {
   operacaoEmbalagem: /^EMBAL/i,
   // tolerância de quantidade (peças) para considerar divergência
   tolQtd: 0.001,
+  // Feriado municipal e parada coletiva: acrescente aqui, no formato
+  // 'aaaa-mm-dd'. Os nacionais e os de São Paulo já estão no cálculo.
+  feriadosExtras: [],
   // regras: id, rótulo, severidade, ativa
   regras: [
     ['APONT_FURADO',          'Apontamento esquecido — fase seguinte já apontada',    'critico', true],
@@ -564,7 +574,81 @@ const toIso=t=>{const m=t.match(RE_DATE);if(!m)return null;let y=m[3];if(y.lengt
 const toNum=t=>Number(t.replace(/\./g,'').replace(',','.'));
 const br=d=>(typeof d==='string'&&d.length>=10)?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
 const nf=(v,c=0)=>v==null?'':v.toLocaleString('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c});
-const dias=(a,b)=>Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/864e5);
+/* ============================================================================
+   DIAS ÚTEIS — a fábrica não produz sábado, domingo nem feriado.
+   ==========================================================================
+   Contar dias corridos infla todo atraso que cruza um fim de semana: uma ordem
+   prevista para sexta e concluída na segunda aparecia com 3 dias de atraso
+   quando a produção perdeu 1. Numa semana com feriado o erro chega a 3 dias, e
+   é sempre para cima — o indicador acusa a fábrica de um atraso que não houve.
+
+   Jornada: segunda a sexta. Se a fábrica passar a produzir aos sábados, inclua
+   6 em DIAS_UTEIS abaixo.
+
+   Feriados: nacionais e do estado de São Paulo. Os móveis saem da Páscoa,
+   calculada pelo algoritmo de Meeus/Jones/Butcher, conferido contra 2024–2027.
+   Carnaval e Corpus Christi são ponto facultativo em lei, mas a fábrica para —
+   por isso entram. Feriado MUNICIPAL e parada coletiva não estão aqui: quando
+   houver, acrescente a data em CFG.feriadosExtras, no formato 'aaaa-mm-dd'. */
+const DIAS_UTEIS=[1,2,3,4,5];
+
+function pascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,
+        f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+        i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  return new Date(Date.UTC(ano,Math.floor((h+l-7*m+114)/31)-1,((h+l-7*m+114)%31)+1));
+}
+const iso=d=>d.toISOString().slice(0,10);
+const somaDias=(d,n)=>{const x=new Date(d.getTime());x.setUTCDate(x.getUTCDate()+n);return x;};
+
+// Calculado uma vez por ano consultado e guardado: um lote pode ter centenas de
+// comparações de data, e recalcular a Páscoa em cada uma seria desperdício.
+const _feriados={};
+function feriadosDoAno(ano){
+  if(_feriados[ano])return _feriados[ano];
+  const pa=pascoa(ano);
+  const set=new Set([
+    `${ano}-01-01`, // Confraternização Universal
+    `${ano}-04-21`, // Tiradentes
+    `${ano}-05-01`, // Dia do Trabalho
+    `${ano}-07-09`, // Revolução Constitucionalista — São Paulo
+    `${ano}-09-07`, // Independência
+    `${ano}-10-12`, // Nossa Senhora Aparecida
+    `${ano}-11-02`, // Finados
+    `${ano}-11-15`, // Proclamação da República
+    `${ano}-11-20`, // Consciência Negra (nacional desde 2024)
+    `${ano}-12-25`, // Natal
+    iso(somaDias(pa,-48)), // Carnaval, segunda
+    iso(somaDias(pa,-47)), // Carnaval, terça
+    iso(somaDias(pa,-2)),  // Sexta-feira Santa
+    iso(somaDias(pa,60)),  // Corpus Christi
+  ]);
+  (CFG.feriadosExtras||[]).forEach(d=>{ if(d.startsWith(ano+'-'))set.add(d); });
+  return (_feriados[ano]=set);
+}
+
+const ehUtil=d=>{
+  if(!DIAS_UTEIS.includes(d.getUTCDay()))return false;
+  return !feriadosDoAno(d.getUTCFullYear()).has(iso(d));
+};
+
+/**
+ * Dias ÚTEIS entre duas datas, contando a de chegada e não a de partida.
+ *
+ * Sexta para segunda dá 1: o sábado e o domingo não são dias em que a fábrica
+ * deixou de entregar. O sinal se mantém — negativo quando a conclusão vem antes
+ * da previsão, que é adiantamento.
+ */
+function dias(a,b){
+  if(!a||!b)return null;
+  if(a===b)return 0;
+  const sinal=b>a?1:-1;
+  let ini=new Date((sinal>0?a:b)+'T00:00:00Z');
+  const fim=new Date((sinal>0?b:a)+'T00:00:00Z');
+  let n=0;
+  while(ini<fim){ ini=somaDias(ini,1); if(ehUtil(ini))n++; }
+  return n*sinal;
+}
 
 function buildRows(items,yTol=4,gap=2.5){
   const its=items.filter(i=>i.t!=='').sort((a,b)=>a.y-b.y||a.x0-b.x0);
@@ -866,7 +950,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.7.0';
+const VERSAO='1.8.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1289,9 +1373,9 @@ function desenhar(){
   if(ABA==='ord'){
     const ord=ordensFiltradas();
     p.innerHTML=tabela('Ordens',
-      `${ord.length} ordem(ns) · o prazo é julgado pela última previsão do processo, não pela previsão da ordem`,
+      `${ord.length} ordem(ns) · prazo julgado pela última previsão do processo, em DIAS ÚTEIS (seg a sex, sem feriado)`,
       [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Prev. processo'},{h:'Prev. ordem'},{h:'Conclusão'},
-       {h:'Desvio / prazo',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
+       {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
       ord.map(o=>{
         const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
         let sit,cls;
@@ -1315,6 +1399,7 @@ function desenhar(){
           <td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}),
+      '<b>Todo prazo desta tela é contado em DIAS ÚTEIS</b> — segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado. '+
       '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
       '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
       '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência.');
@@ -1322,7 +1407,7 @@ function desenhar(){
   if(ABA==='op'){
     const ops=opsFiltradas();
     p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
-      [{h:'Ordem'},{h:'Produto'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio / prazo',n:1},
+      [{h:'Ordem'},{h:'Produto'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio / prazo (d.ú.)',n:1},
        {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
       ops.map(({of,op})=>{
         const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
@@ -1386,7 +1471,7 @@ function desenhar(){
           <span class="n1"><span class="v ${r.semApont?'c-atencao':''}">${r.semApont||'—'}</span><span class="r">Sem apontar</span></span>
           <span class="n1"><span class="v ${r.pcApont?'c-atencao':''}">${r.pcApont?nf(r.pcApont):'—'}</span><span class="r">Pç sem registro</span></span>
           <span class="n1"><span class="v ${r.saldo?'c-atencao':''}">${r.saldo?nf(r.saldo):'—'}</span><span class="r">Saldo pç</span></span>
-          <span class="n1"><span class="v ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'—':(med>0?'+':'')+med.toFixed(1).replace('.',',')}</span><span class="r">Desvio méd. d</span></span>
+          <span class="n1"><span class="v ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'—':(med>0?'+':'')+med.toFixed(1).replace('.',',')}</span><span class="r">Desvio méd. d.ú.</span></span>
         </div>
         <div class="barra" role="img" aria-label="${avanco}% das operações concluídas"><i style="width:${avanco}%"></i></div>
         <div class="linha">${r.conc} de ${r.n} operações concluídas · ${r.ordens.size} ordem(ns)</div>
@@ -1416,12 +1501,12 @@ function desenhar(){
       ${setores.length?`<div class="setores">${cartoes}</div>`:'<div class="vazio">Nada encontrado com os filtros atuais.</div>'}
       ${setores.length?`<div class="cabecalhoSecao" style="border-top:1px solid var(--borda)"><h2>Aderência por setor</h2>
         <span class="meta">o número exato por trás dos cartões</span></div>
-      <div class="wrap"><table><thead><tr>${[{h:'Setor'},{h:'Ordens',n:1},{h:'Operações',n:1},{h:'Concluídas',n:1},{h:'Sem apontar',n:1},{h:'Esquecidos',n:1},{h:'Pç sem registro',n:1},{h:'Vencidas',n:1},{h:'No prazo',n:1},{h:'Desvio médio',n:1},{h:'Saldo (pç)',n:1}]
+      <div class="wrap"><table><thead><tr>${[{h:'Setor'},{h:'Ordens',n:1},{h:'Operações',n:1},{h:'Concluídas',n:1},{h:'Sem apontar',n:1},{h:'Esquecidos',n:1},{h:'Pç sem registro',n:1},{h:'Vencidas',n:1},{h:'No prazo',n:1},{h:'Desvio médio (d.ú.)',n:1},{h:'Saldo (pç)',n:1}]
         .map(c=>`<th${c.n?' class="n"':''}>${c.h}</th>`).join('')}</tr></thead><tbody>${lin.join('')}</tbody></table></div>
       <div class="nota"><b>Setor</b> = processo do roteiro, o centro de trabalho onde a operação é apontada.
         <b>Sem apontar</b> = operações sem quantidade e sem data neste setor; <b>Esquecidos</b> = as que têm prova de que a peça passou (fase seguinte apontada ou ordem concluída), e <b>Pç sem registro</b> = as peças correspondentes. Esses três saem da mesma conta da seção "Sem apontamento".
         <b>Vencidas</b> = operações sem conclusão, com previsão anterior a ${br(ref)}, em ordem ainda em aberto — o mesmo critério do achado "Operação vencida e não concluída". Operação pendente em ordem já concluída não é fila de trabalho: aparece nos Achados como inconsistência de apontamento.
-        <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas; positivo indica que o setor entrega depois do programado.
+        <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas, em <b>dias úteis</b>; positivo indica que o setor entrega depois do programado.
         <b>Saldo</b> = peças ainda não apontadas nas operações do setor.</div>`:''}`;
   }
   if(ABA==='leit'){
@@ -1540,7 +1625,8 @@ function montarImpressoLista(){
     ${tabela?`<section class="doc-setor doc-lista">${tabela.outerHTML}</section>`
             :'<div class="doc-vazio">Nada para imprimir nesta seção com os filtros atuais.</div>'}
     <div class="doc-rodape">
-      <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
+      <p><b>Prazos em dias úteis</b> — segunda a sexta, descontando feriados nacionais e de São Paulo.</p>
+    <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
       Esta folha reproduz a lista exatamente como está na tela, com o recorte declarado acima.</p>
     </div>`;
 }
@@ -1628,6 +1714,7 @@ function rodape(ref){
     <p><b>SEM QTD</b> — a fase tem data de conclusão mas nenhuma peça lançada: foi fechada sem apontar o que produziu.</p>
     <p><b>PENDENTE</b> — nada apontado e a previsão venceu, sem prova de que a peça passou.
     Pode ser falta de apontamento ou de produção; é o que esta reunião precisa esclarecer.</p>
+    <p><b>Prazos em dias úteis</b> — segunda a sexta, descontando feriados nacionais e de São Paulo.</p>
     <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
     Vencimento medido contra ${br(ref)}. O relatório mostra ausência de <i>registro</i> no sistema,
     que não é o mesmo que ausência de produção — exceto nos casos marcados como ESQUECIDO.</p>
@@ -1674,7 +1761,7 @@ $('#btnCsvAch').onclick=()=>csv('achados.csv',
   achFiltrados().map(a=>[a.sev,a.regra,a.arquivo,a.lote,a.of,a.produto,a.descricao,a.operacao,a.detalhe]));
 
 $('#btnCsvOrd').onclick=()=>csv('ordens.csv',
-  ['Arquivo','Lote','LT','Ordem','Produto','Descricao','M3','Previsao','Conclusao','DesvioDias',
+  ['Arquivo','Lote','LT','Ordem','Produto','Descricao','M3','Previsao','Conclusao','DesvioDiasUteis',
    'QtdTotal','JaPronto','Saldo','OpsTotal','OpsConcluidas'],
   ordensFiltradas().map(o=>[o.arquivo,o.lote,o.lt,o.of,o.produto,o.descricao,dec(o.m3),br(o.previsao),br(o.conclusao),
     o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):'',dec(o.qtd),dec(o.pronto),
@@ -1682,7 +1769,7 @@ $('#btnCsvOrd').onclick=()=>csv('ordens.csv',
 
 $('#btnCsvOp').onclick=()=>csv('operacoes.csv',
   ['Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','Operacao','PrevisaoProcesso','Conclusao',
-   'DesvioDias','QtdTotal','JaPronto','Saldo'],
+   'DesvioDiasUteis','QtdTotal','JaPronto','Saldo'],
   opsFiltradas().map(({of,op})=>[of.arquivo,of.lote,of.of,of.produto,of.descricao,op.seq,op.descricao,
     br(op.previsao),br(op.conclusao),op.conclusao&&op.previsao?dias(op.previsao,op.conclusao):'',
     dec(op.qtd),dec(op.pronto),dec(Math.max(0,(op.qtd||0)-(op.pronto||0)))]));
