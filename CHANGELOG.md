@@ -3,6 +3,46 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.10.1] — 2026-09-03
+
+### Alterado
+
+- **As observações de cada tela deixaram de ser um bloco único.** O `.nota` de cada tela era **um
+  parágrafo corrido**: em "Conjunto incompleto", **18 definições emendadas em 21 linhas**, sem um
+  ponto de entrada. Um glossário só serve se der para procurar nele, e nesse formato a única forma
+  de achar "Trava em" era ler o texto inteiro — leitura sequencial para um conteúdo de consulta.
+
+- **Viraram grade de verbetes agrupados por assunto.** Termo em negrito na própria linha, definição
+  abaixo; `grid-template-columns: repeat(auto-fill, minmax(300px,1fr))` — 3 a 4 colunas em monitor,
+  2 em notebook, 1 em tablet, sem quebrar termo. **O texto é o mesmo**; o que mudou é o acesso.
+
+  Os grupos por tela: Setor (*Os três estados* · *Os números* · *A ordem da lista*), Sem apontamento
+  (*As duas situações* · *Como somar as peças*), Onde travou (*Onde a ordem está, e onde deveria
+  estar* · *As demais colunas*), Conjunto incompleto (*O que é um conjunto* · *As colunas da tabela*
+  · *Os dois estados* · *A matriz Começou × terminou* · *O que fica fora da conta*), Operação
+  fechada (*A regra do lote* · *Os números* · *O que fica fora do denominador*), Achados, Ordens,
+  Operações e Leitura dos arquivos.
+
+- **Um único `notaTela()` monta o bloco nas nove telas.** Cada tela montava o seu — e a de Setor
+  ainda vinha em cartão com borda e fundo próprios, diferente das outras oito. A frase que não é
+  verbete (a leitura final, o alerta) vai para o rodapé do bloco, em linha corrida, onde não se
+  confunde com definição.
+
+- **A nota ganhou cabeçalho** — "Como ler esta tela" — porque um bloco de texto solto abaixo da
+  tabela não dizia se era aviso ou referência.
+
+### Corrigido
+
+- **A folha impressa levava a nota errada.** `montarImpressoLista()` selecionava `#painel .nota`, a
+  **primeira** do painel; em quatro telas (Sem apontamento, Onde travou, Conjunto incompleto e
+  Operação fechada) a primeira é o aviso de *"fora da conta"*, emitido por `avisoForaDaConta()`
+  antes da tabela. O líder recebia a folha **sem as definições dos termos da tabela** — exatamente
+  o que a 3.9.1 tinha ido buscar. A seleção passa a ser `.nota-tela`, classe exclusiva do glossário.
+
+- **A nota impressa saía com o texto acinzentado.** `.doc-nota` herdava `--texto-medio` nos termos;
+  em fotocópia é o que some primeiro. Agora é preto, como o resto da folha, em duas colunas fixas
+  (A4 não comporta quatro sem virar coluna de jornal).
+
 ## [3.10.0] — 2026-09-03
 
 ### Alterado

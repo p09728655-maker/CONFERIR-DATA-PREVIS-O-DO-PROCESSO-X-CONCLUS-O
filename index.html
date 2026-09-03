@@ -66,7 +66,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
    respiro fica por conta do padding. Texto corrido tem limite próprio, abaixo:
    linha longa demais cansa a leitura mesmo havendo espaço. */
 .conteudo{flex:1;min-width:0;padding:var(--xl) var(--xl) var(--gigante)}
-.veredito .txt p,.nota,.doc-rodape p{max-width:120ch}
+.veredito .txt p,.doc-rodape p{max-width:120ch}
 
 /* ---------------------------------------------------------------- Lateral
    TRES ZONAS, e so o miolo rola. A lateral inteira rolando somava ~1540px de
@@ -360,8 +360,26 @@ tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--neutro)}
 .selo.info,.selo.neutro{background:var(--neutro-fundo);color:var(--neutro)}
 .selo.ok{background:var(--ok-fundo);color:var(--ok)}
 .vazio{padding:var(--xxl);text-align:center;color:var(--texto-fraco)}
+/* OBSERVACOES DA TELA — o glossario do que cada coluna quer dizer.
+   Era UM paragrafo com ate vinte definicoes emendadas: para achar "Trava em"
+   era preciso ler o texto inteiro, e ninguem le. Vira grade de verbetes —
+   termo em negrito na propria linha, definicao abaixo, agrupados por assunto —
+   e a busca deixa de ser leitura e passa a ser varredura. O texto e o mesmo;
+   o que mudou e o acesso a ele. */
 .nota{padding:var(--md) var(--xl);font-size:12px;line-height:1.6;color:var(--texto-fraco);border-top:1px solid var(--borda)}
 .nota b{color:var(--texto-medio)}
+.nota-tela{padding:var(--lg) var(--xl) var(--xxl);display:flex;flex-direction:column;gap:var(--lg)}
+.nt-cab{font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-medio)}
+.nt-grupo{margin:0 0 var(--sm);padding-bottom:var(--xs);border-bottom:1px solid var(--borda);
+  font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+/* auto-fill com minimo de 300px: em monitor largo sao 3 a 4 colunas de
+   verbete, em notebook 2, e no tablet volta a uma coluna sem quebrar termo. */
+.nt-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:var(--md) var(--xl);margin:0;align-content:start}
+.nt-grade>div{min-width:0;break-inside:avoid}
+.nt-grade dt{font-weight:600;color:var(--texto-medio)}
+.nt-grade dd{margin:0;max-width:62ch}
+.nt-pe{margin:0;max-width:110ch}
 /* Botao de texto dentro do cabecalho de uma tabela: alterna um recorte sem
    parecer um botao de acao. Nunca esconde nada em silencio — o texto ao lado
    dele diz quantas linhas estao fora e por que. */
@@ -497,6 +515,18 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-cartoes .n1 .r{font-size:6.5pt;text-transform:uppercase;letter-spacing:.2pt}
   .doc-cartoes .pct .b{display:none}
   .doc-nota{font-size:7.5pt;line-height:1.4;border-top:.75pt solid #000;padding-top:1.8mm;margin-top:3mm}
+  .doc-nota,.doc-nota *{color:#000}
+  /* A mesma grade no papel, em duas colunas fixas: A4 nao comporta quatro
+     colunas de verbete sem virar coluna de jornal. */
+  .doc-nota .nt-cab{font-size:7pt;font-weight:700;letter-spacing:.3pt;text-transform:uppercase;margin-bottom:1.5mm}
+  .doc-nota .nt-bloco{margin-bottom:2.5mm;break-inside:avoid;page-break-inside:avoid}
+  .doc-nota .nt-grupo{margin:0 0 1mm;padding-bottom:.6mm;border-bottom:.5pt solid #000;
+    font-size:6.5pt;font-weight:700;letter-spacing:.3pt;text-transform:uppercase}
+  .doc-nota .nt-grade{display:grid;grid-template-columns:repeat(2,1fr);gap:1.2mm 5mm;margin:0}
+  .doc-nota .nt-grade dt{font-weight:700;display:inline}
+  .doc-nota .nt-grade dt::after{content:" "}
+  .doc-nota .nt-grade dd{margin:0;display:inline}
+  .doc-nota .nt-pe{margin:1.5mm 0 0}
   .doc-setor{margin-bottom:5mm}
   /* MATRIZ NA FOLHA: em preto e branco quem marca a frente aberta é o peso e
      o fundo cinza, não a cor. Fechada fica limpa — o olho procura o cinza. */
@@ -762,6 +792,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.10.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>As observações de cada tela deixaram de ser um bloco só.</b> Eram um parágrafo corrido com até <b>dezoito definições emendadas</b> — em "Conjunto incompleto", 21 linhas de texto sem um único ponto de entrada. Para achar o que "Trava em" significa era preciso ler tudo, e ninguém lê.</li>
+    <li><b>Viraram grade de verbetes</b>, agrupados por assunto: <i>O que é um conjunto</i>, <i>As colunas da tabela</i>, <i>Os dois estados</i>, <i>A matriz Começou × terminou</i>, <i>O que fica fora da conta</i>. Termo em negrito na própria linha, definição abaixo, três a quatro colunas conforme a largura da tela. O texto é o mesmo — mudou o acesso a ele.</li>
+    <li><b>As nove telas passaram a explicar do mesmo jeito.</b> Um único <code>notaTela()</code> monta o bloco: antes cada tela montava o seu, e a de Setor ainda vinha em cartão, com aparência diferente das outras oito.</li>
+    <li><b>A folha impressa levava a nota errada.</b> Ela pegava a primeira <code>.nota</code> do painel — que em quatro telas é o aviso de "fora da conta", não o glossário. O líder recebia a folha sem as definições dos termos da tabela. Agora a folha leva o glossário, em duas colunas.</li>
+  </ul>
   <h3>3.10.0 — 03/09/2026</h3>
   <ul>
     <li><b>A lateral parou de rolar.</b> Com um lote aberto ela somava <b>1.540px de menu numa tela de 900px</b> — uma tela e meia de rolagem — e rolar custava a navegação: alcançar o CSV empurrava "Onde travou" para fora. Agora são <b>755px</b>, e em monitor comum não rola nada.</li>
@@ -1588,7 +1625,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.10.0';
+const VERSAO='3.10.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2572,7 +2609,23 @@ function tabela(titulo,meta,cols,linhas,nota){
   const corpo=linhas.length
     ?`<div class="wrap"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="n"':''}>${c.h}</th>`).join('')}</tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
     :'<div class="vazio">Nada encontrado com os filtros atuais.</div>';
-  return `<div class="cabecalhoSecao"><h2>${titulo}</h2><span class="meta">${meta}</span></div>${corpo}${nota?`<div class="nota">${nota}</div>`:''}`;
+  return `<div class="cabecalhoSecao"><h2>${titulo}</h2><span class="meta">${meta}</span></div>${corpo}${nota||''}`;
+}
+
+/* O BLOCO DE OBSERVACOES DE CADA TELA.
+   Recebe os verbetes ja separados — [termo, definicao] — agrupados por
+   assunto, e devolve a grade. Uma funcao so para as nove telas: e o que
+   garante que "Esquecido" apareca do mesmo jeito em Setor e em Sem
+   apontamento, e que nenhuma tela invente um formato proprio.
+   `pe` e a frase que nao e verbete — a leitura final, o alerta — e fica
+   embaixo, em linha corrida, onde ninguem a confunde com definicao.
+   A classe `nota-tela` distingue este bloco do aviso de "fora da conta",
+   que tambem usa `.nota`: e por ela que a folha impressa acha o glossario
+   certo (antes levava o aviso, por ser a primeira .nota do painel). */
+function notaTela(blocos,pe){
+  const secoes=blocos.map(b=>`<section class="nt-bloco">${b.g?`<h3 class="nt-grupo">${b.g}</h3>`:''}<dl class="nt-grade">${
+    b.i.map(([t,d])=>`<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl></section>`).join('');
+  return `<div class="nota nota-tela"><div class="nt-cab">Como ler esta tela</div>${secoes}${pe?`<p class="nt-pe">${pe}</p>`:''}</div>`;
 }
 const desvio=dv=>dv==null?'':`<span class="${dv>0?'c-critico':dv<0?'c-ok':''}">${dv>0?'+'+dv:dv} d</span>`;
 /* Ordem/operação ainda em aberto: o número é prazo, não resultado. Vermelho
@@ -2744,15 +2797,19 @@ function desenharSetor(p,ref){
       ${!d.seguradas.length&&!d.faltas.length
         ?'<div class="vazio">Nenhuma ordem parada e nenhum apontamento pendente neste setor com os filtros atuais.</div>':''}
 
-      <div class="nota" style="border:1px solid var(--borda);border-radius:var(--r-lg);background:var(--papel)">
-        Prazos em <b>dias úteis</b>. <b>Parado aqui</b> = a ordem está atrás do programado e a próxima fase a apontar é deste setor.
-        <b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada: a peça passou, faltou o <b>registro</b>.
-        <b>A confirmar</b> = nada apontado e a previsão venceu, sem prova de que a peça passou — só o setor responde.
-        <b>Avanço por lote</b> = quanto deste setor cada lote já tem apontado, em <b>peças</b> (peça-fase): duas passagens do mesmo setor no roteiro somam as duas.
-        Conta em peças, não em ordens, porque 2 ordens de 44 podem ser 20% das peças — contar ordens faz o resto parecer pequeno, e é por isso que ele fica para trás.
-        Ordenado pela <b>ordem de fazer</b>: <b>vencido primeiro</b>, do prazo mais antigo para o mais novo; dentro do mesmo prazo, o mais adiantado, que é o que fecha com menos esforço. Lote fechado vai para o fim, como conferência.
-        <b>Prazo aqui</b> = a previsão mais antiga <b>ainda não apontada</b> deste lote neste setor — é ela que diz há quanto tempo o lote está devendo.
-        <b>Prioridade invertida</b> = o setor fechou um lote cujo prazo aqui é posterior ao de outro que segue aberto e vencido. Não é opinião: são duas datas do próprio ERP.</div>`;
+      ${notaTela([
+        {g:'Os três estados',i:[
+          ['Parado aqui','a ordem está atrás do programado e a próxima fase a apontar é deste setor.'],
+          ['Esquecido','a fase seguinte já tem apontamento, ou a ordem foi fechada: a peça passou, faltou o <b>registro</b>.'],
+          ['A confirmar','nada apontado e a previsão venceu, sem prova de que a peça passou — só o setor responde.']]},
+        {g:'Os números',i:[
+          ['Avanço por lote','quanto deste setor cada lote já tem apontado, em <b>peças</b> (peça-fase): duas passagens do mesmo setor no roteiro somam as duas.'],
+          ['Por que em peças, e não em ordens','2 ordens de 44 podem ser 20% das peças — contar ordens faz o resto parecer pequeno, e é por isso que ele fica para trás.'],
+          ['Prazo aqui','a previsão mais antiga <b>ainda não apontada</b> deste lote neste setor — é ela que diz há quanto tempo o lote está devendo.']]},
+        {g:'A ordem da lista',i:[
+          ['Ordenado pela ordem de fazer','<b>vencido primeiro</b>, do prazo mais antigo para o mais novo; dentro do mesmo prazo, o mais adiantado, que é o que fecha com menos esforço. Lote fechado vai para o fim, como conferência.'],
+          ['Prioridade invertida','o setor fechou um lote cujo prazo aqui é posterior ao de outro que segue aberto e vencido. Não é opinião: são duas datas do próprio ERP.']]}
+      ],'Todos os prazos desta tela são contados em <b>dias úteis</b>.')}`;
 
   const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
   const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
@@ -2773,11 +2830,15 @@ function desenharApont(p){
         <td class="cod">${br(x.op.previsao)}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
         <td>${esc(motivoFalta(x))}</td>
         <td class="cod">${esc(x.of.lote)}</td></tr>`),
-    '<b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada (ou a fase foi fechada sem lançar quantidade). Como a peça não pula fase, faltou o <b>registro</b>, não a produção. '+
-    '<b>A confirmar</b> = nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde. '+
-    'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
-    '<b>Atenção ao somar:</b> uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três. '+
-    'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
+    notaTela([
+      {g:'As duas situações',i:[
+        ['Esquecido','a fase seguinte já tem apontamento, ou a ordem foi fechada (ou a fase foi fechada sem lançar quantidade). Como a peça não pula fase, faltou o <b>registro</b>, não a produção.'],
+        ['A confirmar','nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde.']]},
+      {g:'Como somar as peças',i:[
+        ['Peças','a quantidade prevista daquela fase.'],
+        ['Atenção ao somar','uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três.'],
+        ['Por setor a soma vale','porque cada peça passa uma vez por lá.']]}
+    ]));
 }
 
 /* ---- ONDE TRAVOU: a ordem atrasada, e o setor que a está segurando ---- */
@@ -2859,13 +2920,16 @@ function desenharTravadas(p,ref){
       <tbody>${prontas.map(x=>`<tr><td class="cod">${esc(x.of.of)}</td><td>${esc(x.of.descricao)}</td><td class="cod">${esc(x.of.produto)}</td>
         <td class="cod">${br(x.of.previsao)}</td><td class="n">${nf(x.of.qtd)}</td><td class="n">${nf(x.of.pronto)}</td><td class="cod">${esc(x.of.lote)}</td></tr>`).join('')}</tbody></table></div>
     </details></div>`:''}
-    <div class="nota"><b>Deveria estar em</b> = a última fase do roteiro com previsão do processo até ${br(ref)}: até hoje o PPCP programou a ordem chegar aí.
-      <b>Está em</b> = a fase seguinte à última apontada — fase anterior em branco com uma posterior apontada é apontamento esquecido (seção "Sem apontamento"), não posição; a peça já passou.
-      <b>Parado</b> = a ordem está atrás do programado e a próxima fase a apontar é esta; o texto ao lado diz se a fase começou (parcial) ou se nada foi apontado ainda.
-      <b>Setores atrás</b> = quantos setores separam onde está de onde deveria estar (três passes de pintura no mesmo setor contam um); "—" com dias parada = atrasada na própria fase.
-      <b>Peças na fase</b> = saldo ainda não apontado na fase onde está. Só ordens em aberto; a EMBALAR isenta por convenção não conta como posição.
-      <b>Fase concluída (ERP)</b> = a linha "Qtd. Concluída na Fase" do próprio relatório: a última fase que o ERP dá como completa e quantas peças. Se discordar de "Está em", confira a ordem.
-      Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.</div>`;
+    ${notaTela([
+      {g:'Onde a ordem está, e onde deveria estar',i:[
+        ['Deveria estar em',`a última fase do roteiro com previsão do processo até ${br(ref)}: até hoje o PPCP programou a ordem chegar aí.`],
+        ['Está em','a fase seguinte à última apontada — fase anterior em branco com uma posterior apontada é apontamento esquecido (seção "Sem apontamento"), não posição; a peça já passou.'],
+        ['Setores atrás','quantos setores separam onde está de onde deveria estar (três passes de pintura no mesmo setor contam um); "—" com dias parada = atrasada na própria fase.']]},
+      {g:'As demais colunas',i:[
+        ['Parado','a ordem está atrás do programado e a próxima fase a apontar é esta; o texto ao lado diz se a fase começou (parcial) ou se nada foi apontado ainda.'],
+        ['Peças na fase','saldo ainda não apontado na fase onde está. Só ordens em aberto; a EMBALAR isenta por convenção não conta como posição.'],
+        ['Fase concluída (ERP)','a linha "Qtd. Concluída na Fase" do próprio relatório: a última fase que o ERP dá como completa e quantas peças. Se discordar de "Está em", confira a ordem.']]}
+    ],'Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.')}`;
 }
 
 /* ---- CONJUNTO INCOMPLETO: o produto fecha ou não fecha ---- */
@@ -3126,25 +3190,28 @@ function desenharConjuntos(p,ref){
       <div style="padding:var(--md) 0">${cs.map(c=>`<div class="linha" style="margin-bottom:var(--sm)">
         <b>${esc(c.rotulo||c.cod)}</b> <small class="cod">${esc(c.cod)} · lote ${esc(c.lote)}</small><br>${faixaFases(c)}</div>`).join('')}</div>
     </details></div>`:''}
-    <div class="nota"><b>Conjunto</b> = as ordens de componente do mesmo produto <b>dentro do mesmo lote</b>. O lote é a unidade de entrega: o mesmo produto em dois lotes tem prazos, quantidades e fechamento independentes, e fundir os dois daria um número que não serve para nada.
-      Agrupado pelo <b>1º bloco do código da peça</b>:
-      387 SPACE, 778 SLEEP, 754 INTENSE. O 2º bloco é a peça dentro do produto, o 3º é a cor. O relatório não traz estrutura de produto — o código traz, e é ele que agrupa.
-      <b>% pronto</b> = avanço do roteiro do conjunto em <b>peça-fase</b>: quanto das quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia, pela mesma regra do resto da tela.
-      <b>Não é percentual de tempo.</b> Peça-fase trata corte e embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz — ler "60% pronto" como "60% do tempo" erra o que falta.
-      <b>Roda inteiro até</b> = a última fase que <b>todas</b> as ordens do conjunto passaram. O setor seguinte a ela pega o produto completo; daí para frente, não.
-      <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
-      <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
-      <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
-      <b>Começou × terminou</b>: uma <b>frente</b> é um par setor × produto. Está <b>aberta</b> quando o setor começou aquele produto e não fechou (0% &lt; avanço &lt; 100%).
-      <b>Não ter começado não é pecado</b> — é o estado correto de quem ainda não chegou a vez. O pecado é abrir muitas e fechar poucas: é isso que faz o setor da frente nunca receber produto inteiro.
-      A conta é em peça-fase, pelo mesmo motivo do resto da tela: uma fase pode estar 96% em ordens e 60% em peças, e é o trabalho que decide quanto falta.
-      <b>Ordem de reposição não decide integridade.</b> Ela é aberta depois, por refugo, e o ERP dá a ela previsão posterior à do lote — o próprio plano diz que não é para hoje, e travar o conjunto por ela seria ignorar o plano.
-      Fica fora da conta de fases e do % pronto, declarada na coluna Ordens como <b>+N rep</b>. É a mesma razão pela qual a reposição já fica fora da aderência: o prazo dela começa na criação da ordem, não no início do lote.
-      Se o recorte tiver <b>só</b> reposição, ela volta a valer — senão o conjunto sumiria.
-      <b>Só componente entra.</b> Produto acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele, e ficam fora do agrupamento — a tela declara quantas ordens de cada tipo.
-      A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento; e todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só.
-      <b>Sem fase apontável</b> = conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Sai da lista porque não dá para afirmar nada sobre kit completo — "todas as fases fecharam" seria verdade só por não haver fase nenhuma.
-      Fase fora da conta não bloqueia conjunto.</div>`;
+    ${notaTela([
+      {g:'O que é um conjunto',i:[
+        ['Conjunto','as ordens de componente do mesmo produto <b>dentro do mesmo lote</b>. O lote é a unidade de entrega: o mesmo produto em dois lotes tem prazos, quantidades e fechamento independentes, e fundir os dois daria um número que não serve para nada.'],
+        ['O que agrupa','o <b>1º bloco do código da peça</b>: 387 SPACE, 778 SLEEP, 754 INTENSE. O 2º bloco é a peça dentro do produto, o 3º é a cor. O relatório não traz estrutura de produto — o código traz, e é ele que agrupa.']]},
+      {g:'As colunas da tabela',i:[
+        ['% pronto','avanço do roteiro do conjunto em <b>peça-fase</b>: quanto das quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia, pela mesma regra do resto da tela.'],
+        ['Não é percentual de tempo','peça-fase trata corte e embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz — ler "60% pronto" como "60% do tempo" erra o que falta.'],
+        ['Roda inteiro até','a última fase que <b>todas</b> as ordens do conjunto passaram. O setor seguinte a ela pega o produto completo; daí para frente, não.'],
+        ['Trava em','a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.'],
+        ['Correram na frente','ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.']]},
+      {g:'Os dois estados',i:[
+        ['Quebrado','parte do conjunto andou e parte não — é o estado que dói.'],
+        ['Junto','o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.']]},
+      {g:'A matriz Começou × terminou',i:[
+        ['Frente aberta','uma <b>frente</b> é um par setor × produto. Está <b>aberta</b> quando o setor começou aquele produto e não fechou (0% &lt; avanço &lt; 100%).'],
+        ['Não ter começado não é pecado','é o estado correto de quem ainda não chegou a vez. O pecado é abrir muitas e fechar poucas: é isso que faz o setor da frente nunca receber produto inteiro.'],
+        ['Também em peça-fase','pelo mesmo motivo do resto da tela: uma fase pode estar 96% em ordens e 60% em peças, e é o trabalho que decide quanto falta.']]},
+      {g:'O que fica fora da conta',i:[
+        ['Ordem de reposição não decide integridade','ela é aberta depois, por refugo, e o ERP dá a ela previsão posterior à do lote — o próprio plano diz que não é para hoje, e travar o conjunto por ela seria ignorar o plano. Fica fora da conta de fases e do % pronto, declarada na coluna Ordens como <b>+N rep</b>. É a mesma razão pela qual a reposição já fica fora da aderência: o prazo dela começa na criação da ordem, não no início do lote. Se o recorte tiver <b>só</b> reposição, ela volta a valer — senão o conjunto sumiria.'],
+        ['Só componente entra','produto acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele, e ficam fora do agrupamento — a tela declara quantas ordens de cada tipo. A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento; e todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só.'],
+        ['Sem fase apontável','conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Sai da lista porque não dá para afirmar nada sobre kit completo — "todas as fases fecharam" seria verdade só por não haver fase nenhuma.']]}
+    ],'Fase fora da conta não bloqueia conjunto.')}`;
 }
 
 /* ---- OPERAÇÃO FECHADA: a regra do lote, lote a lote ---- */
@@ -3205,13 +3272,18 @@ function desenharFechamento(p,ref){
       <th>Lote</th><th>Produto</th><th>Operação</th><th>Prazo</th><th class="n">Ordens</th><th class="n">Fechadas</th>
       <th class="n">% peças</th><th class="n">Peças a fazer</th><th>Ordens abertas</th><th>Estado</th></tr></thead>
       <tbody>${linhas}</tbody></table></div>
-    <div class="nota"><b>A regra:</b> o lote finaliza <b>por completo</b> cada operação antes de andar, independente de haver peça ou setup diferente dentro dele. Resto de operação é o que faz o produto nunca chegar inteiro na embalagem.
-      <b>Fechada</b> = <b>todas</b> as ordens do lote naquela operação apontadas. Não é o percentual arredondado: 100% em peças com duas ordens abertas <b>não</b> é fechada, e essa distinção é o ponto da regra.
-      <b>% peças</b> é o avanço em peça-fase, para dimensionar o quanto falta — quem decide o estado é a contagem de ordens.
-      Diferente da matriz de conjuntos, aqui <b>EMBALAR aparece</b> — ela só existe nas ordens de acabado e volume e por isso nunca entra na matriz de conjuntos.
-      <b>O que não se aponta não entra na meta.</b> Setor cego no ERP e EMBALAR isenta nunca recebem registro; contá-los como aberta tornaria 100% inatingível por construção, e meta que não se alcança é ruído. Ficam <b>visíveis na faixa</b>, com selo apagado, fora do denominador.
-      <b>Reposição fica de fora</b>: o ERP dá a ela previsão posterior à do lote, então cobrá-la junto seria cobrar o que o próprio plano não pede para hoje.
-      <b>Vencida</b> = a operação tem ordem aberta com previsão anterior à data de referência.</div>`;
+    ${notaTela([
+      {g:'A regra do lote',i:[
+        ['Fechar antes de andar','o lote finaliza <b>por completo</b> cada operação antes de andar, independente de haver peça ou setup diferente dentro dele. Resto de operação é o que faz o produto nunca chegar inteiro na embalagem.'],
+        ['Fechada','<b>todas</b> as ordens do lote naquela operação apontadas. Não é o percentual arredondado: 100% em peças com duas ordens abertas <b>não</b> é fechada, e essa distinção é o ponto da regra.'],
+        ['Vencida','a operação tem ordem aberta com previsão anterior à data de referência.']]},
+      {g:'Os números',i:[
+        ['% peças','o avanço em peça-fase, para dimensionar o quanto falta — quem decide o estado é a contagem de ordens.'],
+        ['EMBALAR aparece aqui','diferente da matriz de conjuntos: ela só existe nas ordens de acabado e volume e por isso nunca entra na matriz.']]},
+      {g:'O que fica fora do denominador',i:[
+        ['O que não se aponta não entra na meta','setor cego no ERP e EMBALAR isenta nunca recebem registro; contá-los como aberta tornaria 100% inatingível por construção, e meta que não se alcança é ruído. Ficam <b>visíveis na faixa</b>, com selo apagado, fora do denominador.'],
+        ['Reposição fica de fora','o ERP dá a ela previsão posterior à do lote, então cobrá-la junto seria cobrar o que o próprio plano não pede para hoje.']]}
+    ])}`;
 }
 
 /* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
@@ -3222,7 +3294,12 @@ function desenharAchados(p){
     a.map(x=>`<tr class="sev-${x.sev}"><td><span class="selo ${x.sev}">${x.sev==='atencao'?'atenção':x.sev==='critico'?'crítico':x.sev}</span></td>
         <td class="forte">${esc(x.regra)}</td><td class="cod">${esc(x.of)}</td><td class="cod">${esc(x.produto)}</td>
         <td>${esc(x.descricao)}</td><td>${esc(x.operacao)}</td><td>${esc(x.detalhe)}</td><td class="cod">${esc(x.lote)}</td></tr>`),
-    '<b>Crítico</b> = dado inconsistente ou prazo estourado, exige ação. <b>Atenção</b> = divergência que precisa de conferência. <b>Info</b> = registro histórico, não exige ação imediata.');
+    notaTela([
+      {g:'As três severidades',i:[
+        ['Crítico','dado inconsistente ou prazo estourado, exige ação.'],
+        ['Atenção','divergência que precisa de conferência.'],
+        ['Info','registro histórico, não exige ação imediata.']]}
+    ]));
 }
 
 /* ---- ORDENS: prazo julgado pela última previsão do processo ---- */
@@ -3256,11 +3333,15 @@ function desenharOrdens(p,ref){
           <td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}),
-    '<b>Todo prazo desta tela é contado em DIAS ÚTEIS</b> — segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado. '+
-    '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
-    '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
-    '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência. '+
-    '<b>Reposição</b> = ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.');
+    notaTela([
+      {g:'As duas datas de previsão',i:[
+        ['Prev. processo','última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado.'],
+        ['Prev. ordem','a previsão da capa da ordem, mantida para conferência.'],
+        ['Todo prazo em DIAS ÚTEIS','segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado.']]},
+      {g:'As situações que saem da aderência',i:[
+        ['Inconsistente','concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência.'],
+        ['Reposição','ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.']]}
+    ]));
 }
 
 /* ---- OPERAÇÕES: uma linha por fase do roteiro ---- */
@@ -3302,10 +3383,13 @@ function desenharOperacoes(p,ref){
           <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td><span class="selo ${cls}">${sit}</span></td></tr>`;}),
-    '<b>Fora da conta</b> = fase sem apontamento que a tela decidiu não cobrar: EMBALAR em produto acabado (1…) e em volume (5…), com a isenção ligada, e setor que ainda não aponta no ERP. '+
-    'Não entra em falta de apontamento, na posição da ordem nem nas regras — e por isso também não é julgada por prazo aqui. Sai da lista por padrão; use "mostrar" no cabeçalho para conferi-la. '+
-    'Fase isenta que TEM registro continua listada normalmente, porque ali o apontamento existe. '+
-    'O <b>CSV de operações</b> leva todas as fases, com a coluna <b>ForaDaConta</b>.');
+    notaTela([
+      {g:'Fora da conta',i:[
+        ['Quais fases são','fase sem apontamento que a tela decidiu não cobrar: EMBALAR em produto acabado (1…) e em volume (5…), com a isenção ligada, e setor que ainda não aponta no ERP.'],
+        ['O que ela deixa de valer','não entra em falta de apontamento, na posição da ordem nem nas regras — e por isso também não é julgada por prazo aqui. Sai da lista por padrão; use "mostrar" no cabeçalho para conferi-la.'],
+        ['Fase isenta que TEM registro','continua listada normalmente, porque ali o apontamento existe.'],
+        ['No CSV','o <b>CSV de operações</b> leva todas as fases, com a coluna <b>ForaDaConta</b>.']]}
+    ]));
 }
 
 /* ---- LEITURA DOS ARQUIVOS: a prova de que o PDF foi lido inteiro ---- */
@@ -3329,8 +3413,12 @@ function desenharLeitura(p){
       </div>`;});
   p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
       <div class="leitura">${cards.join('')}</div>
-      <div class="nota"><b>Leitura conferida</b> = a soma do M³ das ordens lidas bate com o rodapé de cada lote no próprio relatório — a verificação automática de que o arquivo foi lido por inteiro (o M³ em si não é usado para nada além disso).
-      Se aparecer leitura incompleta ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
+      ${notaTela([
+        {g:'A prova de que o PDF foi lido inteiro',i:[
+          ['Leitura conferida','a soma do M³ das ordens lidas bate com o rodapé de cada lote no próprio relatório — a verificação automática de que o arquivo foi lido por inteiro (o M³ em si não é usado para nada além disso).'],
+          ['Leitura incompleta','a soma não bateu: faltou linha na leitura do PDF.'],
+          ['Sem rodapé para conferir','o lote não trouxe o total de M³ no relatório, então não há com o que comparar — a leitura pode estar certa, mas não está provada.']]}
+      ],'Se aparecer <b>leitura incompleta</b> ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.')}`;
 }
 
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
@@ -3423,7 +3511,7 @@ function montarImpressoLista(){
       ${v.querySelector('.big')?v.querySelector('.big').outerHTML:''}</div>`:'';
   const cards=document.querySelector('#painel .setores');
   const cartoes=cards&&cards.children.length?`<div class="doc-cartoes">${cards.innerHTML}</div>`:'';
-  const n=document.querySelector('#painel .nota');
+  const n=document.querySelector('#painel .nota-tela');
   const nota=n?`<div class="doc-nota">${n.innerHTML}</div>`:'';
   $('#impresso').innerHTML=`
     <div class="doc-topo">
