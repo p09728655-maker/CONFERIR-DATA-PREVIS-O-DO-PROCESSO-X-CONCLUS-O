@@ -1513,6 +1513,10 @@ function agregarPorSetor(faltas){
   });
   return [...m.values()].map(r=>({...r,pecas:pecasDistintas(r.itens)}));
 }
+/* Rótulo e motivo de uma falta, como aparecem na tela, no papel e no CSV.
+   Escritos aqui uma vez: eram cinco cópias da mesma tripla de condições. */
+const rotuloFalta=(x,longo)=>x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?(longo?'sem quantidade':'sem qtd'):'pendente';
+const motivoFalta=x=>x.prova||(x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo');
 const rankSetores=faltas=>agregarPorSetor(faltas).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
 
 /* A frase que abre a tela e a folha: quantos, de que tipo, em quantos setores. */
@@ -2089,42 +2093,6 @@ function filtrosNoPapel(secao){
   return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
 }
 
-/**
- * QUEM NÃO APONTOU, EM UMA TABELA SÓ.
- *
- * O corpo do documento já separa as pendências por setor, mas quem abre a
- * folha numa reunião precisa ver a responsabilidade consolidada antes de
- * entrar no detalhe: qual setor concentra o problema e qual é só respingo.
- * Ordenado por apontamento esquecido, que é o que tem prova.
- */
-function quadroSetores(faltas){
-  const m={};
-  faltas.forEach(x=>{
-    const r=m[x.op.descricao]=m[x.op.descricao]||{n:0,furos:0,pecas:0,pcFuro:0,ordens:new Set()};
-    r.n++; r.pecas+=x.pecas; r.ordens.add(x.of.of);
-    if(x.furo){ r.furos++; r.pcFuro+=x.pecas; }
-  });
-  const linhas=Object.entries(m)
-    .sort((a,b)=>b[1].furos-a[1].furos||b[1].pcFuro-a[1].pcFuro||b[1].pecas-a[1].pecas);
-  if(!linhas.length)return '';
-  return `<section class="doc-setor">
-    <h2>Responsabilidade por setor <span>quem deixou de apontar, e quanto · a soma das colunas de peças é maior que o lote, porque a mesma peça passa por vários setores</span></h2>
-    <table>
-      <colgroup><col style="width:26%"><col style="width:13%"><col style="width:16%"><col style="width:13%">
-        <col style="width:16%"><col style="width:16%"></colgroup>
-      <thead><tr><th>Setor</th><th class="n">Esquecidos</th><th class="n">Peças esquecidas</th>
-        <th class="n">A apontar</th><th class="n">Peças do setor</th><th class="n">Ordens</th></tr></thead>
-      <tbody>${linhas.map(([nome,r])=>`<tr>
-        <td><b>${esc(nome)}</b></td>
-        <td class="n">${r.furos?`<b>${r.furos}</b>`:'—'}</td>
-        <td class="n">${r.pcFuro?`<b>${nf(r.pcFuro)}</b>`:'—'}</td>
-        <td class="n">${r.n}</td>
-        <td class="n">${nf(r.pecas)}</td>
-        <td class="n">${r.ordens.size}</td></tr>`).join('')}</tbody>
-    </table>
-  </section>`;
-}
-
 /* Imprime a LISTA QUE ESTÁ NA TELA, com o mesmo recorte que o usuário está
    vendo. Serve para levar a evidência bruta quando alguém questiona o
    resumo — a tabela inteira, do jeito que o app leu o relatório. */
@@ -2162,16 +2130,12 @@ function montarImpresso(soSetor){
   const hoje=new Date().toISOString().slice(0,10);
 
   const furos=f.filter(x=>x.furo);
-  const pecas=pecasDistintas(f), pcFuro=pecasDistintas(furos);
-
-  // Setores ordenados pelo que exige conversa primeiro.
-  const porSetor={};
-  f.forEach(x=>{(porSetor[x.op.descricao]=porSetor[x.op.descricao]||[]).push(x);});
-  const setores=Object.entries(porSetor).map(([nome,itens])=>({
-    nome, itens,
-    furos:itens.filter(i=>i.furo).length,
-    pecas:itens.reduce((s,i)=>s+i.pecas,0),
-  })).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+  const pecas=pecasDistintas(f);
+  // A mesma agregação da tela, ordenada duas vezes: o ranking pelo critério
+  // do ranking da tela; os blocos de detalhe pelo que exige conversa primeiro,
+  // com o nome como desempate para a folha sair sempre na mesma ordem.
+  const rank=rankSetores(f);
+  const setores=agregarPorSetor(f).sort((a,b)=>b.furos-a.furos||b.somaPecas-a.somaPecas||a.nome.localeCompare(b.nome));
 
   const cab=`<div class="doc-topo">
       <div class="doc-marca">
@@ -2194,46 +2158,31 @@ function montarImpresso(soSetor){
     return;
   }
 
-  /* A conclusão primeiro, em uma frase. Os cinco números vêm depois, para
-     quem precisa do detalhe — não para quem só quer saber o que fazer. */
-  const porSetorImp={};
-  f.forEach(x=>{const r=porSetorImp[x.op.descricao]=porSetorImp[x.op.descricao]||{n:0,furos:0,itens:[]};
-    r.n++; if(x.furo)r.furos++; r.itens.push(x);});
-  const rankImp=Object.entries(porSetorImp).map(([nome,r])=>({nome,...r,pecas:pecasDistintas(r.itens)}))
-    .sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
-  const maiorImp=Math.max(1,...rankImp.map(r=>r.pecas));
-  const comFuro=rankImp.filter(r=>r.furos).length;
+  /* A conclusão primeiro, em uma frase; a comparação (ranking) depois; o
+     detalhe por setor por último, que é onde está a ação. */
+  const maior=Math.max(1,...rank.map(r=>r.pecas));
   const veredito=`<div class="doc-veredito">
       <div>
-        <h2>${furos.length?`${furos.length} apontamento${furos.length>1?'s':''} esquecido${furos.length>1?'s':''} em ${comFuro} setor${comFuro>1?'es':''}`
-                          :`${f.length} apontamento${f.length>1?'s':''} pendente${f.length>1?'s':''} em ${rankImp.length} setor${rankImp.length>1?'es':''}`}</h2>
-        <p>${rankImp.length?`Comece por <b>${esc(rankImp[0].nome)}</b>, com ${nf(rankImp[0].pecas)} peças sem registro.`:''}
+        <h2>${tituloVeredito(f,furos,rank)}</h2>
+        <p>${rank.length?`Comece por <b>${esc(rank[0].nome)}</b>, com ${nf(rank[0].pecas)} peças sem registro.`:''}
         ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}</p>
       </div>
       <div class="big">${nf(pecas)}<span>peças sem apontar</span></div>
     </div>`;
 
-  const rankHtml=rankImp.length?`<div class="doc-rank">
+  const rankHtml=rank.length?`<div class="doc-rank">
       <div class="tit">Onde falta apontamento — do pior para o menor</div>
-      <div class="grade">${rankImp.map(r=>`<div class="l">
+      <div class="grade">${rank.map(r=>`<div class="l">
         <span class="nome">${esc(r.nome)}</span>
-        <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maiorImp*100))}%"></i></span>
+        <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maior*100))}%"></i></span>
         <span class="qtd">${nf(r.pecas)}</span>
-        <span class="marca">${r.furos?`${r.furos} esquecido${r.furos>1?'s':''}`:`${r.n} a apontar`}</span>
+        <span class="marca">${marcaSetor(r)}</span>
       </div>`).join('')}</div>
     </div>`:'';
 
-  const resumo=`<div class="doc-resumo">
-      <div><div class="v">${furos.length}</div><div class="r">Apontamentos esquecidos</div></div>
-      <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças que passaram sem registro</div></div>
-      <div><div class="v">${f.length}</div><div class="r">Apontamentos a fazer</div></div>
-      <div><div class="v">${nf(pecas)}</div><div class="r">Peças sem apontamento</div></div>
-      <div><div class="v">${setores.length}</div><div class="r">Setores envolvidos</div></div>
-    </div>`;
-
   const blocos=setores.map(st=>`<section class="doc-setor">
       <h2>${esc(st.nome)}
-        <span>${st.itens.length} operação(ões) · ${nf(st.pecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
+        <span>${st.itens.length} operação(ões) · ${nf(st.somaPecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
       <table>
         <colgroup>
           <col style="width:13%"><col style="width:9%"><col style="width:12%"><col style="width:17%">
@@ -2244,26 +2193,24 @@ function montarImpresso(soSetor){
           <th>Previsão</th><th class="n">Peças</th><th>Por que</th><th>Tratativa</th>
         </tr></thead>
         <tbody>${st.itens.map(x=>`<tr>
-          <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem qtd':'pendente'}</span></td>
+          <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${rotuloFalta(x)}</span></td>
           <td class="cod">${esc(x.of.of)}</td>
           <td class="cod">${esc(x.of.produto)}</td>
           <td>${esc(x.of.descricao)}</td>
           <td class="cod">${br(x.op.previsao)}${x.vencida?'<span class="venc">venc.</span>':''}</td>
           <td class="n">${nf(x.pecas)}</td>
-          <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td>
+          <td>${esc(motivoFalta(x))}</td>
           <td><span class="doc-tratativa"></span></td>
         </tr>`).join('')}</tbody>
       </table>
     </section>`).join('');
 
   /* MENOS, MAS MELHOR.
-     A folha trazia a mesma conclusão quatro vezes: veredito, ranking, um
+     A folha já trouxe a mesma conclusão quatro vezes: veredito, ranking, um
      resumo de cinco números e um quadro por setor. Informação repetida não
      reforça — faz o leitor procurar qual das quatro é a certa, que é
      exatamente o oposto de entender em dois segundos. Ficam o veredito (a
-     conclusão), o ranking (a comparação) e o detalhe por setor (a ação).
-     `resumo` e `quadroSetores` continuam no código, disponíveis se um dia a
-     folha precisar do consolidado numérico. */
+     conclusão), o ranking (a comparação) e o detalhe por setor (a ação). */
   $('#impresso').innerHTML=cab+veredito+rankHtml+blocos+rodape(ref);
 }
 
@@ -2301,12 +2248,7 @@ function imprimirFolhaSetor(nome){
   orientar('portrait'); montarImpresso(nome); window.print(); montarImpresso();
 }
 function csvDoSetor(nome){
-  const d=dadosDoSetor(nome);
-  csv(`sem-apontamento-${nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,
-    ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
-    d.faltas.map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',nome,dec(x.pecas),
-      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
-      x.prova||(x.vencida?'Previsao vencida, nada apontado':'Ainda dentro do prazo')]));
+  csvFaltas(`sem-apontamento-${nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`, dadosDoSetor(nome).faltas);
 }
 
 $('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); window.print(); };
@@ -2324,11 +2266,18 @@ function csv(nome,cols,linhas){
 }
 const dec=v=>v==null?'':String(v).replace('.',',');
 
-$('#btnCsvApont').onclick=()=>csv('sem-apontamento.csv',
-  ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
-  faltasFiltradas().map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',x.op.descricao,dec(x.pecas),x.of.arquivo,x.of.lote,x.of.of,
-    x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
-    x.prova||(x.vencida?'Previsao vencida, nada apontado':'Ainda dentro do prazo')]));
+/* Sem acento no motivo: o CSV vai para Excel e Power BI, onde acento em
+   texto de coluna vira problema de codificação com mais frequência do que
+   deveria. A tela e o papel usam o texto acentuado de `motivoFalta`. */
+const semAcento=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function csvFaltas(nome,faltas){
+  csv(nome,
+    ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
+    faltas.map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',x.op.descricao,dec(x.pecas),
+      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
+      x.prova||semAcento(motivoFalta(x))]));
+}
+$('#btnCsvApont').onclick=()=>csvFaltas('sem-apontamento.csv',faltasFiltradas());
 
 $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
