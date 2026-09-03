@@ -375,6 +375,27 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Operação fechada por lote
+
+A regra do PPCP virada em indicador: **o lote finaliza por completo cada operação antes de andar**,
+independente de haver peça ou setup diferente dentro dele.
+
+| Lote | Previsão | Fechadas | Falta para a próxima |
+|---|---|---|---|
+| 025140 MESA COMP SPACE | 03/09 | 2/4 | COLAR BORDA — 17 ordens, 2.010 pç |
+| 025141 KIT 2 MESA CABECEIRA SLEEP | 03/09 | 1/4 | FURAR — 2 ordens, 800 pç |
+| 025139 PAINEL INTENSE | 03/09 | 1/5 | FURAR — 2 ordens, 2.000 pç |
+
+> LT 163 + LT 164: **12 de 27 operações fechadas, 44%.**
+
+- **Fechada** = **todas** as ordens do lote apontadas naquela operação, **não** o percentual
+  arredondado. `100%` em peças com duas ordens abertas não é fechada — é o ponto da regra.
+- O grão é **lote × operação**, como a fábrica fala. Por isso **EMBALAR aparece** aqui: ela só
+  existe nas ordens de acabado e volume e nunca entra na matriz de conjuntos.
+- **O que não se aponta não entra na meta.** Setor cego e EMBALAR isenta nunca recebem registro;
+  contá-los tornaria 100% inatingível por construção. Ficam visíveis na faixa, fora do denominador.
+- `operacao-fechada.csv` acumula o indicador entre lotes no Power BI.
+
 ### Prazo e prioridade invertida na tela do setor
 
 A tabela de avanço por lote mostra o **Prazo aqui** — a previsão mais antiga ainda não apontada

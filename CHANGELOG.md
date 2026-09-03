@@ -3,6 +3,43 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.9.0] — 2026-09-03
+
+### Adicionado
+
+- **Tela "Operação fechada por lote"** — a regra do PPCP virada em indicador:
+
+  > O lote finaliza **por completo** cada operação antes de andar, independente de haver peça ou
+  > setup diferente dentro dele.
+
+  Resto de operação é o que faz o produto nunca chegar inteiro na embalagem. No LT 163 + LT 164:
+  **12 de 27 operações fechadas — 44%**, com os três lotes que venciam 03/09 em 2/4, 1/4 e 1/5.
+
+- **Fechada = todas as ordens do lote apontadas naquela operação**, não o percentual arredondado.
+  `100%` em peças com duas ordens abertas **não** é fechada, e essa distinção é o ponto inteiro da
+  regra. O `% peças` continua ao lado para dimensionar o quanto falta; quem decide o estado é a
+  contagem de ordens.
+
+- O grão é **lote × operação**, como a fábrica fala ("o 025139 fechou o corte"), e não conjunto ×
+  setor como na matriz de frentes. Por isso **EMBALAR aparece aqui**: ela só existe nas ordens de
+  acabado e volume e nunca entra na matriz de conjuntos — e é justamente onde a regra dói.
+
+- **O que não se aponta não entra na meta.** Setor cego no ERP e EMBALAR isenta nunca recebem
+  registro; contá-los como "aberta" tornaria 100% **inatingível por construção**, e meta que não se
+  alcança é ruído. Ficam visíveis na faixa, com selo apagado, fora do denominador, e a tela declara
+  quantos são. Encontrado no teste com dados reais: sem isso o indicador dava 35% e nunca poderia
+  chegar a 100%.
+
+- Cartão por lote com faixa do roteiro, prazo, selo de vencido e **o que falta para fechar a
+  primeira operação aberta** — ordens sem repetir (uma ordem com três passes do mesmo setor
+  aparecia três vezes). Ordenação: vencido primeiro, depois pelo prazo do lote, depois pelo mais
+  adiantado.
+
+- **CSV de operação fechada** (`operacao-fechada.csv`), uma linha por lote × operação, para
+  acumular "% de operações fechadas" entre lotes ao longo do tempo no Power BI.
+
+- Reposição fica de fora, como no resto da tela: o ERP dá a ela previsão posterior à do lote.
+
 ## [3.8.0] — 2026-09-03
 
 ### Adicionado
