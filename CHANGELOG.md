@@ -52,6 +52,52 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [2.1.0] — 2026-09-03
+
+### Ordens de reposição
+
+Quando uma peça é perdida ou refugada, o ERP abre uma ordem nova para repor. Ela nasce depois
+do lote e traz previsão posterior à dele, porque a contagem começa na criação da ordem.
+
+Isso tornava dois julgamentos inválidos para ela:
+
+- comparar o prazo dela com o do lote não diz nada, e
+- **"concluída antes da primeira previsão de processo" deixava de ser furo de dado**: na
+  reposição a peça costuma ser feita antes de a programação formal existir, e isso é o fluxo
+  normal dela, não inconsistência.
+
+Agora a reposição é reconhecida, ganha situação própria na aba Ordens e fica **fora do cálculo
+de aderência**. O que não muda: a falta de apontamento continua valendo, porque reposição é
+produção real e precisa de registro como qualquer outra. Filtro novo para incluir, isolar ou
+ocultar.
+
+**O critério é a previsão do lote, lida do cabeçalho do relatório** — a data-limite do lote.
+Uma ordem com previsão além dela nasceu fora do planejamento original.
+
+Tentei antes usar a data mais repetida entre as ordens, imaginando que o cabeçalho pudesse vir
+contaminado pela própria reposição. **O teste desmentiu:** num lote normal cada ordem tem a sua
+data escalonada, a mais repetida não representa o prazo do lote, e **6 de 7 ordens legítimas
+eram acusadas de reposição**. O cabeçalho erra menos.
+
+### Texto de "Esquecido" reescrito
+
+A explicação anterior — *"a peça passou por aqui, logo o apontamento existe para ser feito"* —
+gastava duas frases no que é óbvio para quem conhece o roteiro, e não dizia a conclusão que
+importa. Agora:
+
+> **Esquecido** = a fase seguinte já tem apontamento, ou a ordem foi fechada. Como a peça não
+> pula fase, faltou o **registro**, não a produção.
+
+A distinção entre faltar registro e faltar produção é o que a folha precisa deixar claro numa
+reunião. Aplicado na tela, na tela do setor, no detalhe do achado e nos dois documentos
+impressos.
+
+### Verificado
+
+Lote normal: **zero** ordens marcadas como reposição. Lote com reposição: as duas ordens de
+quantidade pequena e previsão posterior reconhecidas, saindo de "Inconsistente" para
+"Reposição" e da base da aderência (0/3 em vez de 0/1).
+
 ## [2.0.0] — 2026-09-03
 
 ### Uma tela por setor
