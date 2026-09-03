@@ -52,6 +52,30 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.9.1] — 2026-09-03
+
+### Nome da peça
+
+A aba **Operações** mostrava só o código do produto. `479.006.001` não diz nada numa reunião —
+só vira informação com `MADERO LAT DIR 350X320X12 MDP 3` ao lado. A coluna **Peça** entrou
+entre Produto e Seq, e acompanha a impressão da lista, que clona a tabela da tela.
+
+O cartão do **Painel por setor** também passa a nomear a peça da ordem mais parada, em vez de
+citar só o número da ordem.
+
+As demais telas já traziam a descrição: Ordens, Achados, Sem apontamento, a folha da reunião e
+os três CSV.
+
+### A tela aproveita a largura do monitor
+
+O conteúdo tinha teto de 1400px. Em monitor grande sobrava um vazio à direita enquanto as
+colunas da tabela apertavam — o limite existe para texto corrido, não para tabela densa, onde
+cada pixel a mais é uma coluna que deixa de espremer.
+
+O teto saiu; o respiro fica por conta do padding. Texto corrido — o veredito, as notas e o
+rodapé impresso — ganhou limite próprio de 120 caracteres, porque linha longa demais cansa a
+leitura mesmo havendo espaço.
+
 ## [1.9.0] — 2026-09-03
 
 ### A conclusão escrita, não o número solto

@@ -60,7 +60,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 
 /* ---------------------------------------------------------------- Esqueleto */
 .tela{min-height:100dvh;display:flex;align-items:flex-start}
-.conteudo{flex:1;min-width:0;max-width:1400px;padding:var(--xl) var(--xl) var(--gigante)}
+/* Sem teto de largura: as telas aqui são tabelas densas, e cada pixel a mais
+   é uma coluna que deixa de apertar. O limite de 1400px fazia sobrar um vazio
+   à direita em monitor grande enquanto a descrição da peça era cortada. O
+   respiro fica por conta do padding. Texto corrido tem limite próprio, abaixo:
+   linha longa demais cansa a leitura mesmo havendo espaço. */
+.conteudo{flex:1;min-width:0;padding:var(--xl) var(--xl) var(--gigante)}
+.veredito .txt p,.nota,.doc-rodape p{max-width:120ch}
 
 /* ---------------------------------------------------------------- Lateral */
 .lateral{position:sticky;top:0;align-self:flex-start;width:248px;flex-shrink:0;height:100dvh;overflow-y:auto;
@@ -548,6 +554,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.9.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Nome da peça na aba Operações.</b> O código do produto sozinho não diz nada numa reunião: "479.006.001" só vira informação com "MADERO LAT DIR 350X320X12" ao lado.</li>
+    <li>O cartão do Painel por setor também passa a nomear a peça da ordem mais parada.</li>
+    <li><b>A tela aproveita a largura do monitor.</b> Havia um teto de 1400px que deixava um vazio à direita enquanto as colunas apertavam.</li>
+  </ul>
   <h3>1.9.0 — 03/09/2026</h3>
   <ul>
     <li><b>A tela e a folha agora dizem a conclusão, não só os números.</b> Uma frase no topo responde as três perguntas de uma vez: tem problema, onde e quanto.</li>
@@ -1052,7 +1064,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.9.0';
+const VERSAO='1.9.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1551,8 +1563,8 @@ function desenhar(){
   if(ABA==='op'){
     const ops=opsFiltradas();
     p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
-      [{h:'Ordem'},{h:'Produto'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},{h:'Desvio / prazo (d.ú.)',n:1},
-       {h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
+      [{h:'Ordem'},{h:'Produto'},{h:'Peça'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},
+       {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
       ops.map(({of,op})=>{
         const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
         const dv=op.previsao?dias(op.previsao,op.conclusao||ref):null;
@@ -1560,7 +1572,10 @@ function desenhar(){
         if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
         else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
         else {sit='Pendente';cls='neutro';}
-        return `<tr><td class="cod">${esc(of.of)}</td><td class="cod">${esc(of.produto)}</td><td class="n">${op.seq}</td>
+        // O código do produto não diz nada numa reunião: "479.006.001" só vira
+        // informação com o nome da peça ao lado.
+        return `<tr><td class="cod">${esc(of.of)}</td><td class="cod">${esc(of.produto)}</td>
+          <td>${esc(of.descricao)}</td><td class="n">${op.seq}</td>
           <td class="forte">${esc(op.descricao)}</td><td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
           <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
@@ -1584,7 +1599,7 @@ function desenhar(){
           r.venc++;
           const d=dias(op.previsao,ref);
           // A ordem que mais tempo está parada aqui: é por ela que se começa.
-          if(!r.travada||d>r.travada.d) r.travada={of:of.of,produto:of.produto,d,prev:op.previsao};
+          if(!r.travada||d>r.travada.d) r.travada={of:of.of,produto:of.produto,peca:of.descricao,d,prev:op.previsao};
         }
       }
       r.saldo+=Math.max(0,(op.qtd||0)-(op.pronto||0));
@@ -1623,7 +1638,7 @@ function desenhar(){
           ? `<div class="linha"><b>${r.furos}</b> apontamento(s) esquecido(s) — a fase seguinte já foi apontada</div>`
           : ''}
         ${r.travada
-          ? `<div class="linha">Mais parada: ordem <b>${esc(r.travada.of)}</b> — previsão ${br(r.travada.prev)}, <b>${r.travada.d}</b> dia(s) vencida</div>`
+          ? `<div class="linha">Mais parada: ordem <b>${esc(r.travada.of)}</b> — ${esc(r.travada.peca||r.travada.produto)} · previsão ${br(r.travada.prev)}, <b>${r.travada.d}</b> dia(s) vencida</div>`
           : `<div class="linha">Nenhuma operação vencida neste setor</div>`}
       </div>`;}).join('');
 
