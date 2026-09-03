@@ -52,6 +52,51 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.9.0] — 2026-09-03
+
+### A conclusão escrita, não o número solto
+
+A tela mostrava quatro números de peso igual e deixava a conclusão por conta do leitor. Agora
+uma frase responde as três perguntas de uma vez — **tem problema, onde e quanto**:
+
+> **3 apontamentos esquecidos em 2 setores**
+> 62 peças sem registro. Comece por CORTAR, com 42 peças — há prova de que a peça passou por lá.
+
+### Ranking por setor, com barra
+
+O olho compara **comprimento** em milissegundos; comparar números exige ler, alinhar e
+subtrair. O ranking vem logo abaixo do veredito, do pior para o menor, e existe nas duas
+saídas — tela e papel.
+
+Na folha impressa, barra **preenchida** é apontamento esquecido e **hachurada** é pendente. A
+distinção sobrevive à fotocópia, e o número vem ao lado porque barra sozinha não se lê com
+precisão.
+
+### Menos, mas melhor
+
+A folha trazia a mesma conclusão **quatro vezes**: veredito, ranking, resumo de cinco números
+e quadro por setor. Informação repetida não reforça — faz o leitor procurar qual das quatro é
+a certa, que é o oposto de entender em dois segundos. Ficaram o veredito (a conclusão), o
+ranking (a comparação) e o detalhe por setor (a ação).
+
+Na tela, os números detalhados foram para um bloco recolhido.
+
+### Corrigido — as barras do ranking mentiam
+
+Dois defeitos somados faziam a barra do pior setor sair menor que a de um setor com menos da
+metade das peças:
+
+1. **Cada linha era o próprio grid.** A coluna da barra media diferente em cada uma, porque
+   `2 ESQUECIDOS` é mais largo que `1 A APONTAR`. O grid passou para o container, com as
+   linhas em `display:contents` — todas compartilham a mesma régua.
+2. **Colisão de classe.** A barra usava `.f`, que já existia para os campos de filtro com
+   `max-width:320px`. A barra de 100% era cortada nesse limite. As classes viraram `.esq` e
+   `.pend`.
+
+Uma barra que engana é pior que barra nenhuma: o olho acredita nela antes de ler o número.
+Verificado medindo a largura renderizada em pixels contra o valor — 100%/48%/71% para
+42/20/30 peças, na tela e no celular.
+
 ## [1.8.0] — 2026-09-02
 
 ### Prazo em dias úteis, não em dias corridos

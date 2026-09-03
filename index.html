@@ -131,6 +131,67 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .aviso ul{margin:var(--sm) 0 0;padding-left:var(--xxl)}
 .aviso li{margin-top:var(--xs)}
 
+/* ================================================== VEREDITO E RANKING
+   A tela dizia quatro números de peso igual e deixava a conclusão por conta
+   do leitor. Aqui a conclusão vem escrita, em uma frase, e logo abaixo o
+   ranking por setor — o olho compara COMPRIMENTO DE BARRA em milissegundos,
+   enquanto comparar números exige ler, alinhar e subtrair.
+
+   A cor nunca informa sozinha: cada faixa tem ícone, palavra e número. */
+.veredito{display:flex;align-items:center;gap:var(--lg);margin:0 0 var(--md);
+  padding:var(--lg) var(--xl);border-radius:var(--r-lg);border-left:6px solid;background:var(--papel);
+  box-shadow:var(--elev-media)}
+.veredito .ico{flex-shrink:0;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  font-size:26px;font-weight:700;color:#fff;line-height:1}
+.veredito .txt{flex:1;min-width:0}
+.veredito h2{margin:0;font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-.02em}
+.veredito p{margin:2px 0 0;color:var(--texto-medio);font-size:15px}
+.veredito .big{flex-shrink:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:44px;line-height:1;font-weight:700;letter-spacing:-.03em}
+.veredito .big span{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--texto-fraco);font-family:var(--fonte)}
+.veredito.critico{border-left-color:var(--critico)}
+.veredito.critico .ico{background:var(--critico)} .veredito.critico .big{color:var(--critico)}
+.veredito.atencao{border-left-color:var(--atencao)}
+.veredito.atencao .ico{background:var(--atencao)} .veredito.atencao .big{color:var(--atencao)}
+.veredito.ok{border-left-color:var(--ok)}
+.veredito.ok .ico{background:var(--ok)} .veredito.ok .big{color:var(--ok)}
+
+.ranking{margin:0 0 var(--lg);padding:var(--lg) var(--xl);background:var(--papel);
+  border:1px solid var(--borda);border-radius:var(--r-lg)}
+.ranking .tit{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--texto-fraco);margin-bottom:var(--md)}
+/* O GRID É DO CONTAINER, NÃO DA LINHA.
+   Com cada linha sendo o próprio grid, a coluna da barra media diferente em
+   cada uma — "2 ESQUECIDOS" é mais largo que "1 A APONTAR" — e barras de
+   valores diferentes saíam do mesmo tamanho. Uma barra que engana é pior que
+   barra nenhuma: o olho acredita nela antes de ler o número. Com o grid no
+   container, todas as linhas compartilham a mesma régua. */
+.ranking .grade{display:grid;grid-template-columns:minmax(90px,150px) 1fr 90px 120px;
+  align-items:center;gap:4px var(--md)}
+.ranking .l{display:contents}
+.ranking .l>*{padding:5px 0}
+.ranking .nome{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranking .barra{height:20px;background:var(--fundo);border-radius:3px;overflow:hidden;min-width:40px}
+.ranking .barra i{display:block;height:100%;border-radius:3px}
+/* Nomes longos de propósito: `.f` e `.p` colidiam com a classe `.f` dos
+   campos de filtro, que tem max-width 320px — a barra do pior setor era
+   cortada nesse limite e ficava do mesmo tamanho da de um setor com metade
+   das peças. O ranking mentia justamente onde deveria ser mais direto. */
+.ranking .barra i.esq{background:var(--critico)}
+.ranking .barra i.pend{background:var(--atencao)}
+.ranking .qtd{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;
+  white-space:nowrap;min-width:76px;text-align:right}
+.ranking .marca{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  white-space:nowrap;min-width:110px;text-align:right}
+.ranking .marca.esq{color:var(--critico)} .ranking .marca.pend{color:var(--texto-fraco)}
+@media (max-width:640px){
+  .veredito{flex-wrap:wrap} .veredito .big{text-align:left}
+  .ranking .grade{grid-template-columns:1fr auto}
+  .ranking .barra{grid-column:1/-1}
+  .ranking .marca{min-width:0}
+}
+
 /* ---------------------------------------------------------------- Resposta */
 .resposta{min-width:0;margin:0 0 var(--lg);padding:var(--xl);background:var(--papel);border-radius:var(--r-lg);box-shadow:var(--elev-media);
   border-left:4px solid var(--vermelho);display:flex;gap:var(--xxl);flex-wrap:wrap}
@@ -259,6 +320,33 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-sub{font-size:9pt;margin:0;line-height:1.5}
   .doc-sub b{font-weight:700}
   .doc-carimbo{text-align:right;font-size:8pt;line-height:1.5;white-space:nowrap}
+
+  /* VEREDITO NO PAPEL — a conclusão em uma frase, legível de longe.
+     O líder recebe a folha e precisa saber em dois segundos se o setor dele
+     está na lista e quanto deve. */
+  .doc-veredito{border:2pt solid #000;padding:3mm 4mm;margin-bottom:4mm;
+    display:flex;align-items:center;justify-content:space-between;gap:8mm}
+  .doc-veredito h2{margin:0;font-size:16pt;line-height:1.15;font-weight:700;letter-spacing:-.3pt}
+  .doc-veredito p{margin:1mm 0 0;font-size:9.5pt}
+  .doc-veredito .big{font-size:30pt;font-weight:700;line-height:1;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .doc-veredito .big span{display:block;font-size:7.5pt;font-weight:600;letter-spacing:.4pt;
+    text-transform:uppercase;text-align:right}
+
+  /* RANKING — barra sólida preta, que sobrevive a fotocópia. O número vem ao
+     lado porque barra sozinha não se lê com precisão. */
+  .doc-rank{margin-bottom:5mm;break-inside:avoid;page-break-inside:avoid}
+  .doc-rank .tit{font-size:7.5pt;text-transform:uppercase;letter-spacing:.4pt;margin-bottom:1.5mm;
+    border-bottom:.75pt solid #000;padding-bottom:1mm}
+  .doc-rank .grade{display:grid;grid-template-columns:42mm 1fr 18mm 26mm;align-items:center;gap:1mm 3mm}
+  .doc-rank .l{display:contents}
+  .doc-rank .nome{font-weight:700;font-size:9pt;overflow-wrap:break-word}
+  .doc-rank .barra{height:4mm;border:.75pt solid #000}
+  .doc-rank .barra i{display:block;height:100%;background:#000;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .doc-rank .barra i.pend{background:repeating-linear-gradient(90deg,#000 0 1mm,#fff 1mm 2mm)}
+  .doc-rank .qtd{text-align:right;font-size:9pt;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .doc-rank .marca{font-size:7pt;text-transform:uppercase;letter-spacing:.2pt;text-align:right;white-space:nowrap}
 
   .doc-resumo{display:flex;gap:8mm;border:1pt solid #000;padding:2.5mm 3mm;margin-bottom:4mm}
   .doc-resumo div{flex:1}
@@ -421,7 +509,12 @@ dialog form{margin-top:var(--lg);text-align:right}
       <ul id="avisoLista"></ul>
     </details>
 
-    <section class="resposta" id="resposta" aria-label="O que exige atenção"></section>
+    <section id="veredito" aria-live="polite"></section>
+    <section id="ranking"></section>
+    <details class="filtros" style="margin-bottom:var(--lg)">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--texto-medio)">Números detalhados</summary>
+      <div class="resposta" id="resposta" style="box-shadow:none;border-left:0;padding:var(--lg) 0 0" aria-label="Números detalhados"></div>
+    </details>
     <section class="contexto" id="contexto" aria-label="Números de apoio"></section>
 
     <section class="filtros" aria-label="Filtros e parâmetros">
@@ -455,6 +548,15 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>1.9.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>A tela e a folha agora dizem a conclusão, não só os números.</b> Uma frase no topo responde as três perguntas de uma vez: tem problema, onde e quanto.</li>
+    <li><b>Ranking por setor com barra</b>, do pior para o menor. Comparar comprimento de barra é instantâneo; comparar números exige ler e subtrair.</li>
+    <li>Na folha impressa, barra <b>preenchida</b> é apontamento esquecido e <b>hachurada</b> é pendente — a distinção sobrevive à fotocópia em preto e branco.</li>
+    <li>A folha deixou de repetir a mesma conclusão quatro vezes. Ficaram o veredito, o ranking e o detalhe por setor.</li>
+    <li>Os números detalhados da tela foram para um bloco recolhido, para quem precisa deles.</li>
+    <li><b>Correção:</b> as barras do ranking mostravam tamanhos que não correspondiam aos valores.</li>
+  </ul>
   <h3>1.8.0 — 02/09/2026</h3>
   <ul>
     <li><b>Todo prazo passa a ser contado em dias úteis</b> — segunda a sexta, descontando feriados. Antes eram dias corridos, o que inflava todo atraso que cruzava um fim de semana: uma ordem prevista para sexta e concluída na segunda aparecia com 3 dias de atraso quando a produção perdeu 1.</li>
@@ -950,7 +1052,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.8.0';
+const VERSAO='1.9.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1273,8 +1375,50 @@ function renderResposta(){
   const falt=faltasFiltradas(), furos=falt.filter(x=>x.furo);
   const pcFuro=pecasDistintas(furos), pcFalt=pecasDistintas(falt);
   const setores=[...new Set(falt.map(x=>x.op.descricao))];
-  // Quatro blocos, uma linha. O quinto empurrava a régua para baixo e a
-  // primeira leitura da tela deixava de ser uma leitura só.
+  /* ---- VEREDITO: a conclusão escrita, não o número solto ----
+     Quem abre a tela precisa saber em dois segundos se há problema, onde e
+     quanto. Um número sozinho não responde nenhuma das três; uma frase com o
+     número dentro responde as três de uma vez. */
+  const porSetor={};
+  falt.forEach(x=>{
+    const r=porSetor[x.op.descricao]=porSetor[x.op.descricao]||{n:0,furos:0,pecas:0,itens:[]};
+    r.n++; if(x.furo)r.furos++; r.itens.push(x);
+  });
+  const rank=Object.entries(porSetor)
+    .map(([nome,r])=>({nome,...r,pecas:pecasDistintas(r.itens)}))
+    .sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
+  const maiorPç=Math.max(1,...rank.map(r=>r.pecas));
+  const pior=rank[0];
+
+  const estado=furos.length?'critico':falt.length?'atencao':'ok';
+  const titulo=furos.length
+    ? `${furos.length} apontamento${furos.length>1?'s':''} esquecido${furos.length>1?'s':''} em ${rank.filter(r=>r.furos).length} setor${rank.filter(r=>r.furos).length>1?'es':''}`
+    : falt.length
+    ? `${falt.length} apontamento${falt.length>1?'s':''} pendente${falt.length>1?'s':''} em ${rank.length} setor${rank.length>1?'es':''}`
+    : 'Nenhum apontamento pendente';
+  const detalhe=falt.length
+    ? `${nf(pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${furos.length?' — há prova de que a peça passou por lá.':'.'}`
+    : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
+  $('#veredito').innerHTML=`<div class="veredito ${estado}">
+      <span class="ico" aria-hidden="true">${estado==='ok'?'✓':'!'}</span>
+      <div class="txt"><h2>${titulo}</h2><p>${detalhe}</p></div>
+      <div class="big">${nf(pcFalt)}<span>peças sem apontar</span></div>
+    </div>`;
+
+  /* ---- RANKING: comparar barra é mais rápido que comparar número ---- */
+  $('#ranking').innerHTML=rank.length?`<div class="ranking">
+      <div class="tit">Onde falta apontamento — do pior para o menor</div>
+      <div class="grade">
+      ${rank.map(r=>`<div class="l">
+        <span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span>
+        <span class="barra" role="img" aria-label="${nf(r.pecas)} peças">
+          <i class="${r.furos?'esq':'pend'}" style="width:${Math.max(3,Math.round(r.pecas/maiorPç*100))}%"></i></span>
+        <span class="qtd">${nf(r.pecas)} pç</span>
+        <span class="marca ${r.furos?'esq':'pend'}">${r.furos?`${r.furos} esquecido${r.furos>1?'s':''}`:`${r.n} a apontar`}</span>
+      </div>`).join('')}
+      </div>
+    </div>`:'';
+
   $('#resposta').innerHTML=
     bloco('Apontamento esquecido',furos.length,'op.',
       `${nf(pcFuro)} peça(s) com prova de que passaram pelo setor`,furos.length?'c-critico':'c-ok')+
@@ -1671,6 +1815,35 @@ function montarImpresso(){
     return;
   }
 
+  /* A conclusão primeiro, em uma frase. Os cinco números vêm depois, para
+     quem precisa do detalhe — não para quem só quer saber o que fazer. */
+  const porSetorImp={};
+  f.forEach(x=>{const r=porSetorImp[x.op.descricao]=porSetorImp[x.op.descricao]||{n:0,furos:0,itens:[]};
+    r.n++; if(x.furo)r.furos++; r.itens.push(x);});
+  const rankImp=Object.entries(porSetorImp).map(([nome,r])=>({nome,...r,pecas:pecasDistintas(r.itens)}))
+    .sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
+  const maiorImp=Math.max(1,...rankImp.map(r=>r.pecas));
+  const comFuro=rankImp.filter(r=>r.furos).length;
+  const veredito=`<div class="doc-veredito">
+      <div>
+        <h2>${furos.length?`${furos.length} apontamento${furos.length>1?'s':''} esquecido${furos.length>1?'s':''} em ${comFuro} setor${comFuro>1?'es':''}`
+                          :`${f.length} apontamento${f.length>1?'s':''} pendente${f.length>1?'s':''} em ${rankImp.length} setor${rankImp.length>1?'es':''}`}</h2>
+        <p>${rankImp.length?`Comece por <b>${esc(rankImp[0].nome)}</b>, com ${nf(rankImp[0].pecas)} peças sem registro.`:''}
+        ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}</p>
+      </div>
+      <div class="big">${nf(pecas)}<span>peças sem apontar</span></div>
+    </div>`;
+
+  const rankHtml=rankImp.length?`<div class="doc-rank">
+      <div class="tit">Onde falta apontamento — do pior para o menor</div>
+      <div class="grade">${rankImp.map(r=>`<div class="l">
+        <span class="nome">${esc(r.nome)}</span>
+        <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maiorImp*100))}%"></i></span>
+        <span class="qtd">${nf(r.pecas)}</span>
+        <span class="marca">${r.furos?`${r.furos} esquecido${r.furos>1?'s':''}`:`${r.n} a apontar`}</span>
+      </div>`).join('')}</div>
+    </div>`:'';
+
   const resumo=`<div class="doc-resumo">
       <div><div class="v">${furos.length}</div><div class="r">Apontamentos esquecidos</div></div>
       <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças que passaram sem registro</div></div>
@@ -1704,7 +1877,15 @@ function montarImpresso(){
       </table>
     </section>`).join('');
 
-  $('#impresso').innerHTML=cab+resumo+quadroSetores(f)+blocos+rodape(ref);
+  /* MENOS, MAS MELHOR.
+     A folha trazia a mesma conclusão quatro vezes: veredito, ranking, um
+     resumo de cinco números e um quadro por setor. Informação repetida não
+     reforça — faz o leitor procurar qual das quatro é a certa, que é
+     exatamente o oposto de entender em dois segundos. Ficam o veredito (a
+     conclusão), o ranking (a comparação) e o detalhe por setor (a ação).
+     `resumo` e `quadroSetores` continuam no código, disponíveis se um dia a
+     folha precisar do consolidado numérico. */
+  $('#impresso').innerHTML=cab+veredito+rankHtml+blocos+rodape(ref);
 }
 
 function rodape(ref){
