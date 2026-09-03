@@ -3,6 +3,41 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.1.1] — 2026-09-03
+
+### Corrigido
+
+- **O recorte "fora da conta" não chegava à tabela Operações.** A isenção de EMBALAR em
+  produto acabado (`fEmb`) e os setores marcados como "ainda não apontam no ERP" já saíam
+  das duas contas (falta de apontamento e posição da ordem) e das regras de conferência,
+  mas `opsFiltradas()` continuava devolvendo essas fases — e a tabela as exibia com o selo
+  **VENCIDA**. Com "Ignorar EMBALAR" marcado, EMBALAR aparecia em vermelho na tela; com
+  PINTAR PU marcado como setor sem apontamento, o mesmo. O usuário concluía, com razão,
+  que o filtro não funcionava, e num lote grande essas linhas dominavam a lista e escondiam
+  o que é de fato cobrável.
+- O corte aplicado é exatamente o que os dois rótulos prometem: a fase **sem apontamento**.
+  Fase isenta que tem conclusão ou quantidade apontada permanece na lista — ali o registro
+  existe, e removê-la seria apagar produção real da evidência.
+- Fase fora da conta deixou de ser julgada por prazo: quando exibida, recebe o selo neutro
+  **fora da conta** em vez de VENCIDA/PENDENTE. Chamar de vencida o que a própria tela
+  declarou fora da conta era a contradição que fazia o filtro parecer quebrado.
+
+### Adicionado
+
+- Cabeçalho da tabela **Operações** declara quantas fases ficaram de fora e por qual motivo
+  (EMBALAR em acabado; setores que não apontam), com **mostrar/ocultar** para conferi-las.
+  Filtro que esconde sem dizer o que escondeu é pior que filtro nenhum.
+- Nota de rodapé da tabela explicando o estado **fora da conta**.
+- O recorte também é declarado no cabeçalho da folha impressa da seção Operações.
+- Coluna **ForaDaConta** (sim/não) no `operacoes.csv`. O CSV passa a levar **todas** as fases
+  do recorte, inclusive as fora da conta: no Power BI o que se quer é o roteiro inteiro com
+  um campo para filtrar, e sumir com a fase deixaria um buraco no roteiro sem aviso.
+
+### Alterado
+
+- O contador **Operações** da lateral segue a lista da tela (não conta mais as fases fora
+  da conta enquanto elas estiverem ocultas).
+
 ## [1.1.0] — 2026-09-02
 
 ### Adicionado

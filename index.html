@@ -313,6 +313,12 @@ tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--neutro)}
 .vazio{padding:var(--xxl);text-align:center;color:var(--texto-fraco)}
 .nota{padding:var(--md) var(--xl);font-size:12px;line-height:1.6;color:var(--texto-fraco);border-top:1px solid var(--borda)}
 .nota b{color:var(--texto-medio)}
+/* Botao de texto dentro do cabecalho de uma tabela: alterna um recorte sem
+   parecer um botao de acao. Nunca esconde nada em silencio — o texto ao lado
+   dele diz quantas linhas estao fora e por que. */
+.linkTxt{background:none;border:0;padding:0;margin:0;font:inherit;color:var(--texto-medio);
+  font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.linkTxt:hover{opacity:.75}
 
 /* Painel por setor: cartao de decisao, nao mais uma tabela.
    A cor nunca informa sozinha — o estado esta escrito no selo. */
@@ -628,6 +634,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.1.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Correção: o que sai da conta agora sai também da lista.</b> Com "Ignorar EMBALAR" ligado, a tabela <b>Operações</b> continuava listando EMBALAR em produto acabado — e listando como <b>VENCIDA</b>. O mesmo acontecia com PINTAR PU, marcado como setor que ainda não aponta. O filtro parecia não funcionar, e num lote grande essas linhas escondiam o que é cobrável.</li>
+    <li>O corte é o que os dois rótulos prometem: a fase <b>sem apontamento</b>. Fase isenta que tem conclusão ou quantidade continua na lista — ali o registro existe e apagá-lo seria esconder produção apontada.</li>
+    <li>Nada some em silêncio: o cabeçalho da tabela diz quantas linhas ficaram de fora e por qual motivo, com <b>mostrar</b> para trazê-las de volta (aparecem com o selo <b>fora da conta</b>, nunca como vencida). A folha impressa declara o mesmo.</li>
+    <li>O <b>CSV de operações</b> continua levando todas as fases, agora com a coluna <b>ForaDaConta</b> (sim/não) — no Power BI o que se quer é o roteiro inteiro com um campo para filtrar.</li>
+  </ul>
   <h3>3.1.0 — 03/09/2026</h3>
   <ul>
     <li><b>Setores que ainda não apontam no ERP</b> saem das duas contas. Hoje: PINTAR PU. A ausência de registro ali não é cobrança (ninguém aponta) nem prova de que a peça está parada; a posição da ordem pula para a próxima fase que aponta.</li>
@@ -1331,7 +1344,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.1.0';
+const VERSAO='3.1.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1569,10 +1582,31 @@ function ordensFiltradas(){
   return DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
     .filter(o=>!f.oper||o.operacoes.some(x=>x.descricao===f.oper));
 }
-function opsFiltradas(){
+/**
+ * FORA DA CONTA TAMBEM SAI DA LISTA — senao o filtro mente.
+ *
+ * A isencao de EMBALAR em produto acabado e o setor que ainda nao aponta no
+ * ERP ja saiam das duas contas (falta de apontamento e posicao da ordem) e das
+ * regras. So a tabela Operacoes continuava listando essas fases, e listando
+ * como VENCIDA: o usuario marcava "Ignorar EMBALAR", via a linha de EMBALAR em
+ * vermelho na tela e concluia, com razao, que o filtro nao funcionava. Pior:
+ * num lote grande essas linhas dominam a tabela e escondem o que e cobravel.
+ *
+ * O corte e exatamente o que os dois rotulos prometem — a fase SEM APONTAMENTO.
+ * Fase isenta que TEM registro (conclusao ou quantidade) continua na lista: ali
+ * o dado e real e esconde-lo seria apagar producao apontada.
+ *
+ * Nada some em silencio: o cabecalho da tabela declara quantas linhas ficaram
+ * de fora e por que, com um clique para trazer de volta.
+ */
+let MOSTRAR_FORA=false;
+const foraDoDetalhe=({of,op})=>foraDaConta(of,op,$('#fEmb').checked)&&!apontada(op);
+
+function opsFiltradas(incluirFora){
   const f=filtros();
-  return DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
+  const todas=DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
     .flatMap(o=>o.operacoes.filter(x=>!f.oper||x.descricao===f.oper).map(x=>({of:o,op:x})));
+  return (incluirFora||MOSTRAR_FORA)?todas:todas.filter(x=>!foraDoDetalhe(x));
 }
 /**
  * TUDO DE UM SETOR, NUMA ESTRUTURA SÓ.
@@ -1863,6 +1897,14 @@ const prazo=dv=>dv==null?''
   :dv>0?`<span class="c-critico">+${dv} d</span>`
   :`<span title="Ainda dentro do prazo">${-dv} d restante(s)</span>`;
 
+/* O "mostrar/ocultar" do cabecalho de Operacoes. Delegado no painel porque a
+   tabela e reescrita inteira a cada recalculo. */
+$('#painel').addEventListener('click',e=>{
+  if(!e.target.closest('[data-acao="mostrarFora"]'))return;
+  MOSTRAR_FORA=!MOSTRAR_FORA;
+  renderResposta(); render();
+});
+
 function render(){
   try{ desenhar(); }
   catch(err){
@@ -1978,7 +2020,7 @@ const faseTxt=x=>x?`<b>${esc(x.op.descricao)}</b> <small class="cod">${br(x.op.p
 function avisoForaDaConta(){
   const cegos=setoresDisponiveis().filter(setorCego);
   if(!cegos.length) return '';
-  const n=opsFiltradas().filter(({op})=>setorCego(op.descricao)).length;
+  const n=opsFiltradas(true).filter(({op})=>setorCego(op.descricao)).length;
   return `<div class="nota" style="border:1px dashed var(--borda);border-radius:var(--r-lg);background:var(--papel);margin-bottom:var(--lg)">
     <b>Fora da conta:</b> ${cegos.map(esc).join(', ')} — ${cegos.length>1?'setores que ainda não apontam':'setor que ainda não aponta'} no ERP (${n} operação(ões) neste recorte).
     A ausência de registro ali não é cobrança nem prova de que a peça está parada; a posição da ordem pula para a próxima fase que aponta.
@@ -2109,16 +2151,34 @@ function desenharOrdens(p,ref){
 }
 
 /* ---- OPERAÇÕES: uma linha por fase do roteiro ---- */
+/* O que o recorte de "fora da conta" tirou desta lista, escrito no cabeçalho:
+   quantas linhas, por qual motivo, e o clique para trazer de volta. Um filtro
+   que esconde sem dizer o que escondeu é pior que filtro nenhum. */
+function metaOperacoes(ops,ref){
+  const base=`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`;
+  const fora=opsFiltradas(true).filter(foraDoDetalhe);
+  if(!fora.length) return base;
+  const motivos=[];
+  if($('#fEmb').checked&&fora.some(({of,op})=>ignoraEmbalagem(of,op,true))) motivos.push('EMBALAR em produto acabado');
+  const cegos=[...new Set(fora.filter(({op})=>setorCego(op.descricao)).map(({op})=>op.descricao))];
+  if(cegos.length) motivos.push(`${cegos.join(', ')} — ainda não aponta${cegos.length>1?'m':''} no ERP`);
+  return `${base} · <b>${fora.length}</b> fora da conta ${MOSTRAR_FORA?'listada(s) abaixo':'não listada(s)'}
+    (${motivos.join('; ')}) <button type="button" class="linkTxt" data-acao="mostrarFora">${MOSTRAR_FORA?'ocultar':'mostrar'}</button>`;
+}
 function desenharOperacoes(p,ref){
   const ops=opsFiltradas();
-  p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
+  p.innerHTML=tabela('Operações',metaOperacoes(ops,ref),
     [{h:'Ordem'},{h:'Produto'},{h:'Peça'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},
      {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
     ops.map(({of,op})=>{
       const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
       const dv=op.previsao?dias(op.previsao,op.conclusao||ref):null;
       let sit,cls;
-      if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
+      // Fase isenta não é julgada por prazo: chamar de VENCIDA o que a própria
+      // tela declarou fora da conta é a contradição que fazia o filtro parecer
+      // quebrado. Só aparece aqui com "mostrar" ligado.
+      if(!op.conclusao&&foraDoDetalhe({of,op})){sit='Fora da conta';cls='neutro';}
+      else if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
       else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
       else {sit='Pendente';cls='neutro';}
       // O código do produto não diz nada numa reunião: "479.006.001" só vira
@@ -2128,7 +2188,11 @@ function desenharOperacoes(p,ref){
           <td class="forte">${esc(op.descricao)}</td><td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
           <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
-          <td><span class="selo ${cls}">${sit}</span></td></tr>`;}));
+          <td><span class="selo ${cls}">${sit}</span></td></tr>`;}),
+    '<b>Fora da conta</b> = fase sem apontamento que a tela decidiu não cobrar: EMBALAR em produto acabado (código 1…), com a isenção ligada, e setor que ainda não aponta no ERP. '+
+    'Não entra em falta de apontamento, na posição da ordem nem nas regras — e por isso também não é julgada por prazo aqui. Sai da lista por padrão; use "mostrar" no cabeçalho para conferi-la. '+
+    'Fase isenta que TEM registro continua listada normalmente, porque ali o apontamento existe. '+
+    'O <b>CSV de operações</b> leva todas as fases, com a coluna <b>ForaDaConta</b>.');
 }
 
 /* ---- LEITURA DOS ARQUIVOS: a prova de que o PDF foi lido inteiro ---- */
@@ -2205,6 +2269,12 @@ function filtrosNoPapel(secao){
   if(!$('#fEmb').checked) t.push('sem a isenção de EMBALAR em produto acabado');
   const cegos=setoresDisponiveis().filter(setorCego);
   if(cegos.length) t.push(`fora da conta por não apontar no ERP: ${cegos.join(', ')}`);
+  // Só a folha de Operações perde linhas por isso; nas outras seções o recorte
+  // de "fora da conta" muda a conta, não a lista.
+  if(secao==='op'&&!MOSTRAR_FORA){
+    const n=opsFiltradas(true).filter(foraDoDetalhe).length;
+    if(n) t.push(`${n} fase(s) fora da conta sem apontamento não listada(s)`);
+  }
   return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
 }
 
@@ -2413,12 +2483,16 @@ $('#btnCsvOrd').onclick=()=>csv('ordens.csv',
     o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):'',dec(o.qtd),dec(o.pronto),
     dec(Math.max(0,(o.qtd||0)-(o.pronto||0))),o.operacoes.length,o.operacoes.filter(x=>x.conclusao).length]));
 
+/* O CSV leva TODAS as fases do recorte, inclusive as que a tela deixa fora da
+   conta, com a coluna ForaDaConta dizendo quais são. No Power BI o que se quer
+   é o roteiro inteiro com um campo para filtrar; sumir com a fase deixaria um
+   buraco no roteiro sem nenhum aviso do outro lado. */
 $('#btnCsvOp').onclick=()=>csv('operacoes.csv',
   ['Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','Operacao','PrevisaoProcesso','Conclusao',
-   'DesvioDiasUteis','QtdTotal','JaPronto','Saldo'],
-  opsFiltradas().map(({of,op})=>[of.arquivo,of.lote,of.of,of.produto,of.descricao,op.seq,op.descricao,
+   'DesvioDiasUteis','QtdTotal','JaPronto','Saldo','ForaDaConta'],
+  opsFiltradas(true).map(x=>{const {of,op}=x; return [of.arquivo,of.lote,of.of,of.produto,of.descricao,op.seq,op.descricao,
     br(op.previsao),br(op.conclusao),op.conclusao&&op.previsao?dias(op.previsao,op.conclusao):'',
-    dec(op.qtd),dec(op.pronto),dec(Math.max(0,(op.qtd||0)-(op.pronto||0)))]));
+    dec(op.qtd),dec(op.pronto),dec(Math.max(0,(op.qtd||0)-(op.pronto||0))),foraDoDetalhe(x)?'sim':'nao'];}));
 </script>
 </body>
 </html>

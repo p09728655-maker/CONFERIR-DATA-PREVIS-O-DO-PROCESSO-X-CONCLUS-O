@@ -134,6 +134,15 @@ posição da ordem, que pula para a próxima fase que aponta. A tela declara o q
 aviso nas duas telas, "não aponta" na lateral, recorte na folha impressa. Quando o setor começar a
 apontar, desmarque.
 
+**A partir da 3.1.1 o recorte também vale para a lista.** A fase fora da conta **sem apontamento**
+sai da tabela **Operações** e do contador da lateral: enquanto ela era listada — e listada como
+`VENCIDA` — o filtro parecia não funcionar, e num lote grande essas linhas escondiam o que é de
+fato cobrável. O corte é só o que os rótulos prometem: fase isenta que **tem** conclusão ou
+quantidade apontada continua na lista, porque ali o registro existe. O cabeçalho da tabela diz
+quantas linhas ficaram de fora e por quê, com **mostrar** para trazê-las de volta (aparecem com o
+selo `fora da conta`, nunca como vencida). O `operacoes.csv` continua levando **todas** as fases,
+com a coluna `ForaDaConta` (sim/não) para filtrar no Power BI.
+
 ### Convenção tratada como exceção
 
 Nos produtos acabados de prefixo `103.`, a operação `EMBALAR` aparece sistematicamente sem apontamento —
@@ -298,9 +307,12 @@ dizer que estava filtrada, faz o problema parecer menor do que é.
 | CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |
 | CSV achados | `achados.csv` | Uma linha por achado, com severidade, regra e detalhe |
 | CSV ordens | `ordens.csv` | Uma linha por ordem de fabricação |
-| CSV operações | `operacoes.csv` | Uma linha por operação de roteiro |
+| CSV operações | `operacoes.csv` | Uma linha por operação de roteiro, **inclusive as fora da conta**, com a coluna `ForaDaConta` (sim/não) |
 
-Os três respeitam os filtros ativos na tela.
+Todos respeitam os filtros ativos na tela (lote, produto, setor, tipo, reposição, severidade). O
+recorte de "fora da conta" é a única exceção no `operacoes.csv`: em vez de sumir com a fase, ele
+vira a coluna `ForaDaConta` — no Power BI o que se quer é o roteiro inteiro com um campo para
+filtrar, e a fase ausente deixaria um buraco no roteiro sem nenhum aviso do outro lado.
 
 Formato: separador `;`, decimal com vírgula, datas `dd/mm/aaaa`, codificação UTF-8 com BOM.
 Abre direto no Excel pt-BR e é lido pelo Power BI com locale pt-BR.
