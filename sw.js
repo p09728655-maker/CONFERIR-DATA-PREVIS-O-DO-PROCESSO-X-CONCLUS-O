@@ -22,7 +22,7 @@
  * activate apaga todos os caches de nome diferente — não sobra resto de
  * versão antiga ocupando espaço nem sendo servido por engano.
  */
-const VERSAO = '3.1.0';
+const VERSAO = '3.1.1';
 const CACHE = 'ritmopatrimar-datas-v' + VERSAO;
 
 const ESTATICOS = [
