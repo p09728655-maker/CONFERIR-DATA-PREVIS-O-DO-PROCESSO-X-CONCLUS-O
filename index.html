@@ -103,6 +103,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .filtros>details#maisFiltros{margin-top:var(--sm)}
 .filtros>details#maisFiltros>.grade{margin-top:var(--sm)}
 #filtrosAtivos{font-weight:400;color:var(--atencao)}
+.semApont{margin-top:var(--md);padding-top:var(--md);border-top:1px dashed var(--borda)}
+.semApont .rot{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);margin-bottom:var(--xs)}
+.semApont .rot small{font-weight:400;letter-spacing:0;text-transform:none}
+.semApont label{display:inline-flex;align-items:center;gap:6px;margin:2px 12px 2px 0;font-size:13px;cursor:pointer}
+.semApont label.on{color:var(--atencao);font-weight:600}
 .contagem{flex-shrink:0;min-width:20px;padding:0 6px;text-align:center;border-radius:var(--r-pill);
   background:var(--esc-superficie);color:var(--esc-fraco);font-size:11px;font-weight:600;line-height:1.45;letter-spacing:.06em}
 .contagem.alerta{background:var(--atencao);color:#fff}
@@ -598,6 +603,10 @@ dialog form{margin-top:var(--lg);text-align:right}
             <option value="critico,atencao">Crítico e atenção</option></select></div>
           <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (código 1…)</label>
         </div>
+        <div class="semApont">
+          <div class="rot">Setores que ainda não apontam no ERP <small>— saem das duas contas; a tela declara que saíram</small></div>
+          <div id="fSemApont"></div>
+        </div>
       </details>
       <details>
         <summary>Regras de conferência ativas</summary>
@@ -619,6 +628,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.1.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Setores que ainda não apontam no ERP</b> saem das duas contas. Hoje: PINTAR PU. A ausência de registro ali não é cobrança (ninguém aponta) nem prova de que a peça está parada; a posição da ordem pula para a próxima fase que aponta.</li>
+    <li>Configurável em <b>Mais filtros</b>, sem mexer no código; a escolha fica guardada no aparelho. Quando o setor começar a apontar, é só desmarcar.</li>
+    <li>A tela <b>declara</b> o que ficou de fora — no aviso das duas telas, na lateral ("não aponta"), na tela do setor e no recorte impresso. Setor que some em silêncio é pior que setor errado.</li>
+  </ul>
   <h3>3.0.0 — 03/09/2026</h3>
   <ul>
     <li><b>Duas telas, duas perguntas.</b> <b>Onde travou</b> (por que a ordem ficou para trás, e qual setor a segura) e <b>Sem apontamento</b> (quem não registrou). Abre em "Onde travou".</li>
@@ -769,6 +784,13 @@ const CFG = {
   produtoAcabado: /^1/,
   produtoVolume: /^5/,
   operacaoEmbalagem: /^EMBAL/i,
+  /* SETORES QUE AINDA NÃO APONTAM NO ERP. A ausência de registro neles não
+     é cobrança (ninguém aponta lá) nem prova de que a peça está lá parada.
+     Saem das duas contas — faltas de apontamento e posição da ordem — e a
+     tela declara que saíram. Pode ser mudado sem mexer no código, em
+     "Mais filtros"; a escolha fica guardada no aparelho. Quando o setor
+     começar a apontar, é só desmarcar. */
+  setoresSemApontamento: ['PINTAR PU'],
   // tolerância de quantidade (peças) para considerar divergência
   tolQtd: 0.001,
   // Feriado municipal e parada coletiva: acrescente aqui, no formato
@@ -1035,6 +1057,17 @@ const regraInfo={}; CFG.regras.forEach(([id,lbl,sev])=>regraInfo[id]={lbl,sev});
 function ignoraEmbalagem(of,op,flagEmb){
   return flagEmb && CFG.produtoAcabado.test(of.produto) && CFG.operacaoEmbalagem.test(op.descricao);
 }
+/* Setores marcados como "ainda não apontam": guardados no aparelho para não
+   ter que marcar de novo a cada lote. Sem localStorage (navegador bloqueado),
+   vale o padrão do CFG. */
+const CHAVE_SEM_APONT='ritmopatrimar.setoresSemApontamento';
+const SEM_APONT=new Set((()=>{try{const v=JSON.parse(localStorage.getItem(CHAVE_SEM_APONT));if(Array.isArray(v))return v;}catch{} return CFG.setoresSemApontamento;})());
+const setorCego=nome=>SEM_APONT.has(nome);
+function guardarSemApont(){ try{localStorage.setItem(CHAVE_SEM_APONT,JSON.stringify([...SEM_APONT]));}catch{} }
+/* FORA DA CONTA: a operação não entra em falta de apontamento, posição da
+   ordem nem regras de ordem concluída. Dois motivos: a convenção da
+   embalagem em produto acabado, e o setor que ainda não aponta no ERP. */
+const foraDaConta=(of,op,flagEmb)=>ignoraEmbalagem(of,op,flagEmb)||setorCego(op.descricao);
 
 /* Uma operação está apontada se tem quantidade em Já Pronto ou data de conclusão.
    Qualquer um dos dois basta: há setor que fecha a fase sem lançar quantidade e
@@ -1062,7 +1095,7 @@ function faltasApontamento(ordens,ref,flagEmb){
   const out=[];
   for(const of of ordens){
     of.operacoes.forEach((op,i)=>{
-      if(ignoraEmbalagem(of,op,flagEmb))return;
+      if(foraDaConta(of,op,flagEmb))return;
       const pecas=op.qtd||0, vencida=!!(op.previsao&&op.previsao<ref);
 
       // Fase fechada sem lançar quantidade: tem data, mas as peças ficaram
@@ -1143,7 +1176,7 @@ function posicaoOrdem(of,ref,flagEmb){
   // A posição ignora a EMBALAR isenta; a PROGRAMAÇÃO não: "prevista para
   // embalar hoje" continua sendo a régua, mesmo que a embalagem se aponte na
   // ordem do volume.
-  const ops=todas.filter(x=>!ignoraEmbalagem(of,x.op,flagEmb));
+  const ops=todas.filter(x=>!foraDaConta(of,x.op,flagEmb));
   if(!ops.length) return null;
   const saldoOp=op=>Math.max(0,(op.qtd||0)-(op.pronto||0));
   let deveria=null; todas.forEach(x=>{ if(x.op.previsao&&x.op.previsao<=ref) deveria=x; });
@@ -1230,16 +1263,16 @@ function analisar(docs,ref,flagEmb){
       add('APONTADO_MAIOR',of,null,`Ordem: apontado ${nf(of.pronto)} para ${nf(q)} previsto.`);
 
     if(of.conclusao&&ops.length){
-      const relevantes=ops.filter(o=>!ignoraEmbalagem(of,o,flagEmb));
+      const relevantes=ops.filter(o=>!foraDaConta(of,o,flagEmb));
       const nenhum=relevantes.length>0&&relevantes.every(o=>!o.conclusao&&!(o.pronto>0));
       if(nenhum) add('OF_CONCL_SEM_APONTAR',of,null,`Conclusão em ${br(of.conclusao)}, mas nenhuma das ${relevantes.length} operações foi apontada.`);
       const prevMin=ops.map(o=>o.previsao).filter(Boolean).sort()[0];
       if(pz.inconsistente)
         add('OF_CONCL_ANTES_PREV',of,null,`Conclusão ${br(of.conclusao)} anterior à primeira previsão de processo (${br(prevMin)}).`);
-      const pend=ops.filter(o=>!o.conclusao&&!ignoraEmbalagem(of,o,flagEmb));
+      const pend=ops.filter(o=>!o.conclusao&&!foraDaConta(of,o,flagEmb));
       if(pend.length&&!nenhum)
         add('OF_CONCL_OP_PENDENTE',of,pend[0],`Concluída em ${br(of.conclusao)} com ${pend.length} operação(ões) sem conclusão: ${pend.map(o=>o.descricao).join(', ')}.`);
-      const saldo=ops.filter(o=>(o.pronto||0)<(o.qtd||0)-CFG.tolQtd&&!ignoraEmbalagem(of,o,flagEmb));
+      const saldo=ops.filter(o=>(o.pronto||0)<(o.qtd||0)-CFG.tolQtd&&!foraDaConta(of,o,flagEmb));
       if(saldo.length&&!nenhum)
         add('OF_CONCL_OP_SALDO',of,saldo[0],saldo.map(o=>`${o.descricao} ${nf(o.pronto)}/${nf(o.qtd)}`).join(' · '));
     }
@@ -1251,7 +1284,7 @@ function analisar(docs,ref,flagEmb){
 
     let anterior=null;
     ops.forEach((op,i)=>{
-      const falta=faltas[i+1], isento=ignoraEmbalagem(of,op,flagEmb);
+      const falta=faltas[i+1], isento=foraDaConta(of,op,flagEmb);
       if(!op.previsao) add('OP_SEM_PREVISAO',of,op,'Operação sem previsão do processo — roteiro sem programação.');
 
       if(falta&&falta.tipo==='furo')
@@ -1298,7 +1331,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.0.0';
+const VERSAO='3.1.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1503,6 +1536,11 @@ function montarFiltros(){
     const refs=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort();
     $('#fRef').value=refs[refs.length-1]||new Date().toISOString().slice(0,10);
   }
+  $('#fSemApont').innerHTML=ops.map(o=>`<label class="${setorCego(o)?'on':''}"><input type="checkbox" data-s="${esc(o)}" ${setorCego(o)?'checked':''}>${esc(o)}</label>`).join('')
+    ||'<span class="grupo-dica">Abra um lote para listar os setores.</span>';
+  $('#fSemApont').querySelectorAll('input').forEach(c=>c.onchange=()=>{
+    if(c.checked)SEM_APONT.add(c.dataset.s); else SEM_APONT.delete(c.dataset.s);
+    guardarSemApont(); c.parentElement.classList.toggle('on',c.checked); recalc();});
   $('#regras').innerHTML=CFG.regras.map(([id,lbl,sev])=>
     `<label><input type="checkbox" data-r="${id}" ${regraOn[id]?'checked':''}>
       <span>${esc(lbl)} <span class="selo ${sev}">${sev}</span></span></label>`).join('');
@@ -1681,7 +1719,8 @@ function recalc(){
   ['#navSecoes','#navArquivos','#navExportar','#navImprimir','#navSetores'].forEach(s=>$(s).classList.toggle('hide',!tem));
   // Quantos filtros escondidos estão ativos: sem isto, um recorte esquecido em
   // "Mais filtros" faria a tela mentir sem ninguém ver.
-  const f=filtros(), ativos=[f.prod,f.oper,f.tipo,f.repo,f.sev.length?'s':'',$('#fEmb').checked?'':'e'].filter(Boolean).length;
+  const cegos=setoresDisponiveis().filter(setorCego);
+  const f=filtros(), ativos=[f.prod,f.oper,f.tipo,f.repo,f.sev.length?'s':'',$('#fEmb').checked?'':'e'].filter(Boolean).length+cegos.length;
   $('#filtrosAtivos').textContent=ativos?`· ${ativos} ativo${ativos>1?'s':''}`:'';
   if(!tem)return;
   ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
@@ -1763,9 +1802,9 @@ function renderListaSetores(g){
   $('#listaSetores').innerHTML=setores.map(x=>`
     <button type="button" class="setor-item" data-setor="${esc(x.nome)}"
       ${SETOR_SEL===x.nome&&ABA==='setor'?'aria-current="page"':''} title="${esc(x.nome)}">
-      <span class="pt ${x.furos?'c':x.n?'a':'o'}" aria-hidden="true"></span>
+      <span class="pt ${setorCego(x.nome)?'':x.furos?'c':x.n?'a':'o'}" aria-hidden="true"></span>
       <span class="nm">${esc(x.nome)}</span>
-      <span class="qt">${x.pecas?nf(x.pecas)+' pç':'—'}</span>
+      <span class="qt">${setorCego(x.nome)?'não aponta':x.pecas?nf(x.pecas)+' pç':'—'}</span>
     </button>`).join('');
 }
 
@@ -1837,6 +1876,12 @@ function render(){
 function desenharSetor(p,ref){
   if(!SETOR_SEL){ p.innerHTML='<div class="vazio">Escolha um setor na lateral.</div>'; return; }
   const d=dadosDoSetor(SETOR_SEL);
+  if(setorCego(d.nome)){
+    p.innerHTML=`<div class="setorTopo"><div><h1>${esc(d.nome)}</h1>
+        <p class="frase">Marcado como <b>setor que ainda não aponta no ERP</b>: ${d.ops.length} operação(ões) em ${d.ordens} ordem(ns) neste recorte, nenhuma cobrada.
+        Quando o setor começar a apontar, desmarque em "Mais filtros" e ele volta às duas contas.</p></div></div>`;
+    return;
+  }
   const estado=(d.furos||d.seguradas.length)?'critico':d.faltas.length?'atencao':'ok';
   const partes=[];
   if(d.seguradas.length) partes.push(`<b>segura ${d.seguradas.length} ${d.seguradas.length>1?'ordens':'ordem'}</b> atrás do programado (${nf(d.pecasParadas)} pç)`);
@@ -1907,7 +1952,7 @@ function desenharSetor(p,ref){
 /* ---- SEM APONTAMENTO: a lista completa, todos os setores ---- */
 function desenharApont(p){
   const g=resumoGeral(), f=g.falt, furos=g.furos;
-  p.innerHTML=htmlVeredito(g)+htmlRanking(g)+tabela('Sem apontamento',
+  p.innerHTML=htmlVeredito(g)+htmlRanking(g)+avisoForaDaConta()+tabela('Sem apontamento',
     `${f.length} apontamento(s) a fazer · ${nf(g.pcFalt)} peça(s) sem registro · ${furos.length} com apontamento comprovadamente esquecido (${nf(g.pcFuro)} pç)`,
     [{h:'Situação'},{h:'Setor'},{h:'Peças',n:1},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Previsão'},{h:'Por que'},{h:'Lote'}],
     f.map(x=>`<tr class="sev-${x.furo?'critico':'atencao'}">
@@ -1928,6 +1973,17 @@ function desenharApont(p){
 
 /* ---- ONDE TRAVOU: a ordem atrasada, e o setor que a está segurando ---- */
 const faseTxt=x=>x?`<b>${esc(x.op.descricao)}</b> <small class="cod">${br(x.op.previsao)||'sem prev.'}</small>`:'—';
+/* O que saiu da conta por não apontar, dito na tela. Um setor que some em
+   silêncio é pior que um setor errado: ninguém sabe que ele existia. */
+function avisoForaDaConta(){
+  const cegos=setoresDisponiveis().filter(setorCego);
+  if(!cegos.length) return '';
+  const n=opsFiltradas().filter(({op})=>setorCego(op.descricao)).length;
+  return `<div class="nota" style="border:1px dashed var(--borda);border-radius:var(--r-lg);background:var(--papel);margin-bottom:var(--lg)">
+    <b>Fora da conta:</b> ${cegos.map(esc).join(', ')} — ${cegos.length>1?'setores que ainda não apontam':'setor que ainda não aponta'} no ERP (${n} operação(ões) neste recorte).
+    A ausência de registro ali não é cobrança nem prova de que a peça está parada; a posição da ordem pula para a próxima fase que aponta.
+    Para mudar: "Mais filtros".</div>`;
+}
 /* Um estado só — PARADO — e o detalhe em texto pequeno. Três selos diferentes
    para a mesma situação ("não começou", "parcial", "aguardando") obrigavam o
    leitor a aprender vocabulário antes de agir. */
@@ -1980,7 +2036,7 @@ function desenharTravadas(p,ref){
                 :abertas?`${abertas} em aberto, todas na fase programada para ${br(ref)} ou adiante.`:'Nenhuma ordem em aberto nos filtros atuais.'}</p></div>
       <div class="big">${atr.length}<span>ordens paradas</span></div>
     </div>`;
-  p.innerHTML=veredito+`<div class="cabecalhoSecao"><h2>Onde travou</h2>
+  p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Onde travou</h2>
       <span class="meta">${atr.length} ${atr.length===1?'ordem':'ordens'} em aberto atrás do programado · de ${abertas} em aberto · referência ${br(ref)}</span></div>
     ${setores.length?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
@@ -2147,6 +2203,8 @@ function filtrosNoPapel(secao){
   // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
   if(f.sev.length&&secao==='ach') t.push('severidade: '+f.sev.map(x=>x==='critico'?'crítico':x==='atencao'?'atenção':x).join(' e '));
   if(!$('#fEmb').checked) t.push('sem a isenção de EMBALAR em produto acabado');
+  const cegos=setoresDisponiveis().filter(setorCego);
+  if(cegos.length) t.push(`fora da conta por não apontar no ERP: ${cegos.join(', ')}`);
   return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
 }
 
