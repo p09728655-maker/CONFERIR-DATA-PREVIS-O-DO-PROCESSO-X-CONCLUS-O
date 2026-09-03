@@ -355,9 +355,23 @@ curso. Cobrar o líder que está fazendo a coisa certa seria pior que não medir
 
 ### O que fica de fora
 
-- **Ordens de volume (5…)**, e a tela declara quantas. Todo volume começa em `501`, então agrupá-las
-  pelo 1º bloco juntaria os volumes de **todos** os produtos num grupo só — pior que não agrupar. E o
-  volume é o resultado do conjunto, não peça dele: sua EMBALAR é isenta de apontamento.
+**Só componente entra.** Produto acabado (`1…`) e volume (`5…`) são o **resultado** do conjunto, não
+peça dele. A tela declara quantas ordens de cada tipo ficaram fora, na tela e no papel.
+
+- **Acabado**: a ordem do acabado tem praticamente só `EMBALAR` no roteiro, que é isenta de
+  apontamento. Sem fase para contar, ela entrava na lista como um "produto" de 0% que a conta
+  declarava **completo** — porque "todas as fases fecharam" é verdade por vacuidade quando não há
+  fase nenhuma. Isso inflava o denominador do veredito e o contador de completos (corrigido na
+  v3.3.1).
+- **Volume**: todo volume começa em `501`, então agrupá-las pelo 1º bloco juntaria os volumes de
+  **todos** os produtos num grupo só — pior que não agrupar.
+
+O filtro é por **tipo de produto**, não pela isenção de EMBALAR: mesmo com a caixa "Ignorar EMBALAR"
+desmarcada, o acabado continua sendo resultado e não peça.
+
+**Sem fase apontável** é um estado próprio, em bloco à parte: conjunto cujo roteiro **inteiro** está
+fora da conta. Não vira completo nem quebrado, porque não dá para afirmar nada sobre kit completo.
+
 - **Fase fora da conta** (setor que ainda não aponta, EMBALAR isenta) não bloqueia conjunto: sem
   registro ali, exigir que "todas passaram" travaria o produto para sempre. EMBALAR em **componente**
   continua contando e bloqueando.
