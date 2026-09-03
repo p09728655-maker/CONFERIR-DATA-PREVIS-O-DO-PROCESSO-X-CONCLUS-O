@@ -607,7 +607,7 @@ dialog form{margin-top:var(--lg);text-align:right}
           <div class="f"><label for="fSev">Severidade (só Achados)</label><select id="fSev">
             <option value="">Todas</option><option value="critico">Só crítico</option>
             <option value="critico,atencao">Crítico e atenção</option></select></div>
-          <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (código 1…)</label>
+          <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (1…) e volume (5…)</label>
         </div>
         <div class="semApont">
           <div class="rot">Setores que ainda não apontam no ERP <small>— saem das duas contas; a tela declara que saíram</small></div>
@@ -634,6 +634,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.2.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>A isenção de EMBALAR passa a valer também no volume (5…).</b> Antes valia só no produto acabado (1…), porque a leitura anterior supunha que o EMBALAR do acabado era apontado na ordem do volume. Não é: o EMBALAR não é apontado em nenhuma das duas. Resultado prático — todo volume 501.x virava falso <b>apontamento esquecido</b> no dia seguinte ao prazo da embalagem, e num lote de painéis isso é dezenas de linhas cobrando quem não tem o que apontar.</li>
+    <li><b>Componente continua cobrável.</b> Se um código 7xx tem EMBALAR no roteiro, a falta de apontamento ali é falta de verdade e segue aparecendo.</li>
+    <li>Rótulos atualizados na tela, no cabeçalho da tabela <b>Operações</b> e no recorte impresso: onde se lia "produto acabado" agora se lê <b>acabado (1…) e volume (5…)</b>.</li>
+    <li>Se a premissa estiver errada — se algum dia o volume passar a apontar EMBALAR — é só desmarcar a caixa e as linhas voltam como achado.</li>
+  </ul>
   <h3>3.1.1 — 03/09/2026</h3>
   <ul>
     <li><b>Correção: o que sai da conta agora sai também da lista.</b> Com "Ignorar EMBALAR" ligado, a tabela <b>Operações</b> continuava listando EMBALAR em produto acabado — e listando como <b>VENCIDA</b>. O mesmo acontecia com PINTAR PU, marcado como setor que ainda não aponta. O filtro parecia não funcionar, e num lote grande essas linhas escondiam o que é cobrável.</li>
@@ -787,8 +794,6 @@ dialog form{margin-top:var(--lg);text-align:right}
    CONFIGURAÇÃO — ajuste aqui as convenções da Patrimar
    ========================================================================== */
 const CFG = {
-  // produtos que, por convenção, não recebem apontamento de embalagem na própria OF
-  // (o apontamento acontece na OF do volume 501.x)
   /* CLASSIFICAÇÃO PELO PRIMEIRO DÍGITO DO CÓDIGO — convenção da Patrimar.
      Era /^103\./, que só reconhecia os códigos começados exatamente em "103.".
      Um produto acabado 104. ou 102. ficava de fora da isenção de embalagem e
@@ -797,6 +802,16 @@ const CFG = {
   produtoAcabado: /^1/,
   produtoVolume: /^5/,
   operacaoEmbalagem: /^EMBAL/i,
+  /* QUEM TEM EMBALAR ISENTA DE APONTAMENTO.
+     A leitura anterior supunha que o EMBALAR do acabado (1…) era apontado na
+     ordem do volume (501.x) — premissa inferida dos dados, nunca confirmada.
+     O PPCP confirmou que também não se aponta EMBALAR na ordem do volume: a
+     fase existe no roteiro dos dois e não recebe registro em nenhum dos dois.
+     Enquanto era só o acabado, todo volume 501.x virava falso "apontamento
+     esquecido" no dia seguinte ao prazo da embalagem.
+     Componente segue cobrável: se um 7xx tem EMBALAR no roteiro, é apontamento
+     de verdade que está faltando. */
+  isentaEmbalagem: ['acabado','volume'],
   /* SETORES QUE AINDA NÃO APONTAM NO ERP. A ausência de registro neles não
      é cobrança (ninguém aponta lá) nem prova de que a peça está lá parada.
      Saem das duas contas — faltas de apontamento e posição da ordem — e a
@@ -1067,8 +1082,16 @@ async function lerPdf(file){
 const regraOn={}; CFG.regras.forEach(([id,,,on])=>regraOn[id]=on);
 const regraInfo={}; CFG.regras.forEach(([id,lbl,sev])=>regraInfo[id]={lbl,sev});
 
+/* Tipo pelo primeiro dígito do código: 1 acabado, 5 volume, o resto componente.
+   Declaração de função (não const) porque ignoraEmbalagem, acima do filtro de
+   tipo no arquivo, também depende dela. */
+function tipoProduto(cod){
+  return CFG.produtoAcabado.test(cod||'')?'acabado'
+       :CFG.produtoVolume.test(cod||'')?'volume':'componente';
+}
 function ignoraEmbalagem(of,op,flagEmb){
-  return flagEmb && CFG.produtoAcabado.test(of.produto) && CFG.operacaoEmbalagem.test(op.descricao);
+  return flagEmb && CFG.isentaEmbalagem.includes(tipoProduto(of.produto))
+      && CFG.operacaoEmbalagem.test(op.descricao);
 }
 /* Setores marcados como "ainda não apontam": guardados no aparelho para não
    ter que marcar de novo a cada lote. Sem localStorage (navegador bloqueado),
@@ -1079,7 +1102,7 @@ const setorCego=nome=>SEM_APONT.has(nome);
 function guardarSemApont(){ try{localStorage.setItem(CHAVE_SEM_APONT,JSON.stringify([...SEM_APONT]));}catch{} }
 /* FORA DA CONTA: a operação não entra em falta de apontamento, posição da
    ordem nem regras de ordem concluída. Dois motivos: a convenção da
-   embalagem em produto acabado, e o setor que ainda não aponta no ERP. */
+   embalagem em produto acabado e volume, e o setor que ainda não aponta no ERP. */
 const foraDaConta=(of,op,flagEmb)=>ignoraEmbalagem(of,op,flagEmb)||setorCego(op.descricao);
 
 /* Uma operação está apontada se tem quantidade em Já Pronto ou data de conclusão.
@@ -1182,7 +1205,8 @@ const ehReposicao=of=>!!(of.previsaoLote&&of.previsao&&of.previsao>of.previsaoLo
  *             é atraso de produção, é ordem por fechar.
  *
  * A EMBALAR isenta por convenção fica de fora: ela não é apontada nesta ordem,
- * e contá-la como posição faria toda ordem de acabado "travar" na embalagem.
+ * e contá-la como posição faria toda ordem de acabado e de volume "travar" na
+ * embalagem.
  */
 function posicaoOrdem(of,ref,flagEmb){
   const todas=of.operacoes.map((op,i)=>({op,seq:i+1}));
@@ -1344,7 +1368,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.1.1';
+const VERSAO='3.2.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1569,9 +1593,6 @@ function filtros(){
           oper:$('#fOper').value,sev:$('#fSev').value.split(',').filter(Boolean),
           tipo:$('#fTipo')?$('#fTipo').value:'',repo:$('#fRepo')?$('#fRepo').value:'',ref:$('#fRef').value};
 }
-/* Tipo pelo primeiro dígito do código: 1 acabado, 5 volume, o resto componente. */
-const tipoProduto=cod=>CFG.produtoAcabado.test(cod||'')?'acabado'
-  :CFG.produtoVolume.test(cod||'')?'volume':'componente';
 const casaOf=(o,f)=>(!f.lote||o.lote===f.lote)
   &&(!f.prod||(o.produto+' '+o.descricao).toUpperCase().includes(f.prod))
   &&(!f.tipo||tipoProduto(o.produto)===f.tipo)
@@ -1585,7 +1606,7 @@ function ordensFiltradas(){
 /**
  * FORA DA CONTA TAMBEM SAI DA LISTA — senao o filtro mente.
  *
- * A isencao de EMBALAR em produto acabado e o setor que ainda nao aponta no
+ * A isencao de EMBALAR em acabado e volume e o setor que ainda nao aponta no
  * ERP ja saiam das duas contas (falta de apontamento e posicao da ordem) e das
  * regras. So a tabela Operacoes continuava listando essas fases, e listando
  * como VENCIDA: o usuario marcava "Ignorar EMBALAR", via a linha de EMBALAR em
@@ -2159,7 +2180,7 @@ function metaOperacoes(ops,ref){
   const fora=opsFiltradas(true).filter(foraDoDetalhe);
   if(!fora.length) return base;
   const motivos=[];
-  if($('#fEmb').checked&&fora.some(({of,op})=>ignoraEmbalagem(of,op,true))) motivos.push('EMBALAR em produto acabado');
+  if($('#fEmb').checked&&fora.some(({of,op})=>ignoraEmbalagem(of,op,true))) motivos.push('EMBALAR em produto acabado ou volume');
   const cegos=[...new Set(fora.filter(({op})=>setorCego(op.descricao)).map(({op})=>op.descricao))];
   if(cegos.length) motivos.push(`${cegos.join(', ')} — ainda não aponta${cegos.length>1?'m':''} no ERP`);
   return `${base} · <b>${fora.length}</b> fora da conta ${MOSTRAR_FORA?'listada(s) abaixo':'não listada(s)'}
@@ -2189,7 +2210,7 @@ function desenharOperacoes(p,ref){
           <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td><span class="selo ${cls}">${sit}</span></td></tr>`;}),
-    '<b>Fora da conta</b> = fase sem apontamento que a tela decidiu não cobrar: EMBALAR em produto acabado (código 1…), com a isenção ligada, e setor que ainda não aponta no ERP. '+
+    '<b>Fora da conta</b> = fase sem apontamento que a tela decidiu não cobrar: EMBALAR em produto acabado (1…) e em volume (5…), com a isenção ligada, e setor que ainda não aponta no ERP. '+
     'Não entra em falta de apontamento, na posição da ordem nem nas regras — e por isso também não é julgada por prazo aqui. Sai da lista por padrão; use "mostrar" no cabeçalho para conferi-la. '+
     'Fase isenta que TEM registro continua listada normalmente, porque ali o apontamento existe. '+
     'O <b>CSV de operações</b> leva todas as fases, com a coluna <b>ForaDaConta</b>.');
@@ -2266,7 +2287,7 @@ function filtrosNoPapel(secao){
   // ou Operações faria o leitor descontar linhas que nunca foram descartadas —
   // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
   if(f.sev.length&&secao==='ach') t.push('severidade: '+f.sev.map(x=>x==='critico'?'crítico':x==='atencao'?'atenção':x).join(' e '));
-  if(!$('#fEmb').checked) t.push('sem a isenção de EMBALAR em produto acabado');
+  if(!$('#fEmb').checked) t.push('sem a isenção de EMBALAR em acabado e volume');
   const cegos=setoresDisponiveis().filter(setorCego);
   if(cegos.length) t.push(`fora da conta por não apontar no ERP: ${cegos.join(', ')}`);
   // Só a folha de Operações perde linhas por isso; nas outras seções o recorte
