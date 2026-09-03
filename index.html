@@ -68,14 +68,30 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .conteudo{flex:1;min-width:0;padding:var(--xl) var(--xl) var(--gigante)}
 .veredito .txt p,.nota,.doc-rodape p{max-width:120ch}
 
-/* ---------------------------------------------------------------- Lateral */
-.lateral{position:sticky;top:0;align-self:flex-start;width:248px;flex-shrink:0;height:100dvh;overflow-y:auto;
+/* ---------------------------------------------------------------- Lateral
+   TRES ZONAS, e so o miolo rola. A lateral inteira rolando somava ~1540px de
+   menu numa tela de 900px: o botao "Abrir PDFs", o estado do aplicativo e a
+   nota de privacidade so apareciam depois de uma tela e meia de rolagem.
+   Topo (marca + acao principal) e rodape (arquivos, folha da reuniao, nota)
+   ficam ancorados; a rolagem, quando sobra, e so da NAVEGACAO. */
+.lateral{position:sticky;top:0;align-self:flex-start;width:248px;flex-shrink:0;height:100dvh;overflow:hidden;
   background:var(--esc-fundo);border-right:1px solid var(--esc-borda);color:var(--esc-texto);
-  padding:var(--xl) var(--lg);display:flex;flex-direction:column;gap:var(--xl)}
-.marca{display:flex;flex-direction:column;gap:2px}
-.marca img{height:30px;width:auto;max-width:100%;align-self:flex-start;display:block;margin-bottom:var(--sm)}
-.marca .titulo{font-size:17px;line-height:1.4;font-weight:700;letter-spacing:-.01em;color:var(--esc-texto)}
-.marca .sub{font-size:12px;line-height:1.5;color:var(--esc-fraco);display:flex;align-items:center;gap:var(--sm)}
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.lat-topo,.lat-nav,.lat-pe{min-width:0}
+.lat-topo{padding:var(--lg) var(--lg) var(--md);display:flex;flex-direction:column;gap:var(--md)}
+.lat-nav{overflow-y:auto;overscroll-behavior:contain;padding:var(--md) var(--lg) var(--lg);
+  display:flex;flex-direction:column;gap:var(--lg);scrollbar-width:thin;scrollbar-color:var(--esc-borda) transparent}
+.lat-nav::-webkit-scrollbar{width:8px}
+.lat-nav::-webkit-scrollbar-thumb{background:var(--esc-borda);border-radius:var(--r-pill)}
+.lat-pe{padding:var(--md) var(--lg) var(--lg);display:flex;flex-direction:column;gap:var(--sm);
+  border-top:1px solid var(--esc-borda)}
+/* Marca em duas linhas: o subtitulo saiu para o title. Ele ja esta no topo da
+   tela vazia e no cabecalho de toda folha impressa; repetir no menu custava
+   uma linha por sessao inteira. */
+.marca{display:flex;flex-direction:column;gap:var(--xs)}
+.marca img{height:26px;width:auto;max-width:100%;align-self:flex-start;display:block}
+.marca .lin{display:flex;align-items:center;justify-content:space-between;gap:var(--sm)}
+.marca .titulo{font-size:15px;line-height:1.4;font-weight:700;letter-spacing:-.01em;color:var(--esc-texto)}
 .versao{padding:1px 6px;background:transparent;border:1px solid var(--esc-borda);border-radius:var(--r-pill);
   color:var(--esc-fraco);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer}
 .bloco{display:flex;flex-direction:column;gap:var(--xs)}
@@ -86,7 +102,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   color:#fff;font-size:17px;font-weight:700;letter-spacing:-.01em;cursor:pointer;box-shadow:var(--elev-baixa);transition:background var(--rapida)}
 .primario:hover{background:var(--bordeaux)}
 /* Uma régua só: o realce sangra até a borda da lateral, o texto fica a 16px. */
-.item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:36px;padding:0 var(--lg);
+.item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:32px;padding:0 var(--lg);
   display:flex;align-items:center;justify-content:space-between;gap:var(--sm);
   background:transparent;border:0;border-radius:0;color:var(--esc-texto-medio);font-size:14px;text-align:left;cursor:pointer;
   transition:background var(--rapida),color var(--rapida)}
@@ -111,7 +127,22 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .contagem{flex-shrink:0;min-width:20px;padding:0 6px;text-align:center;border-radius:var(--r-pill);
   background:var(--esc-superficie);color:var(--esc-fraco);font-size:11px;font-weight:600;line-height:1.45;letter-spacing:.06em}
 .contagem.alerta{background:var(--atencao);color:#fff}
-.arquivo{display:flex;align-items:center;gap:var(--sm);min-height:36px;padding:var(--xs) 0}
+/* Arquivos abertos: fechado por padrao. E uma lista sem teto — oito PDFs
+   viravam 288px de menu — e depois de aberto o arquivo so se volta nele para
+   remover. O resumo fechado ja diz quantos sao; o aviso de leitura, quando ha,
+   grita no topo do conteudo. */
+.lat-det>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:var(--sm);min-height:28px;
+  font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--esc-fraco)}
+.lat-det>summary::-webkit-details-marker{display:none}
+.lat-det>summary::before{content:'\25B8';font-size:10px;letter-spacing:0}
+.lat-det[open]>summary::before{content:'\25BE'}
+.lat-det>summary .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lat-det>summary .contagem.erro{background:var(--critico);color:#fff}
+#navArquivos>summary{text-transform:none;letter-spacing:0;font-weight:400;font-size:12px}
+/* Aberto, o details nao pode empurrar o rodape para fora: rola dentro de si. */
+.lat-det[open]>summary{color:var(--esc-texto-medio)}
+.lat-det[open]{max-height:42vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--esc-borda) transparent}
+.arquivo{display:flex;align-items:center;gap:var(--sm);min-height:34px;padding:var(--xs) 0}
 .arquivo .info{min-width:0;flex:1;display:flex;flex-direction:column}
 .arquivo .nome{font-size:12px;color:var(--esc-texto-medio);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arquivo .meta{font-size:11px;color:var(--esc-fraco);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -119,7 +150,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .arquivo button{flex-shrink:0;width:26px;height:26px;border:1px solid var(--esc-borda);border-radius:var(--r-sm);
   background:transparent;color:var(--esc-fraco);font-size:15px;line-height:1;cursor:pointer}
 .arquivo button:hover{color:var(--esc-texto);border-color:var(--esc-fraco)}
-.rodape{margin-top:auto;padding-top:var(--md);border-top:1px solid var(--esc-borda);font-size:12px;color:var(--esc-fraco);line-height:1.5}
+.rodape{font-size:11px;color:var(--esc-fraco);line-height:1.45}
+.lat-link{display:block;padding:0;margin-bottom:var(--xs);background:none;border:0;color:var(--esc-texto-medio);
+  font:inherit;font-size:11px;text-align:left;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.lat-link:hover{color:var(--esc-texto)}
 
 /* ---------------------------------------------------------------- Estados */
 .estado{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 120px);padding:var(--xl)}
@@ -153,7 +187,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .aviso li{margin-top:var(--xs)}
 
 /* ---------------------------------------------------- Lista de setores */
-.setor-item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:34px;
+.setor-item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:30px;
   padding:0 var(--lg);display:flex;align-items:center;gap:var(--sm);
   background:transparent;border:0;color:var(--esc-texto-medio);font:inherit;font-size:14px;
   text-align:left;cursor:pointer;transition:background var(--rapida),color var(--rapida)}
@@ -289,6 +323,11 @@ select,input[type=text],input[type=date],input[type=search]{min-height:36px;padd
   border-radius:var(--r-md);background:var(--papel);color:var(--texto);font:inherit;font-size:14px;width:100%}
 .check{display:flex;align-items:center;gap:var(--sm);min-height:36px;color:var(--texto-medio);flex:1 1 280px}
 .check input{width:16px;height:16px;margin:0}
+/* Acoes da TELA, na barra de filtros: exportar e imprimir seguem o recorte
+   que esta na frente do usuario. Antes eram 9 botoes fixos no menu (7 CSVs +
+   2 impressoes), 400px de rolagem, e dava para estar em "Onde travou" e baixar
+   o CSV de ordens sem perceber. Aqui o rotulo diz qual tela vai sair. */
+.acoesTela{display:flex;gap:var(--sm);flex-wrap:wrap;margin-left:auto;align-self:flex-end}
 .filtros details{margin-top:var(--md)}
 .filtros summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--texto-medio)}
 .regras{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--xs) var(--lg);margin-top:var(--sm)}
@@ -538,9 +577,21 @@ dialog form{margin-top:var(--lg);text-align:right}
 }
 
 /* ---------------------------------------------------------------- Telas menores */
+@media (min-width:901px) and (max-height:700px){
+  .lateral{display:block;overflow-y:auto}
+  .lat-nav{overflow:visible}
+  .lat-pe{border-top:1px solid var(--esc-borda)}
+}
 @media (max-width:900px){
   .tela{flex-direction:column}
-  .lateral{position:static;width:100%;height:auto;border-right:0;border-bottom:1px solid var(--esc-borda);padding:var(--lg)}
+  /* Sem coluna, sem zona fixa: a lateral vira uma faixa no topo e rola com a
+     pagina. Alvo de toque volta aos 40px — a densidade de cima e de mouse. */
+  .lateral{position:static;width:100%;height:auto;overflow:visible;display:block;
+    border-right:0;border-bottom:1px solid var(--esc-borda)}
+  .lat-topo,.lat-nav,.lat-pe{padding:var(--lg)}
+  .lat-nav{overflow:visible}
+  .item{min-height:40px} .setor-item{min-height:38px}
+  .acoesTela{margin-left:0}
   .conteudo{width:100%;max-width:100%;padding:var(--lg) var(--lg) var(--xxl)}
   .resposta{padding:var(--lg);gap:var(--lg)}
   .resposta .valor{font-size:32px}
@@ -551,18 +602,45 @@ dialog form{margin-top:var(--lg);text-align:right}
 
 <div class="tela">
 
-<nav class="lateral" aria-label="Navegação">
+<div class="lateral">
+
+  <!-- TOPO ANCORADO: identidade e a ação principal. Nunca rolam para fora. -->
+  <div class="lat-topo">
   <div class="marca">
     <img src="data:image/png;base64,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" alt="Patrimar Móveis">
-    <div class="titulo">RitmoPatrimar</div>
-    <div class="sub">Estudo de Datas de Produção
+    <div class="lin">
+      <span class="titulo" title="Estudo de Datas de Produção">RitmoPatrimar</span>
       <button type="button" class="versao" id="btnVersao" title="Ver histórico de versões">v<span id="ver"></span></button>
     </div>
   </div>
 
-  <div class="bloco">
-    <button type="button" class="primario" id="btnAbrir">Abrir PDFs do lote</button>
-    <input type="file" id="file" accept="application/pdf" multiple hidden>
+  <button type="button" class="primario" id="btnAbrir">Abrir PDFs do lote</button>
+  <input type="file" id="file" accept="application/pdf" multiple hidden>
+  </div>
+
+  <!-- MIOLO: só NAVEGAÇÃO, e é a única parte que rola.
+       DUAS PERGUNTAS, DUAS TELAS. O PPCP pergunta de manhã "onde o lote está
+       travado?" e "quem não apontou?". O resto é evidência, e fica fechado
+       atrás de "Detalhe" para não competir com a resposta.
+       Conferência vem ANTES de Setores: é bloco fixo — quatro telas, sempre as
+       mesmas — e é por onde a manhã começa. Setores é lista variável, cresce
+       com o roteiro, e por isso fica embaixo: se a rolagem cortar alguma
+       coisa, que corte o que muda de lote para lote, não o que é sempre igual. -->
+  <nav class="lat-nav" aria-label="Navegação">
+
+  <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
+    <div class="grupo">Conferência</div>
+    <button type="button" class="item" data-t="trav" aria-current="page"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
+    <button type="button" class="item" data-t="apont"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
+    <button type="button" class="item" data-t="conj"><span class="t">Conjunto incompleto</span><span class="contagem" id="nConj">0</span></button>
+    <button type="button" class="item" data-t="fech"><span class="t">Operação fechada</span><span class="contagem" id="nFech">0</span></button>
+    <details class="detalhe" id="navDetalhe">
+      <summary title="Ordens, operações, achados e leitura dos arquivos">Detalhe</summary>
+      <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
+      <button type="button" class="item" data-t="op"><span class="t">Operações</span><span class="contagem" id="nOp">0</span></button>
+      <button type="button" class="item" data-t="ach"><span class="t">Achados</span><span class="contagem" id="nAch">0</span></button>
+      <button type="button" class="item" data-t="leit"><span class="t">Leitura dos arquivos</span><span class="contagem" id="nLeit">0</span></button>
+    </details>
   </div>
 
   <div class="bloco hide" id="navSetores" role="group" aria-label="Setores">
@@ -571,60 +649,38 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div id="listaSetores"></div>
   </div>
 
-  <!-- DUAS PERGUNTAS, DUAS TELAS. O PPCP pergunta de manhã "onde o lote está
-       travado?" e "quem não apontou?". O resto é evidência, e fica fechado
-       atrás de "Detalhe" para não competir com a resposta. -->
-  <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
-    <div class="grupo">Conferência</div>
-    <button type="button" class="item" data-t="trav" aria-current="page"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
-    <button type="button" class="item" data-t="apont"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
-    <button type="button" class="item" data-t="conj"><span class="t">Conjunto incompleto</span><span class="contagem" id="nConj">0</span></button>
-    <button type="button" class="item" data-t="fech"><span class="t">Operação fechada</span><span class="contagem" id="nFech">0</span></button>
-    <details class="detalhe" id="navDetalhe">
-      <summary>Detalhe <span class="grupo-dica">ordens, operações, achados, leitura</span></summary>
-      <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
-      <button type="button" class="item" data-t="op"><span class="t">Operações</span><span class="contagem" id="nOp">0</span></button>
-      <button type="button" class="item" data-t="ach"><span class="t">Achados</span><span class="contagem" id="nAch">0</span></button>
-      <button type="button" class="item" data-t="leit"><span class="t">Leitura dos arquivos</span><span class="contagem" id="nLeit">0</span></button>
+  </nav>
+
+  <!-- RODAPÉ ANCORADO: o que se consulta uma vez por sessão. A folha da
+       reunião fica aqui, e não junto das ações de tela, porque não é a tela
+       impressa: é outro documento, um bloco por setor, para circular na
+       reunião. As exportações e a impressão da lista saíram do menu — viraram
+       ação da tela, na barra de filtros, onde o recorte está à vista. -->
+  <div class="lat-pe">
+
+    <details class="lat-det hide" id="navArquivos">
+      <summary title='Relatório "Situação do Lote de Produção", emitido no ERP com Status das Ordens: Todas'><span class="t" id="arqResumo">Arquivos abertos</span><span class="contagem hide" id="nArq"></span></summary>
+      <div id="arquivos"></div>
     </details>
-  </div>
 
-  <div class="bloco hide" id="navArquivos">
-    <div class="grupo">Arquivos abertos</div>
-    <div class="grupo-dica">Relatório "Situação do Lote de Produção"</div>
-    <div id="arquivos"></div>
-  </div>
+    <details class="lat-det hide" id="navExportar">
+      <summary title="CSV com separador ; para Excel e Power BI · respeita os filtros da barra"><span class="t">Todos os CSVs</span></summary>
+      <button type="button" class="item" id="btnCsvApont"><span class="t">CSV sem apontamento</span></button>
+      <button type="button" class="item" id="btnCsvTrav"><span class="t">CSV onde travou</span></button>
+      <button type="button" class="item" id="btnCsvConj"><span class="t">CSV de conjuntos</span></button>
+      <button type="button" class="item" id="btnCsvFech"><span class="t">CSV de operação fechada</span></button>
+      <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
+      <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
+      <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
+    </details>
 
-  <div class="bloco hide" id="navImprimir">
-    <div class="grupo">Reunião</div>
-    <div class="grupo-dica">Uma folha por setor, com espaço para a tratativa</div>
-    <button type="button" class="item" id="btnImprimir"><span class="t">Imprimir para os líderes</span></button>
-    <button type="button" class="item" id="btnImprimirLista"><span class="t">Imprimir a lista da tela</span></button>
-  </div>
+    <div class="rodape">
+      <span class="hide" id="blocoInstalar"><button type="button" class="lat-link" id="btnInstalar"
+        title="Abre pelo ícone e funciona sem internet">Instalar no aparelho</button></span><span id="estadoApp"></span>Leitura local do PDF. Nenhum dado sai deste computador.
+    </div>
 
-  <div class="bloco hide" id="navExportar">
-    <div class="grupo">Exportar</div>
-    <div class="grupo-dica">CSV para Excel e Power BI · respeita os filtros</div>
-    <button type="button" class="item" id="btnCsvApont"><span class="t">CSV sem apontamento</span></button>
-    <button type="button" class="item" id="btnCsvTrav"><span class="t">CSV onde travou</span></button>
-    <button type="button" class="item" id="btnCsvConj"><span class="t">CSV de conjuntos</span></button>
-    <button type="button" class="item" id="btnCsvFech"><span class="t">CSV de operação fechada</span></button>
-    <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
-    <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
-    <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
   </div>
-
-  <div class="bloco hide" id="blocoInstalar">
-    <div class="grupo">Aplicativo</div>
-    <div class="grupo-dica">Abre pelo ícone e funciona sem internet</div>
-    <button type="button" class="item" id="btnInstalar"><span class="t">Instalar no aparelho</span></button>
-  </div>
-
-  <div class="rodape">
-    <div id="estadoApp"></div>
-    Leitura local do PDF. Nenhum dado sai deste computador.
-  </div>
-</nav>
+</div>
 
 <main class="conteudo">
   <div id="status" role="status" aria-live="polite"></div>
@@ -655,6 +711,11 @@ dialog form{margin-top:var(--lg);text-align:right}
       <div class="grade">
         <div class="f"><label for="fLote">Lote</label><select id="fLote"></select></div>
         <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef" title="O que conta como vencido é medido contra esta data. Padrão: data de emissão do relatório."></div>
+        <div class="acoesTela">
+          <button type="button" class="btnPri" id="btnImprimir">Folha da reunião</button>
+          <button type="button" class="secundario" id="btnImprimirLista">Imprimir a lista</button>
+          <button type="button" class="secundario" id="btnCsvTela">Exportar CSV</button>
+        </div>
       </div>
       <details id="maisFiltros">
         <summary>Mais filtros <span id="filtrosAtivos"></span></summary>
@@ -701,6 +762,18 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.10.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>A lateral parou de rolar.</b> Com um lote aberto ela somava <b>1.540px de menu numa tela de 900px</b> — uma tela e meia de rolagem — e rolar custava a navegação: alcançar o CSV empurrava "Onde travou" para fora. Agora são <b>755px</b>, e em monitor comum não rola nada.</li>
+    <li><b>A causa não era comprimento, era conteúdo.</b> Dos nove blocos, só dois navegavam: 552px eram ação disfarçada de menu — sete botões de CSV que espelhavam sete telas já listadas 250px acima, dois de impressão e um de instalar.</li>
+    <li><b>Exportar e imprimir viraram ação da tela</b>, na barra de filtros: <b>Folha da reunião</b>, <b>Imprimir a lista</b> e <b>Exportar CSV</b>. O rótulo agora diz qual tela vai sair e qual é o grão — <code>operacoes.csv</code> leva o roteiro inteiro, <code>conjuntos</code> é conjunto × fase e <code>operação fechada</code> é lote × operação, todos com mais linhas que a tela, e isso passou a estar escrito. A lista completa dos sete CSVs continua no rodapé do menu, fechada, para quem alimenta o Power BI de uma vez.</li>
+    <li><b>Os dois documentos de impressão pararam de se parecer.</b> Lado a lado com rótulo próprio: a <b>folha da reunião</b> é sempre o apontamento por setor, seja qual for a tela aberta — antes ela ficava colada em "Imprimir a lista da tela", com a mesma cara, e trocava de assunto em silêncio.</li>
+    <li><b>Três zonas na lateral</b>: marca e "Abrir PDFs" no topo, navegação no meio (a única parte que rola), arquivos e rodapé embaixo. Antes, o botão de abrir arquivo e a nota de privacidade dependiam de 1.500px de rolagem. Em janela baixa (menos de 700px) as zonas se dissolvem: rolar uma janelinha é pior que rolar a coluna.</li>
+    <li><b>Conferência subiu para antes de Setores.</b> É bloco fixo — quatro telas, sempre as mesmas — e é por onde a manhã começa. Setores cresce com o roteiro e fica embaixo: se a rolagem cortar algo, que corte o que muda de lote para lote. O setor aberto é trazido para dentro da faixa visível.</li>
+    <li><b>Arquivos abertos fechado por padrão</b>, e o resumo responde em vez de rotular: "3 arquivos · 6 lotes · 260 ordens". <b>Falha de leitura abre a lista sozinha</b> e marca em vermelho — esconder aviso atrás de um triângulo, numa ferramenta cuja premissa é "não use os números antes de conferir", seria inaceitável.</li>
+    <li>Correção achada no caminho: <b>PDF ilegível travava a tela sem reação</b>. O registro da falha nascia sem a lista de lotes e estourava em <code>montarFiltros</code> — antes de desenhar o aviso que existe justamente para relatar a falha.</li>
+    <li>Acabamento: <code>&lt;nav&gt;</code> passa a envolver só navegação (eram nove comandos anunciados como itens de menu), itens a 32px no mouse e 40px no toque, e as dicas fixas de cada bloco viraram tooltip.</li>
+  </ul>
   <h3>3.9.1 — 03/09/2026</h3>
   <ul>
     <li><b>Correção: "Imprimir a lista da tela" levava só a tabela.</b> O veredito, os cartões e a nota com as definições ficavam de fora — o líder recebia o dado sem a resposta. Apareceu na tela <b>Operação fechada</b>, que no papel saía sem o percentual e sem a faixa do roteiro, mas valia para todas as seções.</li>
@@ -1515,7 +1588,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.9.1';
+const VERSAO='3.10.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1687,7 +1760,8 @@ async function carregar(files){
     i++;
     $('#status').textContent=`Lendo ${f.name}… (${i} de ${novos.length})`;
     try{ DOCS.push(trocarLoteRepetido(await lerPdf(f))); }
-    catch(err){ DOCS.push({arquivo:f.name,ofs:[],avisos:['Falha ao ler o arquivo: '+err.message],erro:true,paginas:0}); }
+    catch(err){ DOCS.push({arquivo:f.name,lotes:[],dataRelatorio:null,ofs:[],
+      avisos:['Falha ao ler o arquivo: '+err.message],ignoradas:0,suspeitas:0,erro:true,paginas:0}); }
   }
   $('#status').textContent='';
   montarFiltros(); renderArquivos(); recalc();
@@ -1727,11 +1801,29 @@ function trocarLoteRepetido(doc){
   if(trocados.length)
     doc.avisos.push(`Leitura mais recente: ${trocados.join('; ')} — as ordens da leitura anterior foram SUBSTITUÍDAS pelas deste arquivo. `
       +`Somar duas leituras do mesmo lote dobraria ordens e peças; a tela mostra sempre uma foto só. `
-      +`Para voltar à leitura anterior, remova este arquivo na lateral e abra o antigo de novo.`);
+      +`Para voltar à leitura anterior, abra "Arquivos abertos" no rodapé da lateral, remova este arquivo e abra o antigo de novo.`);
   return doc;
 }
 
+/* Com a lista fechada por padrão, o resumo é o único lugar onde uma falha de
+   leitura apareceria — e PDF não lido significa relatório incompleto sem
+   ninguém saber. Então o selo vira vermelho, conta as falhas, e a lista abre
+   sozinha na primeira vez que a falha aparece. */
+let ARQ_ABERTO_POR_ERRO=false;
 function renderArquivos(){
+  const falhas=DOCS.filter(d=>d.erro).length;
+  const avisos=DOCS.filter(d=>!d.erro&&d.avisos&&d.avisos.length).length;
+  const lotes=new Set(DOCS.flatMap(d=>d.lotes.map(l=>l.lote))).size;
+  const ordens=DOCS.reduce((t,d)=>t+d.ofs.length,0);
+  const resumo=`${DOCS.length} ${DOCS.length===1?'arquivo':'arquivos'} · ${lotes} ${lotes===1?'lote':'lotes'} · ${nf(ordens)} ordens`;
+  const r=$('#arqResumo'); r.textContent=resumo; r.title=resumo;
+  const c=$('#nArq');
+  c.classList.toggle('hide',!falhas&&!avisos);
+  c.classList.toggle('erro',falhas>0);
+  c.classList.toggle('alerta',!falhas&&avisos>0);
+  c.textContent=falhas?`${falhas} ${falhas>1?'falhas':'falha'}`:avisos?`${avisos} aviso${avisos>1?'s':''}`:'';
+  if((falhas||avisos)&&!ARQ_ABERTO_POR_ERRO){ $('#navArquivos').open=true; ARQ_ABERTO_POR_ERRO=true; }
+  if(!falhas&&!avisos) ARQ_ABERTO_POR_ERRO=false;
   $('#arquivos').innerHTML=DOCS.map((d,i)=>`
     <div class="arquivo">
       <div class="info">
@@ -2322,7 +2414,7 @@ function recalc(){
   const tem=DOCS.length>0;
   $('#app').classList.toggle('hide',!tem);
   $('#vazio').classList.toggle('hide',tem);
-  ['#navSecoes','#navArquivos','#navExportar','#navImprimir','#navSetores'].forEach(s=>$(s).classList.toggle('hide',!tem));
+  ['#navSecoes','#navArquivos','#navExportar','#navSetores'].forEach(s=>$(s).classList.toggle('hide',!tem));
   // Quantos filtros escondidos estão ativos: sem isto, um recorte esquecido em
   // "Mais filtros" faria a tela mentir sem ninguém ver.
   const cegos=setoresDisponiveis().filter(setorCego);
@@ -2416,6 +2508,11 @@ function renderListaSetores(g){
       <span class="nm">${esc(x.nome)}</span>
       <span class="qt">${setorCego(x.nome)?'não aponta':x.pecas?nf(x.pecas)+' pç':'—'}</span>
     </button>`).join('');
+  /* A lista rola dentro da própria zona: com um roteiro longo o setor aberto
+     pode cair fora da faixa visível, e a lateral deixaria de mostrar onde o
+     usuário está. */
+  const sel=$('#listaSetores').querySelector('[aria-current="page"]');
+  if(sel) sel.scrollIntoView({block:'nearest'});
 }
 
 /* Contadores do menu saem daqui, não do desenho de cada seção. */
@@ -2492,6 +2589,47 @@ $('#painel').addEventListener('click',e=>{
   renderResposta(); render();
 });
 
+/* AÇÕES DA TELA — exportar e imprimir o recorte que está na frente.
+   `btnCsvTela` NÃO duplica exportação nenhuma: ele aciona o botão da tela
+   atual, que continua sendo a única definição de cada CSV.
+
+   O grão vai no rótulo porque três CSVs NÃO são a tela, e isso é decisão de
+   projeto, não descuido: `operacoes` leva o roteiro inteiro (inclusive as
+   fases fora da conta, com a coluna ForaDaConta), `conjuntos` é uma linha por
+   conjunto × fase e `operacao-fechada` uma linha por lote × operação. Um botão
+   dizendo "exporta esta lista" mentiria sobre o número de linhas — e a
+   promessa da ferramenta é que tela, papel e CSV nunca discordem. */
+const CSV_DA_TELA={
+  apont:['btnCsvApont','uma linha por operação a cobrar'],
+  trav :['btnCsvTrav' ,'uma linha por ordem parada'],
+  conj :['btnCsvConj' ,'uma linha por conjunto × fase — mais linhas que a tela'],
+  fech :['btnCsvFech' ,'uma linha por lote × operação — mais linhas que a tela'],
+  ach  :['btnCsvAch'  ,'uma linha por achado'],
+  ord  :['btnCsvOrd'  ,'uma linha por ordem'],
+  op   :['btnCsvOp'   ,'uma linha por operação, roteiro inteiro, com a coluna ForaDaConta']};
+function atualizarAcoesTela(){
+  const nome=SECOES[ABA]||'', c=$('#btnCsvTela'), p=$('#btnImprimirLista');
+  const alvo=ABA==='setor'?(SETOR_SEL?['','o apontamento a cobrar neste setor']:null):CSV_DA_TELA[ABA];
+  c.disabled=!alvo;
+  c.title=alvo?`CSV de "${nome}" — ${alvo[1]}. Respeita os filtros da barra. Separador ; para Excel e Power BI.`
+    :'Esta tela não tem lista para exportar. Os sete CSVs continuam em "Todos os CSVs", no rodapé do menu.';
+  const temTabela=!!document.querySelector('#painel table');
+  p.disabled=!temTabela;
+  p.title=temTabela?`Imprime ESTA tela ("${nome}") como está, em paisagem: conclusão, cartões, lista e nota.`
+    :'Esta tela não tem lista para imprimir.';
+  /* Os dois botões imprimem documentos DIFERENTES, e agora estão lado a lado:
+     o da esquerda é sempre o apontamento por setor (montarImpresso usa
+     faltasFiltradas, não a aba), o da direita é a tela da vez. Sem dizer isso
+     no rótulo, clicar em "Folha da reunião" de dentro de "Onde travou" troca
+     de assunto em silêncio. */
+  $('#btnImprimir').title='Documento da reunião, em retrato: uma folha por setor com o apontamento a cobrar '
+    +'e espaço para escrever a tratativa. É sempre este documento — não muda com a tela aberta.';
+}
+$('#btnCsvTela').onclick=()=>{
+  if(ABA==='setor'){ if(SETOR_SEL) csvDoSetor(SETOR_SEL); return; }
+  const alvo=CSV_DA_TELA[ABA]; if(alvo) $('#'+alvo[0]).click();
+};
+
 function render(){
   try{ desenhar(); }
   catch(err){
@@ -2499,6 +2637,7 @@ function render(){
       <div class="vazio">Não foi possível montar esta seção: ${esc(err.message)}.<br>
       Confira a seção <b>Leitura dos arquivos</b> — provavelmente o PDF não foi lido como esperado.</div>`;
   }
+  atualizarAcoesTela();
 }
 
 /* ---- TELA DE UM SETOR: as duas perguntas, só para este setor ---- */
