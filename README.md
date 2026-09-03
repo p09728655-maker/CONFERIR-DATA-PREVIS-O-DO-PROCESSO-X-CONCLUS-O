@@ -375,6 +375,23 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Prazo e prioridade invertida na tela do setor
+
+A tabela de avanço por lote mostra o **Prazo aqui** — a previsão mais antiga ainda não apontada
+daquele lote naquele setor — e ordena **vencido primeiro**, do prazo mais antigo para o mais novo.
+
+Quando o setor concluiu trabalho que vencia depois e deixou aberto trabalho que vencia antes, a
+tela declara:
+
+> **Prioridade invertida.** Este setor concluiu **20.050 peças** com prazo até **01/09** (lote
+> 025144, 025145) e deixou abertas **2.800 peças** que venciam **31/08** (lote 025139, 025141).
+
+Não é acusação: um resto pode ficar por setup, falta de material ou refugo. A tela põe as duas
+datas do ERP lado a lado e diz o tamanho — a explicação é do setor.
+
+A conta é por **operação**, não por lote: um lote com uma única ordem aberta de prazo distante não
+conta como fechado e sairia da comparação.
+
 ### Vários lotes ao mesmo tempo
 
 O app aceita vários PDFs e cruza tudo — LT 163 e LT 164 juntos dão 6 lotes e 260 ordens, com a
