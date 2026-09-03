@@ -3,6 +3,36 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.2.0] — 2026-09-03
+
+### Alterado
+
+- **A isenção de EMBALAR passa a valer para produto acabado (`1…`) e para volume (`5…`).**
+  Até aqui valia só para o acabado, sobre a premissa — inferida dos dados, nunca confirmada —
+  de que o apontamento real de embalagem acontecia na ordem do volume (`501.x`). O PPCP
+  confirmou que não acontece: a fase EMBALAR existe no roteiro dos dois e não recebe registro
+  em nenhum dos dois. Enquanto a isenção era só do acabado, toda ordem de volume aparecia
+  como **apontamento esquecido** no dia seguinte ao prazo da embalagem — falso positivo em
+  volume, e num lote de painéis são dezenas de linhas cobrando um setor que não tem o que
+  apontar no ERP.
+- **Componente segue cobrável.** A isenção é por tipo de produto (`CFG.isentaEmbalagem`),
+  não pela operação: EMBALAR no roteiro de um código `7xx` continua entrando na conta,
+  porque ali a falta de apontamento é falta de verdade.
+- Rótulo da caixa, motivo declarado no cabeçalho da tabela **Operações**, nota de rodapé e
+  cabeçalho da folha impressa passam de "produto acabado (código 1…)" para
+  "acabado (1…) e volume (5…)". O recorte continua declarado; nada sai em silêncio.
+- `tipoProduto()` virou declaração de função e subiu para junto de `ignoraEmbalagem()`, que
+  agora depende dela. Era `const` definido depois no arquivo.
+
+### Notas
+
+- A premissa continua **reversível pela tela**: desmarcar "Ignorar EMBALAR sem apontamento"
+  traz as fases de volta como achado. Se um dia o volume passar a apontar embalagem no ERP,
+  a caixa é o interruptor — e o caminho definitivo é tirar `'volume'` de `CFG.isentaEmbalagem`.
+- Alternativa avaliada e descartada: marcar EMBALAR em "setores que ainda não apontam no ERP".
+  Resolveria acabado e volume com um clique, mas isentaria **também os componentes**, apagando
+  a única falta de apontamento de embalagem que é real hoje.
+
 ## [3.1.1] — 2026-09-03
 
 ### Corrigido

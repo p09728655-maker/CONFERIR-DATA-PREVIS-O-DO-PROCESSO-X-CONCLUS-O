@@ -145,15 +145,25 @@ com a coluna `ForaDaConta` (sim/não) para filtrar no Power BI.
 
 ### Convenção tratada como exceção
 
-Nos produtos acabados de prefixo `103.`, a operação `EMBALAR` aparece sistematicamente sem apontamento —
-o apontamento real acontece na ordem do volume correspondente (`501.`). A ferramenta trata isso como
-convenção e ignora esses casos por padrão.
+Em produto acabado (`1…`) e em volume (`5…`), a operação `EMBALAR` aparece sistematicamente sem
+apontamento: a fase existe no roteiro dos dois e não recebe registro em nenhum dos dois. A ferramenta
+trata isso como convenção e ignora esses casos por padrão.
 
-O comportamento é controlado pela caixa **"Ignorar EMBALAR sem apontamento em produto acabado"** e pelas
-constantes `CFG.produtoAcabado` e `CFG.operacaoEmbalagem`.
+> A versão anterior isentava só o acabado, sobre a hipótese de que o apontamento de embalagem
+> acontecia na ordem do volume (`501.x`). Não acontece. Enquanto a isenção era só do acabado, toda
+> ordem de volume virava falso **apontamento esquecido** no dia seguinte ao prazo da embalagem.
 
-> Esta premissa foi inferida dos dados, **não confirmada pela Engenharia**. Se estiver errada, desmarque a
-> caixa e os casos voltam a aparecer como achado.
+**Componente continua cobrável.** A isenção é por tipo de produto, não pela operação: `EMBALAR` no
+roteiro de um código `7xx` entra na conta normalmente, porque ali a falta de apontamento é real.
+É por isso que o caso não foi resolvido marcando `EMBALAR` em "setores que ainda não apontam no ERP" —
+aquilo isentaria o componente junto.
+
+O comportamento é controlado pela caixa **"Ignorar EMBALAR sem apontamento em produto acabado (1…) e
+volume (5…)"** e pelas constantes `CFG.isentaEmbalagem`, `CFG.produtoAcabado`, `CFG.produtoVolume` e
+`CFG.operacaoEmbalagem`.
+
+> Se um dia o volume passar a apontar embalagem no ERP, desmarque a caixa para conferir e tire
+> `'volume'` de `CFG.isentaEmbalagem` para valer por padrão.
 
 ---
 
@@ -163,9 +173,13 @@ Todo o ajuste fica no bloco `CFG`, no topo do `<script>` do `index.html`:
 
 ```js
 const CFG = {
-  produtoAcabado:   /^103\./,   // prefixo de produto acabado
-  operacaoEmbalagem:/^EMBAL/i,  // nome da operação de embalagem
-  tolQtd: 0.001,                // tolerância de quantidade, em peças
+  produtoAcabado:   /^1/,               // 1… = produto acabado
+  produtoVolume:    /^5/,               // 5… = volume (501.x)
+  operacaoEmbalagem:/^EMBAL/i,          // nome da operação de embalagem
+  isentaEmbalagem: ['acabado','volume'],// tipos sem apontamento de EMBALAR no ERP
+  setoresSemApontamento: ['PINTAR PU'], // padrão; ajustável na tela
+  tolQtd: 0.001,                        // tolerância de quantidade, em peças
+  feriadosExtras: [],                   // 'aaaa-mm-dd' — feriado municipal, parada coletiva
   regras: [ /* id, rótulo, severidade, ativa por padrão */ ]
 };
 ```
