@@ -3,6 +3,88 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.3.0] — 2026-09-03
+
+### Adicionado
+
+- **Tela "Conjunto incompleto"** — a terceira pergunta do PPCP: *o produto fecha?*
+
+  O problema que ela mede: o ERP programa com **capacidade infinita**. Pega a data de
+  entrega do lote, volta pelo roteiro e carimba a mesma data em todas as fases de todas as
+  ordens. Num lote de 55 ordens, 55 vencem na COLAR BORDA no mesmo dia, independente de a
+  COLAR BORDA fazer 55 num dia. Sem prioridade, o líder sequencia pelo que economiza setup
+  — junta cor, junta chapa — o que é **racional**. O resultado é todo produto 70% pronto,
+  nenhum conjunto fechado, e a EMBALAR sem o que embalar. Começar tudo é a consequência,
+  não a causa.
+
+- **O agrupamento vem do código da peça, não de BOM.** O relatório "Situação do Lote de
+  Produção" não traz estrutura de produto — e não precisa. O 1º bloco do código é o
+  produto (`387` SPACE, `778` SLEEP, `754` INTENSE), o 2º é a peça dentro dele
+  (`387.010` = FRENTE GAV, e a descrição confirma com "MDP 10") e o 3º é a cor
+  (`.116` CINAMOMO, `.006` OFF WHITE, `.001` BRANCO REAL). `prefixoProduto()` agrupa;
+  `rotuloConjunto()` tira o nome legível da primeira palavra da descrição, porque "387"
+  não diz nada numa reunião e "SPACE" diz.
+
+- **Roda inteiro até** = a última fase que **todas** as ordens do conjunto passaram. O setor
+  seguinte a ela pega o produto completo; daí para frente, não. **Trava em** = a primeira fase
+  que não fechou, com quantas peças faltam e **quais ordens** — é a ação do dia. Uma ordem
+  passou a fase quando **todas** as operações dela estão apontadas: dois passes de COLAR BORDA
+  são um setor, e passar só o primeiro não é passar.
+
+- **% pronto por conjunto**, com barra: avanço do roteiro medido em **peça-fase** — quanto das
+  quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade
+  lançada conta cheia, pela mesma regra do `apontada()`. No desempate da ordenação, o conjunto
+  mais adiantado vem antes: é o que fecha antes.
+
+  **Não é percentual de tempo**, e a nota da tela declara isso. Peça-fase trata corte e
+  embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta
+  possível com o que o relatório traz; ler "60% pronto" como "60% do tempo" erra a estimativa
+  do que falta.
+
+- **Correram na frente** = ordens que já passaram a fase que trava enquanto outras ficaram
+  atrás. Aparece em vermelho porque **não é alívio**: são exatamente elas que criam produto
+  incompleto nos setores seguintes. Zero aqui é o número bom. A primeira versão desta coluna
+  se chamava "liberado p/ a frente" e sugeria o contrário — o que o setor seguinte pode rodar
+  completo é o que está **até** `Roda inteiro até`, não o que correu além da trava.
+
+- **Ordem das fases pela sequência média** do roteiro das ordens do conjunto. O roteiro
+  varia de peça para peça (uma leva pintura, outra não), então "a 3ª linha" não serve como
+  régua; a média ordena sem exigir que todas as ordens tenham as mesmas fases. Cada fase só
+  conta as ordens que a **têm** no roteiro.
+
+- **CSV de conjuntos** (`conjuntos.csv`): uma linha por conjunto × fase. Uma linha por
+  conjunto perderia o roteiro, que é onde está a informação; com o grão fase dá para montar
+  "% de conjuntos fechados por fase" ao longo dos lotes no Power BI.
+
+### Notas de modelagem
+
+- **Quebrado ≠ atrasado.** Conjunto inteiro parado na mesma fase é **junto**, não disperso:
+  está atrasado ou não, mas não está espalhado, e junto é exatamente o que se quer. Só é
+  **quebrado** quando parte do conjunto andou e parte não. O contador da lateral e o
+  veredito alertam sobre o quebrado, não sobre o total de produtos em curso — cobrar o líder
+  que está fazendo a coisa certa seria pior que não medir. Nos dados do lote 025139, o
+  conjunto INTENSE aparece como **junto** (as 3 ordens passaram CORTAR e FURAR e pararam
+  juntas na COLAR BORDA), e SPACE e SLEEP como **quebrados**.
+
+- **Volume (5…) fica fora do agrupamento**, e a tela declara quantas ordens ficaram. Todo
+  volume começa em `501`, então agrupá-las pelo 1º bloco juntaria os volumes de **todos** os
+  produtos num grupo só — pior que não agrupar. E o volume é o resultado do conjunto, não
+  peça dele: sua EMBALAR é isenta de apontamento (v3.2.0), logo não informa nada sobre kit
+  completo.
+
+- **Fase fora da conta não bloqueia conjunto.** Setor que ainda não aponta no ERP e EMBALAR
+  isenta saem das fases do conjunto: sem registro ali, exigir que "todas passaram" travaria
+  o produto para sempre. EMBALAR em **componente** continua contando e bloqueando, coerente
+  com o v3.2.0.
+
+### Limitação conhecida
+
+- O conjunto é o **produto**, não a combinação de cores do volume. Um `VOL 1/1 PAINEL
+  INTENSE FREIJO/OFF WHITE` mistura peças de duas cores; a tela fecha no nível do produto
+  (754), não no do volume (501.113.001). É a granularidade da dor relatada — "3 produtos no
+  mesmo dia" — e não exige inferência de texto. Fechar por combinação de cor exigiria a
+  estrutura do produto vinda do ERP.
+
 ## [3.2.0] — 2026-09-03
 
 ### Alterado

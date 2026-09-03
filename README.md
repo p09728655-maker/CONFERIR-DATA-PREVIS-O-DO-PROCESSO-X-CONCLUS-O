@@ -291,6 +291,79 @@ Regras que evitam leitura errada:
 
 ---
 
+## 5.3 Conjunto incompleto
+
+A terceira pergunta do PPCP: **o produto fecha?**
+
+O lote não fecha produto por produto. O ERP programa com **capacidade infinita** — pega a data de
+entrega do lote, volta pelo roteiro e carimba a mesma data em todas as fases de todas as ordens.
+Num lote de 55 ordens, 55 vencem na COLAR BORDA no mesmo dia, independente de a COLAR BORDA fazer
+55 num dia. Sem prioridade, o líder sequencia pelo que economiza setup — junta cor, junta chapa —
+o que é **racional**. O resultado é todo produto 70% pronto, nenhum conjunto fechado, e a EMBALAR
+sem o que embalar. Começar tudo é a consequência, não a causa.
+
+### O agrupamento sai do código da peça
+
+O relatório não traz estrutura de produto. Não precisa — o código traz:
+
+| Bloco | Significa | Exemplo |
+|---|---|---|
+| 1º | **Produto** | `387` SPACE · `778` SLEEP · `754` INTENSE |
+| 2º | Peça dentro do produto | `387.010` FRENTE GAV (a descrição confirma: "MDP 10") |
+| 3º | Cor / acabamento | `.116` CINAMOMO · `.006` OFF WHITE · `.001` BRANCO REAL |
+
+`prefixoProduto()` agrupa pelo 1º bloco; `rotuloConjunto()` tira o nome legível da primeira palavra
+da descrição, porque "387" não diz nada numa reunião e "SPACE" diz.
+
+### O que a tela mede
+
+- **Roda inteiro até** — a última fase que **todas** as ordens do conjunto passaram. O setor
+  seguinte a ela pega o produto completo; daí para frente, não.
+- **Trava em** — a primeira fase que não fechou, com quantas peças faltam e **quais ordens**.
+  É a ação do dia.
+- **% pronto** — avanço do roteiro em **peça-fase**: quanto das quantidades de todas as fases de
+  todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia.
+
+  > **Não é percentual de tempo.** Peça-fase trata corte e embalagem como esforços iguais, e não
+  > são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz —
+  > ler "60% pronto" como "60% do tempo" erra a estimativa do que falta.
+
+- **Correram na frente** — ordens que já passaram a fase que trava enquanto outras ficaram atrás.
+  Não é alívio: são elas que criam produto incompleto nos setores seguintes. **Zero é o número
+  bom.** O que o setor seguinte roda completo é o que está *até* **Roda inteiro até**, não o que
+  correu além da trava.
+- Uma ordem **passou** a fase quando **todas** as operações dela estão apontadas: dois passes de
+  COLAR BORDA são um setor, e passar só o primeiro não é passar.
+- As fases são ordenadas pela **sequência média** do roteiro das ordens do conjunto. O roteiro varia
+  de peça para peça, então "a 3ª linha" não serve como régua. Cada fase só conta as ordens que a
+  **têm** no roteiro.
+
+### Quebrado não é atrasado
+
+| Estado | Significa |
+|---|---|
+| `quebrado` | Parte do conjunto andou, parte não. **É o estado que dói.** |
+| `junto` | O conjunto inteiro está na mesma fase. Atrasado ou não, **não está espalhado** — e junto é o que se quer. |
+| `completo` | Todas as fases fechadas por todas as ordens. |
+| `não começou` | Nenhuma ordem apontada em nenhuma fase. |
+
+O contador da lateral e o veredito alertam sobre o **quebrado**, não sobre o total de produtos em
+curso. Cobrar o líder que está fazendo a coisa certa seria pior que não medir.
+
+> No lote 025139, o conjunto INTENSE aparece como **junto** — as 3 ordens passaram CORTAR e FURAR e
+> pararam juntas na COLAR BORDA. SPACE e SLEEP aparecem como **quebrados**.
+
+### O que fica de fora
+
+- **Ordens de volume (5…)**, e a tela declara quantas. Todo volume começa em `501`, então agrupá-las
+  pelo 1º bloco juntaria os volumes de **todos** os produtos num grupo só — pior que não agrupar. E o
+  volume é o resultado do conjunto, não peça dele: sua EMBALAR é isenta de apontamento.
+- **Fase fora da conta** (setor que ainda não aponta, EMBALAR isenta) não bloqueia conjunto: sem
+  registro ali, exigir que "todas passaram" travaria o produto para sempre. EMBALAR em **componente**
+  continua contando e bloqueando.
+
+---
+
 ## 6. Exportação
 
 ### Levar para a reunião com os líderes
@@ -319,6 +392,7 @@ dizer que estava filtrada, faz o problema parecer menor do que é.
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
 | CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |
+| CSV de conjuntos | `conjuntos.csv` | Uma linha por **conjunto × fase**, com `% pronto` do conjunto, ordens na fase, quantas passaram, quantas faltam e quais |
 | CSV achados | `achados.csv` | Uma linha por achado, com severidade, regra e detalhe |
 | CSV ordens | `ordens.csv` | Uma linha por ordem de fabricação |
 | CSV operações | `operacoes.csv` | Uma linha por operação de roteiro, **inclusive as fora da conta**, com a coluna `ForaDaConta` (sim/não) |
@@ -441,7 +515,11 @@ localmente pelo usuário e nunca trafegam. Ainda assim, se a política interna e
 3. **A regra `SEQ_FORA_ORDEM` compara pela ordem de impressão do roteiro**, que assume ser a sequência
    cadastrada. Se o relatório imprimir fora de sequência, gera falso positivo.
 4. **Sem verificação de estrutura de produto.** A ferramenta confere roteiro e apontamento, não a árvore
-   de componentes.
+   de componentes. Em "Conjunto incompleto", o agrupamento vem do 1º bloco do código da peça, não de
+   BOM: o conjunto é o **produto** (`754`), não a combinação de cores do volume (`501.113.001`). Um
+   `VOL 1/1 PAINEL INTENSE FREIJO/OFF WHITE` mistura peças de duas cores, e a tela fecha no nível do
+   produto. É a granularidade da dor relatada — "3 produtos no mesmo dia" — e não exige inferência de
+   texto; fechar por combinação de cor exigiria a estrutura vinda do ERP.
 5. **A ferramenta lê o relatório, não a realidade.** Se o apontamento não foi feito no ERP, o achado aponta
    falta de apontamento — não necessariamente falta de produção. Vale igualmente para o Painel por setor:
    ele mede datas, não capacidade.

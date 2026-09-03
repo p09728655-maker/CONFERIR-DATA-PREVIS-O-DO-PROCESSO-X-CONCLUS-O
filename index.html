@@ -337,6 +337,13 @@ tr.sev-info td:first-child{box-shadow:inset 3px 0 0 var(--neutro)}
 .setor .n1 .v{font-size:21px;line-height:1.3;font-weight:700;letter-spacing:-.015em;
   font-family:var(--mono);font-variant-numeric:tabular-nums}
 .setor .n1 .r{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+/* Avanço em percentual na tabela: o número diz quanto, a barra diz se está
+   perto ou longe sem obrigar o leitor a comparar dígitos linha a linha. */
+.pct{display:flex;align-items:center;gap:var(--sm);justify-content:flex-end}
+.pct .b{width:54px;height:6px;border-radius:var(--r-pill);background:var(--borda);overflow:hidden;flex:none}
+.pct .b i{display:block;height:100%;background:var(--ok)}
+.pct .b i.meio{background:var(--atencao)}
+.pct .b i.baixo{background:var(--critico)}
 .setor .barra{height:6px;border-radius:var(--r-pill);background:var(--borda);overflow:hidden}
 .setor .barra i{display:block;height:100%;background:var(--ok)}
 .setor .linha{font-size:12px;color:var(--texto-medio);overflow-wrap:anywhere}
@@ -515,6 +522,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="grupo">Conferência</div>
     <button type="button" class="item" data-t="trav" aria-current="page"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
     <button type="button" class="item" data-t="apont"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
+    <button type="button" class="item" data-t="conj"><span class="t">Conjunto incompleto</span><span class="contagem" id="nConj">0</span></button>
     <details class="detalhe" id="navDetalhe">
       <summary>Detalhe <span class="grupo-dica">ordens, operações, achados, leitura</span></summary>
       <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
@@ -542,6 +550,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="grupo-dica">CSV para Excel e Power BI · respeita os filtros</div>
     <button type="button" class="item" id="btnCsvApont"><span class="t">CSV sem apontamento</span></button>
     <button type="button" class="item" id="btnCsvTrav"><span class="t">CSV onde travou</span></button>
+    <button type="button" class="item" id="btnCsvConj"><span class="t">CSV de conjuntos</span></button>
     <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
     <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
     <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
@@ -634,6 +643,17 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.3.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Tela nova: Conjunto incompleto.</b> Responde a terceira pergunta do PPCP — <b>o produto fecha?</b> O lote não fecha produto por produto: o ERP carimba a mesma data em todas as fases de todas as ordens, nada é prioridade, o líder sequencia pelo que economiza setup (junta cor, junta chapa) — o que é racional — e o resultado é todo produto 70% pronto, nenhum conjunto fechado e a EMBALAR sem o que embalar.</li>
+    <li><b>O agrupamento sai do próprio código da peça</b>, sem precisar de estrutura de produto: o 1º bloco é o produto (<b>387 SPACE, 778 SLEEP, 754 INTENSE</b>), o 2º é a peça dentro dele e o 3º é a cor.</li>
+    <li><b>Roda inteiro até</b> = a última fase que <b>todas</b> as ordens do conjunto passaram: o setor seguinte a ela pega o produto completo, daí para frente não. <b>Trava em</b> = a primeira fase que não fechou, com <b>quais ordens</b> faltam e quantas peças — é a ação do dia.</li>
+    <li><b>% pronto</b> por conjunto, com barra: avanço do roteiro em peça-fase. Serve para escolher o que fechar primeiro — no desempate, o mais adiantado vem antes, porque é o que fecha antes. <b>Não é percentual de tempo</b>: peça-fase trata corte e embalagem como esforços iguais, e a nota da tela declara isso.</li>
+    <li><b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. <b>Zero aqui é o número bom.</b></li>
+    <li><b>Quebrado x junto.</b> Conjunto inteiro parado na mesma fase <b>não</b> é dispersão: está junto, e junto é o que se quer. Só é quebrado quando parte andou e parte não. Cobrar o líder que está fazendo a coisa certa seria pior que não medir.</li>
+    <li>Ordens de <b>volume</b> (5…) ficam fora do agrupamento e a tela declara quantas: todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só. O volume é o resultado do conjunto, não peça dele.</li>
+    <li><b>CSV de conjuntos</b>: uma linha por conjunto × fase, para montar "% de conjuntos fechados" ao longo dos lotes no Power BI.</li>
+  </ul>
   <h3>3.2.0 — 03/09/2026</h3>
   <ul>
     <li><b>A isenção de EMBALAR passa a valer também no volume (5…).</b> Antes valia só no produto acabado (1…), porque a leitura anterior supunha que o EMBALAR do acabado era apontado na ordem do volume. Não é: o EMBALAR não é apontado em nenhuma das duas. Resultado prático — todo volume 501.x virava falso <b>apontamento esquecido</b> no dia seguinte ao prazo da embalagem, e num lote de painéis isso é dezenas de linhas cobrando quem não tem o que apontar.</li>
@@ -1368,7 +1388,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.2.0';
+const VERSAO='3.3.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1753,6 +1773,135 @@ function ordensTravadas(){
 const travadasAtrasadas=()=>ordensTravadas().filter(x=>x.pos.atrasada)
   .sort((a,b)=>b.pos.fasesAtras-a.pos.fasesAtras||(b.pos.diasParada||0)-(a.pos.diasParada||0)||b.pos.pecas-a.pos.pecas);
 
+/* ============================================================================
+   CONJUNTO — as ordens que precisam fechar JUNTAS
+   ==========================================================================
+   A dor que esta tela existe para medir: o lote não fecha produto por produto.
+   O ERP carimba a MESMA data em todas as fases de todas as ordens do lote —
+   programação com capacidade infinita. Se 55 ordens vencem na COLAR BORDA no
+   mesmo dia, nenhuma é prioridade; o líder então sequencia pelo que economiza
+   setup (junta cor, junta chapa), o que é racional. O resultado é que todo
+   produto fica 70% pronto, nenhum conjunto fecha, e a EMBALAR não tem o que
+   embalar.
+
+   O relatório não traz estrutura de produto. Não precisa: o CÓDIGO DA PEÇA
+   traz. O 1º bloco é o PRODUTO — 387 SPACE, 778 SLEEP, 754 INTENSE; o 2º é a
+   peça dentro dele (387.010 = FRENTE GAV, e a descrição confirma com "MDP
+   10"); o 3º é a cor (.116 CINAMOMO, .006 OFF WHITE, .001 BRANCO REAL).
+
+   VOLUME FICA FORA. Todo volume começa em 501, então agrupar pelo 1º bloco
+   jogaria os volumes de TODOS os produtos num grupo só — pior que não
+   agrupar. E o volume não é peça do conjunto: é o resultado dele. Sua EMBALAR
+   é isenta de apontamento, logo não informa nada sobre kit completo. A tela
+   declara quantos ficaram de fora. */
+const prefixoProduto=cod=>((cod||'').split('.')[0]||'').trim()||'—';
+
+/* Nome legível do conjunto: a descrição da peça começa pelo produto ("SPACE
+   FRENTE GAV…", "SLEEP BASE…"). A primeira palavra mais frequente do grupo é
+   o rótulo — "387" não diz nada numa reunião, "SPACE" diz. */
+function rotuloConjunto(ofs){
+  const c={};
+  ofs.forEach(o=>{const w=(o.descricao||'').trim().split(/\s+/)[0]; if(w)c[w]=(c[w]||0)+1;});
+  const top=Object.entries(c).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0];
+  return top?top[0]:'';
+}
+
+/**
+ * FASE FECHADA DO CONJUNTO.
+ *
+ * Uma ordem PASSOU uma fase quando todas as operações daquela fase estão
+ * apontadas. Dois passes de COLAR BORDA são um setor, e passar só o primeiro
+ * não é passar — é assim que o líder conta, e é o que o print do lote mostra:
+ * COLAR BORDA seq 3 concluída, seq 4 em branco.
+ *
+ * A fase está FECHADA NO CONJUNTO quando todas as ordens que a têm no roteiro
+ * passaram. Enquanto faltar uma, o setor da frente não pega o produto
+ * completo. Esse é o número que a tela existe para dar.
+ *
+ * Ordem das fases: pela sequência MÉDIA no roteiro das ordens do conjunto. O
+ * roteiro varia de peça para peça (uma leva pintura, outra não), então "a 3ª
+ * linha" não serve como régua; a média ordena sem exigir que todas as ordens
+ * tenham as mesmas fases.
+ *
+ * Fase fora da conta (setor que não aponta, EMBALAR isenta) não bloqueia
+ * conjunto: sem registro ali, exigir que "todas passaram" travaria todo
+ * produto para sempre.
+ */
+function conjuntos(){
+  const flagEmb=$('#fEmb').checked;
+  const g=new Map();
+  ordensFiltradas().filter(o=>tipoProduto(o.produto)!=='volume').forEach(o=>{
+    const k=prefixoProduto(o.produto);
+    if(!g.has(k))g.set(k,[]);
+    g.get(k).push(o);
+  });
+  return [...g.entries()].map(([cod,ofs])=>{
+    const naConta=(o,nome)=>o.operacoes.filter(op=>op.descricao===nome&&!foraDaConta(o,op,flagEmb));
+    const soma={}, cont={};
+    ofs.forEach(o=>o.operacoes.forEach((op,i)=>{
+      if(foraDaConta(o,op,flagEmb))return;
+      soma[op.descricao]=(soma[op.descricao]||0)+(i+1);
+      cont[op.descricao]=(cont[op.descricao]||0)+1;
+    }));
+    const fases=Object.keys(soma)
+      .sort((a,b)=>soma[a]/cont[a]-soma[b]/cont[b]||a.localeCompare(b))
+      .map(nome=>{
+        const tem=ofs.filter(o=>naConta(o,nome).length);
+        const faltam=tem.filter(o=>!naConta(o,nome).every(apontada));
+        const passou=tem.length-faltam.length;
+        return {nome,tem:tem.length,passou,faltam,
+                // % de ordens do conjunto que já fecharam esta fase.
+                pct:tem.length?passou/tem.length:0,
+                /* Duas quantidades, e confundi-las inverte a decisão:
+                   `pecas` é o que FALTA fazer nesta fase; `liberadas` é o que
+                   já passou e o setor da frente pode pegar AGORA. */
+                pecas:faltam.reduce((s,o)=>s+(o.qtd||0),0),
+                liberadas:tem.filter(o=>!faltam.includes(o)).reduce((s,o)=>s+(o.qtd||0),0)};
+      });
+    // Até onde o conjunto está INTEIRO: para na primeira fase que não fechou.
+    let fechada=null; for(const x of fases){ if(x.passou===x.tem) fechada=x; else break; }
+    const proxima=fases.find(x=>x.passou<x.tem)||null;
+
+    /* % PRONTO DO CONJUNTO — avanço do roteiro medido em PEÇA-FASE.
+       Denominador = soma das quantidades de todas as fases de todas as ordens
+       do conjunto (fora da conta excluída); numerador = o que já tem registro.
+       Fase com conclusão e quantidade zerada conta cheia: há setor que fecha a
+       fase sem lançar quantidade, e é a mesma regra do apontada().
+
+       O QUE ESTE NÚMERO NÃO É: percentual de TEMPO. Peça-fase trata corte e
+       embalagem como esforços iguais, e não são. Sem tempo padrão por operação
+       essa é a única conta possível com o que o relatório traz, e a nota da
+       tela declara isso — um líder que leia "60% pronto" como "60% do tempo"
+       vai errar a estimativa do que falta. */
+    const feitoPF=op=>op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
+    let pf=0, pfTotal=0;
+    ofs.forEach(o=>o.operacoes.forEach(op=>{
+      if(foraDaConta(o,op,flagEmb))return;
+      pfTotal+=(op.qtd||0); pf+=feitoPF(op);
+    }));
+
+    return {cod, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
+      pf, pfTotal, pct:pfTotal?pf/pfTotal:0,
+      ordens:ofs.length, pecas:ofs.reduce((s,o)=>s+(o.qtd||0),0),
+      naoComecou:fases.every(x=>x.passou===0),
+      completo:!proxima,
+      /* DISPERSO é o estado que dói: parte do conjunto andou, parte não. O
+         setor da frente vê peça chegando e não consegue montar o produto.
+         Conjunto INTEIRO parado na mesma fase NÃO é dispersão — está junto, e
+         junto é exatamente o que se quer. Confundir os dois faria a tela
+         cobrar o líder que está fazendo a coisa certa. */
+      disperso:!!proxima&&proxima.passou>0};
+  }).sort((a,b)=>
+      // Ação de hoje primeiro: quebrado e a poucas ordens de fechar.
+      (a.completo?1:0)-(b.completo?1:0)
+    ||(a.naoComecou?1:0)-(b.naoComecou?1:0)
+    ||(b.disperso?1:0)-(a.disperso?1:0)
+    ||((a.proxima&&b.proxima)?a.proxima.faltam.length-b.proxima.faltam.length:0)
+    // Empate em ordens atrás: o mais adiantado primeiro — é o que fecha antes.
+    ||b.pct-a.pct
+    ||b.pecas-a.pecas||a.cod.localeCompare(b.cod));
+}
+
 function faltasFiltradas(){
   const f=filtros();
   return faltasApontamento(ordensFiltradas(),$('#fRef').value,$('#fEmb').checked)
@@ -1870,6 +2019,11 @@ function renderContadores(g){
   $('#nApont').textContent=g.falt.length;
   $('#nApont').classList.toggle('alerta',g.furos.length>0);
   $('#nApont').title=g.furos.length?`${g.furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
+  const cj=conjuntos(), quebrados=cj.filter(c=>c.disperso).length;
+  $('#nConj').textContent=quebrados;
+  $('#nConj').classList.toggle('alerta',quebrados>0);
+  $('#nConj').title=quebrados?`${quebrados} produto(s) com parte do conjunto adiante e parte atrás`
+    :`${cj.length} produto(s) no recorte, nenhum conjunto quebrado`;
   $('#nAch').textContent=achFiltrados().length;
   $('#nOrd').textContent=ordensFiltradas().length;
   $('#nOp').textContent=opsFiltradas().length;
@@ -1899,7 +2053,8 @@ $('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
   // esta chamada ele ficava escondido ao voltar da tela de um setor.
   renderResposta(); render();};
 
-const SECOES={setor:'Setor',trav:'Onde travou',apont:'Sem apontamento',ach:'Achados',ord:'Ordens',op:'Operações',leit:'Leitura dos arquivos'};
+const SECOES={setor:'Setor',trav:'Onde travou',apont:'Sem apontamento',conj:'Conjunto incompleto',
+  ach:'Achados',ord:'Ordens',op:'Operações',leit:'Leitura dos arquivos'};
 // Setor aberto na tela dedicada. Independente do filtro de operação da barra:
 // o filtro muda TODAS as telas, e abrir o setor do líder não pode reescrever o
 // recorte que o usuário montou para a conferência.
@@ -2122,6 +2277,115 @@ function desenharTravadas(p,ref){
       Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.</div>`;
 }
 
+/* ---- CONJUNTO INCOMPLETO: o produto fecha ou não fecha ---- */
+/* A faixa de fases é a leitura de dois segundos: verde = o conjunto inteiro
+   passou, vermelho = quebrou aqui, cinza = ninguém chegou. Reaproveita os
+   selos que a tela já usa; cor nova para dizer a mesma coisa só aumentaria o
+   vocabulário do usuário sem aumentar a informação. */
+const faixaFases=c=>c.fases.map(x=>{
+  const cls=x.passou===x.tem?'ok':x.passou>0?'critico':'neutro';
+  const t=x.passou===x.tem?'conjunto inteiro passou'
+    :x.passou>0?`trava aqui — ${x.passou} correram na frente, ${x.faltam.length} atrás (${nf(x.pecas)} pç)`
+    :'nenhuma ordem passou — conjunto inteiro esperando aqui';
+  return `<span class="selo ${cls}" title="${esc(x.nome)}: ${t}">${esc(x.nome)} ${x.passou}/${x.tem}</span>`;
+}).join(' ');
+
+/* PCT: número à esquerda, barra à direita. A cor é semáforo de avanço, não de
+   prazo — quem julga prazo é "Onde travou". */
+const pctBarra=v=>{
+  const p=Math.round(v*100);
+  const cls=p>=100?'':p>=50?'meio':'baixo';
+  return `<span class="pct"><b>${p}%</b><span class="b"><i class="${cls}" style="width:${p}%"></i></span></span>`;
+};
+const ordensFaltantes=(x,max=6)=>x.faltam.slice(0,max).map(o=>esc(o.of)).join(', ')
+  +(x.faltam.length>max?` <small>+${x.faltam.length-max}</small>`:'');
+
+function desenharConjuntos(p,ref){
+  const cs=conjuntos();
+  const emCurso=cs.filter(c=>!c.completo&&!c.naoComecou);
+  const quebrados=cs.filter(c=>c.disperso);
+  const juntos=emCurso.filter(c=>!c.disperso);
+  const completos=cs.filter(c=>c.completo);
+  const volumes=ordensFiltradas().filter(o=>tipoProduto(o.produto)==='volume').length;
+
+  /* Os cartões são só os quebrados, e o texto diz o que fazer: fechar a fase
+     que quebrou. Cartão para conjunto que está junto ou completo ocuparia a
+     tela dizendo "está tudo bem" — isso é o lugar da tabela, não do alerta. */
+  const cartoes=quebrados.map(c=>`<div class="setor critico">
+      <div class="topo"><span class="nome" title="${esc(c.cod)} ${esc(c.rotulo)}">${esc(c.rotulo||c.cod)} <small class="cod">${esc(c.cod)}</small></span>
+        <span class="selo critico">quebrado</span></div>
+      <div class="numeros">
+        <span class="n1"><span class="v">${Math.round(c.pct*100)}%</span><span class="r">Pronto (roteiro)</span></span>
+        <span class="n1"><span class="v c-critico">${c.proxima.passou}/${c.proxima.tem}</span><span class="r">Correram na frente</span></span>
+        <span class="n1"><span class="v c-critico">${c.proxima.faltam.length}</span><span class="r">${c.proxima.faltam.length>1?'Ordens atrás':'Ordem atrás'}</span></span>
+        <span class="n1"><span class="v">${nf(c.proxima.pecas)}</span><span class="r">Peças a fazer</span></span>
+      </div>
+      <div class="barra" title="${Math.round(c.pct*100)}% do roteiro do conjunto apontado"><i style="width:${Math.round(c.pct*100)}%"></i></div>
+      <div class="linha">${c.fechada?`Roda inteiro até <b>${esc(c.fechada.nome)}</b>.`
+        :'<b>Nenhuma fase fechada</b> — o produto não sai inteiro de lugar nenhum.'}
+        Em <b>${esc(c.proxima.nome)}</b>, ${c.proxima.passou} ordem(ns) já passaram e ${c.proxima.faltam.length} ficaram atrás: daí para frente o setor recebe produto incompleto.
+        Para fechar: ${ordensFaltantes(c.proxima)} <small class="cod">${nf(c.proxima.pecas)} pç</small></div>
+    </div>`).join('');
+
+  const linhas=cs.map(c=>{
+    /* JUNTO é NEUTRO, não atenção. Laranja diria "tem problema aqui" e
+       contradiria a própria nota da tela: junto é o estado que se quer. Se o
+       conjunto também está atrasado, quem diz isso é "Onde travou" — misturar
+       as duas leituras num selo só faz o usuário desconfiar das duas. */
+    const est=c.completo?['ok','completo']:c.naoComecou?['neutro','não começou']
+      :c.disperso?['critico','quebrado']:['neutro','junto'];
+    return `<tr>
+      <td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
+      <td class="n">${c.ordens}</td>
+      <td class="n">${nf(c.pecas)}</td>
+      <td class="n">${pctBarra(c.pct)}</td>
+      <td>${c.fechada?`<b>${esc(c.fechada.nome)}</b>`:'<small>nenhuma fase fechada</small>'}</td>
+      <td>${c.proxima?`<b>${esc(c.proxima.nome)}</b>`:'—'}</td>
+      <td class="n">${c.completo||c.naoComecou?'—'
+        :c.proxima.passou?`<span class="c-critico"><b>${c.proxima.passou}/${c.proxima.tem}</b></span> <small class="cod">${nf(c.proxima.liberadas)} pç</small>`
+        :'<b>0</b>'}</td>
+      <td class="n ${c.proxima&&c.proxima.faltam.length?'c-critico':''}">${c.proxima?`${c.proxima.faltam.length} <small class="cod">${nf(c.proxima.pecas)} pç</small>`:'—'}</td>
+      <td class="cod">${c.proxima?ordensFaltantes(c.proxima,4):''}</td>
+      <td><span class="selo ${est[0]}">${est[1]}</span></td></tr>`;});
+
+  const pior=quebrados[0];
+  const estado=quebrados.length?'critico':'ok';
+  const veredito=`<div class="veredito ${estado}">
+      <span class="ico" aria-hidden="true">${quebrados.length?'!':'✓'}</span>
+      <div class="txt"><h2>${!cs.length?'Nenhuma ordem de componente nos filtros atuais'
+          :quebrados.length?`${quebrados.length} de ${cs.length} produto${cs.length>1?'s':''} não fecha${quebrados.length>1?'m':''} para o setor da frente`
+          :`Os ${cs.length} produto${cs.length>1?'s':''} do recorte estão inteiros — o setor da frente roda completo`}</h2>
+        <p>${pior?`Comece por <b>${esc(pior.rotulo||pior.cod)}</b>: ${Math.round(pior.pct*100)}% pronto, roda inteiro até <b>${pior.fechada?esc(pior.fechada.nome):'nenhuma fase'}</b> e trava em <b>${esc(pior.proxima.nome)}</b> — ${pior.proxima.faltam.length} ordem(ns), ${nf(pior.proxima.pecas)} pç atrás.`
+          :juntos.length?`Nenhum conjunto quebrado: cada produto está inteiro até onde parou, e o setor seguinte pega o produto completo. É o estado que se quer.`
+          :completos.length?`${completos.length} produto(s) com o roteiro inteiro apontado.`:'Sem ordens de componente nos filtros atuais.'}</p></div>
+      <div class="big">${quebrados.length}<span>conjuntos quebrados</span></div>
+    </div>`;
+
+  p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Conjunto incompleto</h2>
+      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${volumes?` · ${volumes} ordem(ns) de volume fora do agrupamento`:''}</span></div>
+    ${cartoes?`<div class="setores">${cartoes}</div>`:''}
+    ${linhas.length?`<div class="wrap"><table><thead><tr>
+      <th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th><th class="n">% pronto</th>
+      <th>Roda inteiro até</th><th>Trava em</th><th class="n">Correram na frente</th><th class="n">Falta fechar</th>
+      <th>Quais ordens</th><th>Estado</th></tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
+      :'<div class="vazio">Nenhuma ordem de componente com os filtros atuais.</div>'}
+    ${cs.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
+      <summary>Roteiro de cada conjunto <small>fase por fase, quantas ordens já passaram</small></summary>
+      <div style="padding:var(--md) 0">${cs.map(c=>`<div class="linha" style="margin-bottom:var(--sm)">
+        <b>${esc(c.rotulo||c.cod)}</b> <small class="cod">${esc(c.cod)}</small><br>${faixaFases(c)}</div>`).join('')}</div>
+    </details></div>`:''}
+    <div class="nota"><b>Conjunto</b> = todas as ordens de componente do mesmo produto, agrupadas pelo <b>1º bloco do código da peça</b>:
+      387 SPACE, 778 SLEEP, 754 INTENSE. O 2º bloco é a peça dentro do produto, o 3º é a cor. O relatório não traz estrutura de produto — o código traz, e é ele que agrupa.
+      <b>% pronto</b> = avanço do roteiro do conjunto em <b>peça-fase</b>: quanto das quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia, pela mesma regra do resto da tela.
+      <b>Não é percentual de tempo.</b> Peça-fase trata corte e embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz — ler "60% pronto" como "60% do tempo" erra o que falta.
+      <b>Roda inteiro até</b> = a última fase que <b>todas</b> as ordens do conjunto passaram. O setor seguinte a ela pega o produto completo; daí para frente, não.
+      <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
+      <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
+      <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
+      <b>Ordens de volume</b> (código 5…) ficam fora do agrupamento: todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só. O volume é o resultado do conjunto, não peça dele.
+      Fase fora da conta (setor que não aponta, EMBALAR isenta) não bloqueia conjunto.</div>`;
+}
+
 /* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
 function desenharAchados(p){
   const a=achFiltrados();
@@ -2244,7 +2508,7 @@ function desenharLeitura(p){
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
    escreve o próprio HTML; `render` embrulha a chamada num try para que uma
    seção quebrada mostre o erro no lugar dela, sem levar a tela junto. */
-const DESENHO={setor:desenharSetor,trav:desenharTravadas,apont:desenharApont,ach:desenharAchados,
+const DESENHO={setor:desenharSetor,trav:desenharTravadas,apont:desenharApont,conj:desenharConjuntos,ach:desenharAchados,
   ord:desenharOrdens,op:desenharOperacoes,leit:desenharLeitura};
 function desenhar(){
   const fn=DESENHO[ABA]; if(!fn) return;
@@ -2296,7 +2560,15 @@ function filtrosNoPapel(secao){
     const n=opsFiltradas(true).filter(foraDoDetalhe).length;
     if(n) t.push(`${n} fase(s) fora da conta sem apontamento não listada(s)`);
   }
-  return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
+  const base=t.length?t.join(' · '):'nenhum filtro — lote inteiro';
+  /* O volume fora do agrupamento NÃO é filtro escolhido pelo usuário: é o
+     recorte estrutural da tela. Somado à lista, fazia "nenhum filtro" sumir e
+     a folha parecer filtrada quando não estava. */
+  if(secao==='conj'){
+    const v=ordensFiltradas().filter(o=>tipoProduto(o.produto)==='volume').length;
+    if(v) return `${base} · ${v} ordem(ns) de volume fora do agrupamento por produto`;
+  }
+  return base;
 }
 
 /* Imprime a LISTA QUE ESTÁ NA TELA, com o mesmo recorte que o usuário está
@@ -2492,6 +2764,25 @@ $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
     pos.deveria.op.descricao,br(pos.deveria.op.previsao),pos.esta.op.descricao,br(pos.esta.op.previsao),
     pos.naoComecou?'Parado - nada apontado':pos.parcial?'Parado - parcial':'Parado - aguardando',pos.fasesAtras,pos.diasParada==null?'':pos.diasParada,dec(pos.pecas),
     of.faseConcluida?of.faseConcluida.fase:'',of.faseConcluida?dec(of.faseConcluida.qtd):'']));
+
+/* Uma linha por CONJUNTO x FASE: é o grão que o Power BI precisa para montar
+   "% de conjuntos fechados por fase" ao longo dos lotes. Uma linha por
+   conjunto perderia o roteiro, que é onde está a informação. */
+/* Percentual no CSV vai como fração 0–1 com 4 casas: o Power BI formata como
+   % e a divisão original fica preservada. `dec` não arredonda, então o corte
+   é feito aqui — sem ele sai "0,6666666666666666" em toda linha. */
+const pct4=v=>dec(Math.round((v||0)*10000)/10000);
+$('#btnCsvConj').onclick=()=>csv('conjuntos.csv',
+  ['Produto','CodigoProduto','Ordens','Pecas','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
+   'RodaInteiroAte','TravaEm','Fase','SeqFase','OrdensNaFase','OrdensQuePassaram','PctPassouFase',
+   'PecasQuePassaram','OrdensAtras','PecasAFazer','FaseFechada','OrdensFaltantes'],
+  conjuntos().flatMap(c=>c.fases.map((x,i)=>[
+    c.rotulo,c.cod,c.ordens,dec(c.pecas),
+    c.completo?'completo':c.naoComecou?'nao comecou':c.disperso?'quebrado':'junto',
+    pct4(c.pct),dec(c.pf),dec(c.pfTotal),
+    c.fechada?c.fechada.nome:'',c.proxima?c.proxima.nome:'',
+    x.nome,i+1,x.tem,x.passou,pct4(x.pct),dec(x.liberadas),x.faltam.length,dec(x.pecas),
+    x.passou===x.tem?'sim':'nao',x.faltam.map(o=>o.of).join(' ')])));
 
 $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
