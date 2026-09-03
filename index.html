@@ -408,11 +408,6 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-rank .qtd{text-align:right;font-size:9pt;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .doc-rank .marca{font-size:7pt;text-transform:uppercase;letter-spacing:.2pt;text-align:right;white-space:nowrap}
 
-  .doc-resumo{display:flex;gap:8mm;border:1pt solid #000;padding:2.5mm 3mm;margin-bottom:4mm}
-  .doc-resumo div{flex:1}
-  .doc-resumo .v{font-size:16pt;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
-  .doc-resumo .r{font-size:7.5pt;text-transform:uppercase;letter-spacing:.4pt}
-
   /* O setor FLUI entre páginas em vez de pular inteiro para a próxima.
      Forçar cada setor a caber numa folha gastava uma página por setor —
      doze folhas para pouco mais de cem linhas, o que ninguém imprime duas
@@ -624,6 +619,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.1.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Refatoração interna, sem mudança de comportamento.</b> Tela, folhas impressas e CSVs foram comparados byte a byte antes e depois, em dois lotes de teste.</li>
+    <li>A conta de "quanto cada setor deve" passou a existir em <b>um único lugar</b>: veredito, ranking, lateral e folha dos líderes não podem mais divergir entre si.</li>
+    <li>Cada seção da tela virou uma função própria; código morto da folha antiga foi removido.</li>
+  </ul>
   <h3>2.1.0 — 03/09/2026</h3>
   <ul>
     <li><b>Ordens de reposição</b> — abertas a partir de perda — passam a ser reconhecidas e marcadas. Elas nascem depois do lote e trazem previsão própria, então o prazo delas não se compara com o das demais.</li>
@@ -1184,10 +1185,8 @@ function analisar(docs,ref,flagEmb){
 
 /* ============================================================================
    ESTADO E UI
-/* ============================================================================
-   ESTADO E UI
    ========================================================================== */
-const VERSAO='2.1.0';
+const VERSAO='2.1.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1495,6 +1494,50 @@ function pecasDistintas(faltas){
   return Object.values(porOrdem).reduce((s,v)=>s+v,0);
 }
 
+/**
+ * FALTAS AGRUPADAS POR SETOR — a conta é uma só.
+ *
+ * Veredito, ranking da tela, lista da lateral, ranking impresso e blocos da
+ * folha dos líderes precisam concordar sobre quantos apontamentos e quantas
+ * peças cada setor deve. Antes cada um refazia o agrupamento do seu jeito; a
+ * primeira divergência entre tela e papel seria descoberta na reunião.
+ *
+ * Devolve um setor por linha, na ordem em que aparece nas faltas, SEM ordenar:
+ * cada uso ordena pelo critério que faz sentido para ele.
+ *   n         apontamentos a fazer no setor
+ *   furos     quantos deles têm prova de que a peça passou (esquecidos)
+ *   pecas     peças distintas (ver pecasDistintas)
+ *   somaPecas soma simples das fases — válida dentro de um setor, usada no
+ *             cabeçalho do bloco impresso
+ */
+function agregarPorSetor(faltas){
+  const m=new Map();
+  faltas.forEach(x=>{
+    let r=m.get(x.op.descricao);
+    if(!r) m.set(x.op.descricao, r={nome:x.op.descricao,n:0,furos:0,somaPecas:0,itens:[]});
+    r.n++; r.somaPecas+=x.pecas; if(x.furo)r.furos++; r.itens.push(x);
+  });
+  return [...m.values()].map(r=>({...r,pecas:pecasDistintas(r.itens)}));
+}
+/* Rótulo e motivo de uma falta, como aparecem na tela, no papel e no CSV.
+   Escritos aqui uma vez: eram cinco cópias da mesma tripla de condições. */
+const rotuloFalta=(x,longo)=>x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?(longo?'sem quantidade':'sem qtd'):'pendente';
+const motivoFalta=x=>x.prova||(x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo');
+const rankSetores=faltas=>agregarPorSetor(faltas).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
+
+/* A frase que abre a tela e a folha: quantos, de que tipo, em quantos setores. */
+const plural=(n,sing,suf='s')=>n>1?sing+suf:sing;
+function tituloVeredito(faltas,furos,rank){
+  if(furos.length){
+    const k=rank.filter(r=>r.furos).length;
+    return `${furos.length} ${plural(furos.length,'apontamento')} ${plural(furos.length,'esquecido')} em ${k} ${plural(k,'setor','es')}`;
+  }
+  if(faltas.length)
+    return `${faltas.length} ${plural(faltas.length,'apontamento')} ${plural(faltas.length,'pendente')} em ${rank.length} ${plural(rank.length,'setor','es')}`;
+  return 'Nenhum apontamento pendente';
+}
+const marcaSetor=r=>r.furos?`${r.furos} ${plural(r.furos,'esquecido')}`:`${r.n} a apontar`;
+
 function faltasFiltradas(){
   const f=filtros();
   return faltasApontamento(ordensFiltradas(),$('#fRef').value,$('#fEmb').checked)
@@ -1534,7 +1577,15 @@ function renderAviso(){
   $('#avisoLista').innerHTML=com.flatMap(d=>d.avisos.map(a=>`<li><strong>${esc(d.arquivo)}</strong> — ${esc(a)}</li>`)).join('');
 }
 
-function renderResposta(){
+/**
+ * O RESUMO GERAL, CALCULADO UMA VEZ.
+ *
+ * Tudo que a lateral e o topo da tela mostram sai desta estrutura: veredito,
+ * ranking, cartões, contexto, lista de setores e contadores do menu. Calcular
+ * aqui e só desenhar depois garante que dois lugares da tela nunca mostrem
+ * números diferentes para a mesma pergunta.
+ */
+function resumoGeral(){
   const ord=ordensFiltradas(), ach=achFiltrados(), ref=$('#fRef').value;
   const abertas=ord.filter(o=>!o.conclusao);
   const vencidas=abertas.filter(o=>{const z=prazoOrdem(o);return z.ref&&z.ref<ref;});
@@ -1551,111 +1602,126 @@ function renderResposta(){
   const noPrazo=julgaveis.filter(o=>o.conclusao<=prazoOrdem(o).ref).length;
   const ader=julgaveis.length?Math.round(noPrazo/julgaveis.length*100):null;
   const saldo=ord.reduce((s,o)=>s+Math.max(0,(o.qtd||0)-(o.pronto||0)),0);
+
+  // A pergunta que a ferramenta existe para responder: o apontamento
+  // esquecido antes do pendente — um é cobrança, o outro é dúvida.
+  const falt=faltasFiltradas(), furos=falt.filter(x=>x.furo);
+  const rank=rankSetores(falt);
+  const ops=opsFiltradas();
+  return {
+    ord, ach, ref, abertas, vencidas, crit, ops,
+    julgaveis, inconsist, nRepo, noPrazo, ader, saldo,
+    falt, furos, rank,
+    pcFuro:pecasDistintas(furos), pcFalt:pecasDistintas(falt),
+    estado:furos.length?'critico':falt.length?'atencao':'ok',
+    setoresComFalta:rank.length,
+    setoresTodos:new Set(ops.map(({op})=>op.descricao)).size,
+  };
+}
+
+/* ---- VEREDITO: a conclusão escrita, não o número solto ----
+   Quem abre a tela precisa saber em dois segundos se há problema, onde e
+   quanto. Um número sozinho não responde nenhuma das três; uma frase com o
+   número dentro responde as três de uma vez. */
+function renderVeredito(g){
+  const pior=g.rank[0];
+  const detalhe=g.falt.length
+    ? `${nf(g.pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${g.furos.length?' — nos esquecidos, faltou apontar, não produzir.':'.'}`
+    : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
+  $('#veredito').innerHTML=`<div class="veredito ${g.estado}">
+      <span class="ico" aria-hidden="true">${g.estado==='ok'?'✓':'!'}</span>
+      <div class="txt"><h2>${tituloVeredito(g.falt,g.furos,g.rank)}</h2><p>${detalhe}</p></div>
+      <div class="big">${nf(g.pcFalt)}<span>peças sem apontar</span></div>
+    </div>`;
+}
+
+/* ---- RANKING: comparar barra é mais rápido que comparar número ---- */
+function renderRanking(g){
+  const maior=Math.max(1,...g.rank.map(r=>r.pecas));
+  $('#ranking').innerHTML=g.rank.length?`<div class="ranking">
+      <div class="tit">Onde falta apontamento — do pior para o menor</div>
+      <div class="grade">
+      ${g.rank.map(r=>`<div class="l">
+        <span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span>
+        <span class="barra" role="img" aria-label="${nf(r.pecas)} peças">
+          <i class="${r.furos?'esq':'pend'}" style="width:${Math.max(3,Math.round(r.pecas/maior*100))}%"></i></span>
+        <span class="qtd">${nf(r.pecas)} pç</span>
+        <span class="marca ${r.furos?'esq':'pend'}">${marcaSetor(r)}</span>
+      </div>`).join('')}
+      </div>
+    </div>`:'';
+}
+
+/* ---- CARTÕES: os quatro números, com a explicação embaixo ---- */
+function renderCartoes(g){
   // Cor só quando há problema: "0" colorido treina o olho a ignorar a cor.
   const bloco=(rot,val,unid,expl,cls)=>`
     <div class="b"><span class="rotulo">${rot}</span>
       <div class="linha"><span class="valor num ${cls||''}">${val}</span>${unid?`<span class="unidade">${unid}</span>`:''}</div>
       <p class="explica">${expl}</p></div>`;
-  // A pergunta que a ferramenta existe para responder vem primeiro, e o
-  // apontamento esquecido antes do pendente: um é cobrança, o outro é dúvida.
-  const falt=faltasFiltradas(), furos=falt.filter(x=>x.furo);
-  const pcFuro=pecasDistintas(furos), pcFalt=pecasDistintas(falt);
-  const setores=[...new Set(falt.map(x=>x.op.descricao))];
-  /* ---- VEREDITO: a conclusão escrita, não o número solto ----
-     Quem abre a tela precisa saber em dois segundos se há problema, onde e
-     quanto. Um número sozinho não responde nenhuma das três; uma frase com o
-     número dentro responde as três de uma vez. */
-  const porSetor={};
-  falt.forEach(x=>{
-    const r=porSetor[x.op.descricao]=porSetor[x.op.descricao]||{n:0,furos:0,pecas:0,itens:[]};
-    r.n++; if(x.furo)r.furos++; r.itens.push(x);
-  });
-  const rank=Object.entries(porSetor)
-    .map(([nome,r])=>({nome,...r,pecas:pecasDistintas(r.itens)}))
-    .sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
-  const maiorPç=Math.max(1,...rank.map(r=>r.pecas));
-  const pior=rank[0];
-
-  const estado=furos.length?'critico':falt.length?'atencao':'ok';
-  const titulo=furos.length
-    ? `${furos.length} apontamento${furos.length>1?'s':''} esquecido${furos.length>1?'s':''} em ${rank.filter(r=>r.furos).length} setor${rank.filter(r=>r.furos).length>1?'es':''}`
-    : falt.length
-    ? `${falt.length} apontamento${falt.length>1?'s':''} pendente${falt.length>1?'s':''} em ${rank.length} setor${rank.length>1?'es':''}`
-    : 'Nenhum apontamento pendente';
-  const detalhe=falt.length
-    ? `${nf(pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${furos.length?' — nos esquecidos, faltou apontar, não produzir.':'.'}`
-    : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
-  /* Na tela de um setor, o veredito GERAL sai: ele fala do lote inteiro (62
-     peças) enquanto o cabeçalho do setor fala do setor (42). Dois títulos com
-     números diferentes na mesma tela é o que faz o leitor parar para descobrir
-     qual vale — o oposto de responder em dois segundos. */
-  const noSetor=ABA==='setor'&&SETOR_SEL;
-  $('#veredito').classList.toggle('hide',!!noSetor);
-  $('#ranking').classList.toggle('hide',!!noSetor);
-  $('#veredito').innerHTML=`<div class="veredito ${estado}">
-      <span class="ico" aria-hidden="true">${estado==='ok'?'✓':'!'}</span>
-      <div class="txt"><h2>${titulo}</h2><p>${detalhe}</p></div>
-      <div class="big">${nf(pcFalt)}<span>peças sem apontar</span></div>
-    </div>`;
-
-  /* ---- RANKING: comparar barra é mais rápido que comparar número ---- */
-  $('#ranking').innerHTML=rank.length?`<div class="ranking">
-      <div class="tit">Onde falta apontamento — do pior para o menor</div>
-      <div class="grade">
-      ${rank.map(r=>`<div class="l">
-        <span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span>
-        <span class="barra" role="img" aria-label="${nf(r.pecas)} peças">
-          <i class="${r.furos?'esq':'pend'}" style="width:${Math.max(3,Math.round(r.pecas/maiorPç*100))}%"></i></span>
-        <span class="qtd">${nf(r.pecas)} pç</span>
-        <span class="marca ${r.furos?'esq':'pend'}">${r.furos?`${r.furos} esquecido${r.furos>1?'s':''}`:`${r.n} a apontar`}</span>
-      </div>`).join('')}
-      </div>
-    </div>`:'';
-
   $('#resposta').innerHTML=
-    bloco('Apontamento esquecido',furos.length,'op.',
-      `${nf(pcFuro)} peça(s) produzidas sem registro no sistema`,furos.length?'c-critico':'c-ok')+
-    bloco('Peças sem apontamento',nf(pcFalt),'pç',
-      `peças distintas · ${falt.length} apontamento(s) a fazer em ${setores.length} setor(es)`,pcFalt?'c-atencao':'c-ok')+
-    bloco('Ordens com achado crítico',crit.length,'',`de ${ord.length} ordens no filtro`,crit.length?'c-critico':'')+
-    bloco('Em aberto e vencidas',vencidas.length,'',`${abertas.length} em aberto · referência ${br(ref)}`,vencidas.length?'c-critico':'');
+    bloco('Apontamento esquecido',g.furos.length,'op.',
+      `${nf(g.pcFuro)} peça(s) produzidas sem registro no sistema`,g.furos.length?'c-critico':'c-ok')+
+    bloco('Peças sem apontamento',nf(g.pcFalt),'pç',
+      `peças distintas · ${g.falt.length} apontamento(s) a fazer em ${g.setoresComFalta} setor(es)`,g.pcFalt?'c-atencao':'c-ok')+
+    bloco('Ordens com achado crítico',g.crit.length,'',`de ${g.ord.length} ordens no filtro`,g.crit.length?'c-critico':'')+
+    bloco('Em aberto e vencidas',g.vencidas.length,'',`${g.abertas.length} em aberto · referência ${br(g.ref)}`,g.vencidas.length?'c-critico':'');
+}
 
+/* ---- CONTEXTO: o tamanho do recorte, para o leitor saber de que universo fala ---- */
+function renderContexto(g){
   const lotes=new Set(DOCS.map(d=>d.lote).filter(Boolean));
-  const ctx=[['Arquivos',DOCS.length],['Lotes',lotes.size],['Ordens',ord.length],['Operações',opsFiltradas().length],
-    ['Achados',ach.length],['Saldo a produzir',nf(saldo)+' pç'],
-    ['Aderência (previsão do processo)',(ader==null?'—':ader+'%')+` · ${noPrazo}/${julgaveis.length}`],
-    ...(inconsist?[['Fora da conta (fechada antes do roteiro)',inconsist]]:[]),
-    ...(nRepo?[['Ordens de reposição',nRepo]]:[]),
+  const ctx=[['Arquivos',DOCS.length],['Lotes',lotes.size],['Ordens',g.ord.length],['Operações',g.ops.length],
+    ['Achados',g.ach.length],['Saldo a produzir',nf(g.saldo)+' pç'],
+    ['Aderência (previsão do processo)',(g.ader==null?'—':g.ader+'%')+` · ${g.noPrazo}/${g.julgaveis.length}`],
+    ...(g.inconsist?[['Fora da conta (fechada antes do roteiro)',g.inconsist]]:[]),
+    ...(g.nRepo?[['Ordens de reposição',g.nRepo]]:[]),
     ['Relatório emitido em',br(DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop())||'—']];
   $('#contexto').innerHTML=ctx.map(([r,v])=>`<div class="i"><span>${r}</span><b class="num">${v}</b></div>`).join('');
+}
 
-  // Contadores do menu saem daqui, nao do desenho de cada seção: escritos só
-  // ao desenhar, o do painel ficava em "0" até alguém abrir o painel.
-  const setoresTodos=new Set(opsFiltradas().map(({op})=>op.descricao));
-  $('#nSet').textContent=setoresTodos.size;
-  $('#nSet').classList.toggle('alerta',falt.some(x=>x.furo));
-
-  /* ---- LISTA DE SETORES na lateral ----
-     Ordenada pelo que exige conversa primeiro. O ponto colorido tem a
-     quantidade ao lado: quem não distingue a cor lê o número. */
-  const setoresLat=setoresDisponiveis().map(nome=>{
-    const r=porSetor[nome];
-    return {nome, furos:r?r.furos:0, n:r?r.n:0, pecas:r?pecasDistintas(r.itens):0};
+/* ---- LISTA DE SETORES na lateral ----
+   Ordenada pelo que exige conversa primeiro. O ponto colorido tem a
+   quantidade ao lado: quem não distingue a cor lê o número. */
+function renderListaSetores(g){
+  const porNome=new Map(g.rank.map(r=>[r.nome,r]));
+  const setores=setoresDisponiveis().map(nome=>{
+    const r=porNome.get(nome);
+    return {nome, furos:r?r.furos:0, n:r?r.n:0, pecas:r?r.pecas:0};
   }).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
-  $('#listaSetores').innerHTML=setoresLat.map(x=>`
+  $('#listaSetores').innerHTML=setores.map(x=>`
     <button type="button" class="setor-item" data-setor="${esc(x.nome)}"
       ${SETOR_SEL===x.nome&&ABA==='setor'?'aria-current="page"':''} title="${esc(x.nome)}">
       <span class="pt ${x.furos?'c':x.n?'a':'o'}" aria-hidden="true"></span>
       <span class="nm">${esc(x.nome)}</span>
       <span class="qt">${x.pecas?nf(x.pecas)+' pç':'—'}</span>
     </button>`).join('');
+}
 
-  $('#nApont').textContent=falt.length;
-  $('#nApont').classList.toggle('alerta',furos.length>0);
-  $('#nApont').title=furos.length?`${furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
-  $('#nAch').textContent=ach.length;
-  $('#nOrd').textContent=ord.length;
-  $('#nOp').textContent=opsFiltradas().length;
+/* Contadores do menu saem daqui, não do desenho de cada seção: escritos só
+   ao desenhar, o do painel ficava em "0" até alguém abrir o painel. */
+function renderContadores(g){
+  $('#nSet').textContent=g.setoresTodos;
+  $('#nSet').classList.toggle('alerta',g.furos.length>0);
+  $('#nApont').textContent=g.falt.length;
+  $('#nApont').classList.toggle('alerta',g.furos.length>0);
+  $('#nApont').title=g.furos.length?`${g.furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
+  $('#nAch').textContent=g.ach.length;
+  $('#nOrd').textContent=g.ord.length;
+  $('#nOp').textContent=g.ops.length;
+}
+
+function renderResposta(){
+  const g=resumoGeral();
+  /* Na tela de um setor, o veredito GERAL sai: ele fala do lote inteiro (62
+     peças) enquanto o cabeçalho do setor fala do setor (42). Dois títulos com
+     números diferentes na mesma tela é o que faz o leitor parar para descobrir
+     qual vale — o oposto de responder em dois segundos. */
+  const noSetor=ABA==='setor'&&!!SETOR_SEL;
+  $('#veredito').classList.toggle('hide',noSetor);
+  $('#ranking').classList.toggle('hide',noSetor);
+  renderVeredito(g); renderRanking(g); renderCartoes(g); renderContexto(g);
+  renderListaSetores(g); renderContadores(g);
 }
 
 $('#listaSetores').onclick=e=>{
@@ -1705,43 +1771,42 @@ function render(){
   }
 }
 
-function desenhar(){
-  const p=$('#painel'), ref=$('#fRef').value;
-  if(ABA==='setor'){
-    if(!SETOR_SEL){ p.innerHTML='<div class="vazio">Escolha um setor na lateral.</div>'; return; }
-    const d=dadosDoSetor(SETOR_SEL);
-    const estado=d.furos?'critico':(d.faltas.length||d.parado.length)?'atencao':'ok';
-    const frase=d.furos
-      ? `<b>${d.furos} apontamento${d.furos>1?'s':''} esquecido${d.furos>1?'s':''}</b> — faltou o registro, não a produção.`
-      : d.faltas.length
-      ? `<b>${d.faltas.length} apontamento${d.faltas.length>1?'s':''} pendente${d.faltas.length>1?'s':''}</b> — sem prova de que a peça passou; confirmar no setor.`
-      : d.parado.length
-      ? `<b>${d.parado.length} operação(ões) vencida(s)</b>, começadas e paradas no meio.`
-      : 'Nenhuma pendência de apontamento neste setor, com os filtros atuais.';
+/* ---- TELA DE UM SETOR: o que o líder precisa cobrar, e só isso ---- */
+function desenharSetor(p,ref){
+  if(!SETOR_SEL){ p.innerHTML='<div class="vazio">Escolha um setor na lateral.</div>'; return; }
+  const d=dadosDoSetor(SETOR_SEL);
+  const estado=d.furos?'critico':(d.faltas.length||d.parado.length)?'atencao':'ok';
+  const frase=d.furos
+    ? `<b>${d.furos} ${plural(d.furos,'apontamento')} ${plural(d.furos,'esquecido')}</b> — faltou o registro, não a produção.`
+    : d.faltas.length
+    ? `<b>${d.faltas.length} ${plural(d.faltas.length,'apontamento')} ${plural(d.faltas.length,'pendente')}</b> — sem prova de que a peça passou; confirmar no setor.`
+    : d.parado.length
+    ? `<b>${d.parado.length} operação(ões) vencida(s)</b>, começadas e paradas no meio.`
+    : 'Nenhuma pendência de apontamento neste setor, com os filtros atuais.';
 
-    const linhaFalta=x=>`<tr>
-      <td><span class="selo ${x.furo?'critico':'atencao'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem qtd':'pendente'}</span></td>
+  const linhaFalta=x=>`<tr>
+      <td><span class="selo ${x.furo?'critico':'atencao'}">${rotuloFalta(x)}</span></td>
       <td class="cod">${esc(x.of.of)}</td><td>${esc(x.of.descricao)}</td>
       <td class="cod">${esc(x.of.produto)}</td>
       <td class="cod">${br(x.op.previsao)}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
       <td class="n"><b>${nf(x.pecas)}</b></td>
-      <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td></tr>`;
+      <td>${esc(motivoFalta(x))}</td></tr>`;
 
-    const linhaParado=({of,op})=>{
-      const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
-      return `<tr><td><span class="selo critico">vencida</span></td>
+  const linhaParado=({of,op})=>{
+    const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
+    return `<tr><td><span class="selo critico">vencida</span></td>
         <td class="cod">${esc(of.of)}</td><td>${esc(of.descricao)}</td><td class="cod">${esc(of.produto)}</td>
         <td class="cod">${br(op.previsao)}</td><td class="n">${prazo(dias(op.previsao,ref))}</td>
         <td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
         <td class="n c-atencao"><b>${nf(saldo)}</b></td></tr>`;};
 
-    const linhaConc=({of,op})=>{
-      const dv=op.previsao?dias(op.previsao,op.conclusao):null;
-      return `<tr><td class="cod">${esc(of.of)}</td><td>${esc(of.descricao)}</td><td class="cod">${esc(of.produto)}</td>
+  const linhaConc=({of,op})=>{
+    const dv=op.previsao?dias(op.previsao,op.conclusao):null;
+    return `<tr><td class="cod">${esc(of.of)}</td><td>${esc(of.descricao)}</td><td class="cod">${esc(of.produto)}</td>
         <td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
         <td class="n">${desvio(dv)}</td><td class="n">${nf(op.qtd)}</td></tr>`;};
 
-    p.innerHTML=`
+  p.innerHTML=`
       <div class="setorTopo ${estado}">
         <div><h1>${esc(d.nome)}</h1><p class="frase">${frase}</p></div>
         <div class="big">${nf(d.pecas)}<span>peças sem apontar</span></div>
@@ -1793,63 +1858,68 @@ function desenhar(){
         <b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou.
         <b>Parado no setor</b> = a fase começou, tem apontamento parcial e não terminou.</div>`;
 
-    const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
-    const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
-    return;
-  }
-  if(ABA==='apont'){
-    const f=faltasFiltradas();
-    const furos=f.filter(x=>x.furo), pecasFuro=pecasDistintas(furos);
-    const pecas=pecasDistintas(f);
-    p.innerHTML=tabela('Sem apontamento',
-      `${f.length} apontamento(s) a fazer · ${nf(pecas)} peça(s) sem registro · ${furos.length} com apontamento comprovadamente esquecido (${nf(pecasFuro)} pç)`,
-      [{h:'Situação'},{h:'Setor'},{h:'Peças',n:1},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Previsão'},{h:'Por que'},{h:'Lote'}],
-      f.map(x=>`<tr class="sev-${x.furo?'critico':'atencao'}">
-        <td><span class="selo ${x.furo?'critico':'atencao'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem quantidade':'pendente'}</span></td>
+  const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
+  const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
+}
+
+/* ---- SEM APONTAMENTO: a lista completa, todos os setores ---- */
+function desenharApont(p){
+  const f=faltasFiltradas();
+  const furos=f.filter(x=>x.furo), pecasFuro=pecasDistintas(furos);
+  const pecas=pecasDistintas(f);
+  p.innerHTML=tabela('Sem apontamento',
+    `${f.length} apontamento(s) a fazer · ${nf(pecas)} peça(s) sem registro · ${furos.length} com apontamento comprovadamente esquecido (${nf(pecasFuro)} pç)`,
+    [{h:'Situação'},{h:'Setor'},{h:'Peças',n:1},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Previsão'},{h:'Por que'},{h:'Lote'}],
+    f.map(x=>`<tr class="sev-${x.furo?'critico':'atencao'}">
+        <td><span class="selo ${x.furo?'critico':'atencao'}">${rotuloFalta(x,true)}</span></td>
         <td class="forte">${esc(x.op.descricao)}</td>
         <td class="n"><b>${nf(x.pecas)}</b></td>
         <td class="cod">${esc(x.of.of)}</td><td class="cod">${esc(x.of.produto)}</td>
         <td>${esc(x.of.descricao)}</td>
         <td class="cod">${br(x.op.previsao)}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
-        <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td>
+        <td>${esc(motivoFalta(x))}</td>
         <td class="cod">${esc(x.of.lote)}</td></tr>`),
-      '<b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada. Como a peça não pula fase, faltou o <b>registro</b>, não a produção. '+
-      '<b>Sem quantidade</b> = a fase tem data de conclusão mas nenhuma peça lançada; o setor fechou sem apontar o que produziu. '+
-      '<b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde. '+
-      'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
-      '<b>Atenção ao somar:</b> uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três. '+
-      'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
-  }
-  if(ABA==='ach'){
-    const a=achFiltrados();
-    p.innerHTML=tabela('Achados',`${a.length} achado(s) · ordenados por severidade`,
-      [{h:'Sev.'},{h:'Regra'},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Operação'},{h:'Detalhe'},{h:'Lote'}],
-      a.map(x=>`<tr class="sev-${x.sev}"><td><span class="selo ${x.sev}">${x.sev==='atencao'?'atenção':x.sev==='critico'?'crítico':x.sev}</span></td>
+    '<b>Esquecido</b> = a fase seguinte já tem apontamento, ou a ordem foi fechada. Como a peça não pula fase, faltou o <b>registro</b>, não a produção. '+
+    '<b>Sem quantidade</b> = a fase tem data de conclusão mas nenhuma peça lançada; o setor fechou sem apontar o que produziu. '+
+    '<b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou. Pode ser falta de apontamento ou de produção; só o setor responde. '+
+    'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
+    '<b>Atenção ao somar:</b> uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três. '+
+    'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
+}
+
+/* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
+function desenharAchados(p){
+  const a=achFiltrados();
+  p.innerHTML=tabela('Achados',`${a.length} achado(s) · ordenados por severidade`,
+    [{h:'Sev.'},{h:'Regra'},{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Operação'},{h:'Detalhe'},{h:'Lote'}],
+    a.map(x=>`<tr class="sev-${x.sev}"><td><span class="selo ${x.sev}">${x.sev==='atencao'?'atenção':x.sev==='critico'?'crítico':x.sev}</span></td>
         <td class="forte">${esc(x.regra)}</td><td class="cod">${esc(x.of)}</td><td class="cod">${esc(x.produto)}</td>
         <td>${esc(x.descricao)}</td><td>${esc(x.operacao)}</td><td>${esc(x.detalhe)}</td><td class="cod">${esc(x.lote)}</td></tr>`),
-      '<b>Crítico</b> = dado inconsistente ou prazo estourado, exige ação. <b>Atenção</b> = divergência que precisa de conferência. <b>Info</b> = registro histórico, não exige ação imediata.');
-  }
-  if(ABA==='ord'){
-    const ord=ordensFiltradas();
-    p.innerHTML=tabela('Ordens',
-      `${ord.length} ordem(ns) · prazo julgado pela última previsão do processo, em DIAS ÚTEIS (seg a sex, sem feriado)`,
-      [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Prev. processo'},{h:'Prev. ordem'},{h:'Conclusão'},
-       {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
-      ord.map(o=>{
-        const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
-        let sit,cls;
-        if(pz.inconsistente){sit='Inconsistente';cls='critico';}
-        else if(pz.reposicao){sit=concl?'Reposição concluída':'Reposição';cls=concl?'ok':'neutro';}
-        else if(concl){sit='Concluída';cls='ok';}
-        else if(pz.ref&&pz.ref<ref){sit='Vencida';cls='critico';}
-        else {sit='Em aberto';cls='neutro';}
-        // Fechada antes de o roteiro começar: o desvio não é desempenho, e
-        // exibi-lo como adiantamento é o que fazia a ordem parecer exemplar.
-        const dv=pz.inconsistente?null
-          :concl&&pz.ref?dias(pz.ref,o.conclusao)
-          :!concl&&pz.ref?dias(pz.ref,ref):null;
-        const feitas=o.operacoes.filter(x=>x.conclusao).length;
-        return `<tr${pz.inconsistente?' class="sev-critico"':''}>
+    '<b>Crítico</b> = dado inconsistente ou prazo estourado, exige ação. <b>Atenção</b> = divergência que precisa de conferência. <b>Info</b> = registro histórico, não exige ação imediata.');
+}
+
+/* ---- ORDENS: prazo julgado pela última previsão do processo ---- */
+function desenharOrdens(p,ref){
+  const ord=ordensFiltradas();
+  p.innerHTML=tabela('Ordens',
+    `${ord.length} ordem(ns) · prazo julgado pela última previsão do processo, em DIAS ÚTEIS (seg a sex, sem feriado)`,
+    [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Prev. processo'},{h:'Prev. ordem'},{h:'Conclusão'},
+     {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
+    ord.map(o=>{
+      const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
+      let sit,cls;
+      if(pz.inconsistente){sit='Inconsistente';cls='critico';}
+      else if(pz.reposicao){sit=concl?'Reposição concluída':'Reposição';cls=concl?'ok':'neutro';}
+      else if(concl){sit='Concluída';cls='ok';}
+      else if(pz.ref&&pz.ref<ref){sit='Vencida';cls='critico';}
+      else {sit='Em aberto';cls='neutro';}
+      // Fechada antes de o roteiro começar: o desvio não é desempenho, e
+      // exibi-lo como adiantamento é o que fazia a ordem parecer exemplar.
+      const dv=pz.inconsistente?null
+        :concl&&pz.ref?dias(pz.ref,o.conclusao)
+        :!concl&&pz.ref?dias(pz.ref,ref):null;
+      const feitas=o.operacoes.filter(x=>x.conclusao).length;
+      return `<tr${pz.inconsistente?' class="sev-critico"':''}>
           <td class="cod">${esc(o.of)}</td><td class="cod">${esc(o.produto)}</td><td>${esc(o.descricao)}</td>
           <td><span class="selo ${cls}">${sit}</span></td>
           <td class="cod"${pz.doProcesso?'':' title="A ordem não tem previsão de processo; o prazo cai para a previsão da ordem"'}>${pz.doProcesso?br(pz.fim):'—'}</td>
@@ -1859,83 +1929,99 @@ function desenhar(){
           <td class="n">${nf(o.qtd)}</td><td class="n">${nf(o.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td class="n">${feitas}/${o.operacoes.length}</td><td class="cod">${esc(o.lote)}</td></tr>`;}),
-      '<b>Todo prazo desta tela é contado em DIAS ÚTEIS</b> — segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado. '+
-      '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
-      '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
-      '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência. '+
-      '<b>Reposição</b> = ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.');
-  }
-  if(ABA==='op'){
-    const ops=opsFiltradas();
-    p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
-      [{h:'Ordem'},{h:'Produto'},{h:'Peça'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},
-       {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
-      ops.map(({of,op})=>{
-        const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
-        const dv=op.previsao?dias(op.previsao,op.conclusao||ref):null;
-        let sit,cls;
-        if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
-        else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
-        else {sit='Pendente';cls='neutro';}
-        // O código do produto não diz nada numa reunião: "479.006.001" só vira
-        // informação com o nome da peça ao lado.
-        return `<tr><td class="cod">${esc(of.of)}</td><td class="cod">${esc(of.produto)}</td>
+    '<b>Todo prazo desta tela é contado em DIAS ÚTEIS</b> — segunda a sexta, descontando feriados nacionais e de São Paulo. A fábrica não produz no fim de semana, e contar dias corridos inflaria todo atraso que cruza um sábado. '+
+    '<b>Prev. processo</b> = última Previsão do Processo do roteiro, que é quando a ordem deveria estar pronta. É por ela que o prazo é julgado. '+
+    '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
+    '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência. '+
+    '<b>Reposição</b> = ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.');
+}
+
+/* ---- OPERAÇÕES: uma linha por fase do roteiro ---- */
+function desenharOperacoes(p,ref){
+  const ops=opsFiltradas();
+  p.innerHTML=tabela('Operações',`${ops.length} operação(ões) · nas pendentes o prazo é medido contra ${br(ref)}`,
+    [{h:'Ordem'},{h:'Produto'},{h:'Peça'},{h:'Seq',n:1},{h:'Operação'},{h:'Prev. processo'},{h:'Conclusão'},
+     {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Situação'}],
+    ops.map(({of,op})=>{
+      const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
+      const dv=op.previsao?dias(op.previsao,op.conclusao||ref):null;
+      let sit,cls;
+      if(op.conclusao){sit=dv>0?'Concluída com atraso':'Concluída';cls=dv>0?'atencao':'ok';}
+      else if(op.previsao&&op.previsao<ref){sit='Vencida';cls='critico';}
+      else {sit='Pendente';cls='neutro';}
+      // O código do produto não diz nada numa reunião: "479.006.001" só vira
+      // informação com o nome da peça ao lado.
+      return `<tr><td class="cod">${esc(of.of)}</td><td class="cod">${esc(of.produto)}</td>
           <td>${esc(of.descricao)}</td><td class="n">${op.seq}</td>
           <td class="forte">${esc(op.descricao)}</td><td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
           <td class="n">${op.conclusao?desvio(dv):prazo(dv)}</td><td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
           <td class="n ${saldo?'c-atencao':''}">${saldo?nf(saldo):''}</td>
           <td><span class="selo ${cls}">${sit}</span></td></tr>`;}));
-  }
-  if(ABA==='ader'){
-    /* PAINEL POR SETOR — a pergunta é "onde o lote está travado agora".
-       Setor = processo do roteiro (CORTAR, PINTAR UV, EMBALAR...), que é o
-       centro de trabalho onde a operação acontece. O cartão responde antes
-       da tabela: a tabela detalha depois, para quem quer o número exato. */
-    const m={};
-    opsFiltradas().forEach(({of,op})=>{
-      const k=op.descricao, r=m[k]=m[k]||{n:0,conc:0,prazo:0,soma:0,cnt:0,pend:0,venc:0,saldo:0,semApont:0,furos:0,pcApont:0,ordens:new Set(),travada:null};
-      r.n++; r.ordens.add(of.of);
-      if(op.conclusao){r.conc++;
-        if(op.previsao){const d=dias(op.previsao,op.conclusao);r.soma+=d;r.cnt++;if(d<=0)r.prazo++;}
-      }else{
-        r.pend++;
-        const conta=!of.conclusao&&!ignoraEmbalagem(of,op,$('#fEmb').checked);
-        if(conta&&op.previsao&&op.previsao<ref){
-          r.venc++;
-          const d=dias(op.previsao,ref);
-          // A ordem que mais tempo está parada aqui: é por ela que se começa.
-          if(!r.travada||d>r.travada.d) r.travada={of:of.of,produto:of.produto,peca:of.descricao,d,prev:op.previsao};
-        }
+}
+
+/**
+ * PAINEL POR SETOR — a pergunta é "onde o lote está travado agora".
+ *
+ * Setor = processo do roteiro (CORTAR, PINTAR UV, EMBALAR...), que é o centro
+ * de trabalho onde a operação acontece. Diferente de `dadosDoSetor`, este
+ * painel RESPEITA o filtro de operação (é uma seção como as outras) e conta
+ * como "vencida" toda operação sem conclusão e fora do prazo — inclusive as
+ * que estão na lista de faltas. A tela do setor separa as duas coisas; aqui a
+ * pergunta é só "está travado ou não".
+ */
+function painelPorSetor(ref){
+  const m={};
+  opsFiltradas().forEach(({of,op})=>{
+    const k=op.descricao, r=m[k]=m[k]||{n:0,conc:0,prazo:0,soma:0,cnt:0,pend:0,venc:0,saldo:0,semApont:0,furos:0,pcApont:0,ordens:new Set(),travada:null};
+    r.n++; r.ordens.add(of.of);
+    if(op.conclusao){r.conc++;
+      if(op.previsao){const d=dias(op.previsao,op.conclusao);r.soma+=d;r.cnt++;if(d<=0)r.prazo++;}
+    }else{
+      r.pend++;
+      const conta=!of.conclusao&&!ignoraEmbalagem(of,op,$('#fEmb').checked);
+      if(conta&&op.previsao&&op.previsao<ref){
+        r.venc++;
+        const d=dias(op.previsao,ref);
+        // A ordem que mais tempo está parada aqui: é por ela que se começa.
+        if(!r.travada||d>r.travada.d) r.travada={of:of.of,produto:of.produto,peca:of.descricao,d,prev:op.previsao};
       }
-      r.saldo+=Math.max(0,(op.qtd||0)-(op.pronto||0));
-    });
+    }
+    r.saldo+=Math.max(0,(op.qtd||0)-(op.pronto||0));
+  });
 
-    // Falta de apontamento por setor: e' o setor que aponta, entao e' por
-    // setor que se cobra. Sai da MESMA funcao da secao "Sem apontamento",
-    // para os dois numeros nunca discordarem.
-    faltasFiltradas().forEach(f=>{
-      const r=m[f.op.descricao]; if(!r)return;
-      r.semApont++; r.pcApont+=f.pecas; if(f.furo)r.furos++;
-    });
+  // Falta de apontamento por setor: é o setor que aponta, então é por setor
+  // que se cobra. Sai da MESMA função da seção "Sem apontamento", para os
+  // dois números nunca discordarem.
+  faltasFiltradas().forEach(f=>{
+    const r=m[f.op.descricao]; if(!r)return;
+    r.semApont++; r.pcApont+=f.pecas; if(f.furo)r.furos++;
+  });
 
-    const setores=Object.entries(m).map(([k,r])=>{
-      const estado=r.furos?'critico':r.venc?'critico':r.pend?'atencao':'ok';
-      const rotulo=r.furos?'esquecido':r.venc?'atrasado':r.pend?'em andamento':'concluído';
-      return {k,r,estado,rotulo,
-        ord:(r.furos?3:r.venc?2:r.pend?1:0)*1e12 + r.furos*1e9 + r.venc*1e6 + r.saldo};
-    }).sort((a,b)=>b.ord-a.ord||b.r.n-a.r.n);
+  return Object.entries(m).map(([k,r])=>{
+    const estado=r.furos?'critico':r.venc?'critico':r.pend?'atencao':'ok';
+    const rotulo=r.furos?'esquecido':r.venc?'atrasado':r.pend?'em andamento':'concluído';
+    return {k,r,estado,rotulo,
+      ord:(r.furos?3:r.venc?2:r.pend?1:0)*1e12 + r.furos*1e9 + r.venc*1e6 + r.saldo};
+  }).sort((a,b)=>b.ord-a.ord||b.r.n-a.r.n);
+}
 
-    const cartoes=setores.map(({k,r,estado,rotulo})=>{
-      const avanco=r.n?Math.round(r.conc/r.n*100):0;
-      const med=r.cnt?(r.soma/r.cnt):null;
-      return `<div class="setor ${estado}">
+/* O cartão responde antes da tabela: a tabela detalha depois, para quem quer
+   o número exato. */
+function desenharPainel(p,ref){
+  const setores=painelPorSetor(ref);
+  const fmtMed=med=>med==null?'—':(med>0?'+':'')+med.toFixed(1).replace('.',',');
+
+  const cartoes=setores.map(({k,r,estado,rotulo})=>{
+    const avanco=r.n?Math.round(r.conc/r.n*100):0;
+    const med=r.cnt?(r.soma/r.cnt):null;
+    return `<div class="setor ${estado}">
         <div class="topo"><span class="nome" title="${esc(k)}">${esc(k)}</span><span class="selo ${estado}">${rotulo}</span></div>
         <div class="numeros">
           <span class="n1"><span class="v ${r.venc?'c-critico':''}">${r.venc||'—'}</span><span class="r">Vencidas</span></span>
           <span class="n1"><span class="v ${r.semApont?'c-atencao':''}">${r.semApont||'—'}</span><span class="r">Sem apontar</span></span>
           <span class="n1"><span class="v ${r.pcApont?'c-atencao':''}">${r.pcApont?nf(r.pcApont):'—'}</span><span class="r">Pç sem registro</span></span>
           <span class="n1"><span class="v ${r.saldo?'c-atencao':''}">${r.saldo?nf(r.saldo):'—'}</span><span class="r">Saldo pç</span></span>
-          <span class="n1"><span class="v ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'—':(med>0?'+':'')+med.toFixed(1).replace('.',',')}</span><span class="r">Desvio méd. d.ú.</span></span>
+          <span class="n1"><span class="v ${med>0?'c-critico':med<0?'c-ok':''}">${fmtMed(med)}</span><span class="r">Desvio méd. d.ú.</span></span>
         </div>
         <div class="barra" role="img" aria-label="${avanco}% das operações concluídas"><i style="width:${avanco}%"></i></div>
         <div class="linha">${r.conc} de ${r.n} operações concluídas · ${r.ordens.size} ordem(ns)</div>
@@ -1947,20 +2033,20 @@ function desenhar(){
           : `<div class="linha">Nenhuma operação vencida neste setor</div>`}
       </div>`;}).join('');
 
-    const lin=setores.map(({k,r})=>{
-      const ad=r.cnt?Math.round(r.prazo/r.cnt*100):null;
-      const med=r.cnt?(r.soma/r.cnt):null;
-      return `<tr><td class="forte">${esc(k)}</td><td class="n">${r.ordens.size}</td><td class="n">${r.n}</td><td class="n">${r.conc}</td>
+  const lin=setores.map(({k,r})=>{
+    const ad=r.cnt?Math.round(r.prazo/r.cnt*100):null;
+    const med=r.cnt?(r.soma/r.cnt):null;
+    return `<tr><td class="forte">${esc(k)}</td><td class="n">${r.ordens.size}</td><td class="n">${r.n}</td><td class="n">${r.conc}</td>
         <td class="n ${r.semApont?'c-atencao':''}">${r.semApont||''}</td>
         <td class="n ${r.furos?'c-critico':''}">${r.furos||''}</td>
         <td class="n ${r.pcApont?'c-atencao':''}">${r.pcApont?nf(r.pcApont):''}</td>
         <td class="n ${r.venc?'c-critico':''}">${r.venc||''}</td>
         <td class="n">${ad==null?'':ad+'%'}</td>
-        <td class="n ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'':(med>0?'+':'')+med.toFixed(1).replace('.',',')+' d'}</td>
+        <td class="n ${med>0?'c-critico':med<0?'c-ok':''}">${med==null?'':fmtMed(med)+' d'}</td>
         <td class="n ${r.saldo?'c-atencao':''}">${r.saldo?nf(r.saldo):''}</td></tr>`;});
 
-    const criticos=setores.filter(x=>x.estado==='critico');
-    p.innerHTML=`<div class="cabecalhoSecao"><h2>Painel por setor</h2>
+  const criticos=setores.filter(x=>x.estado==='critico');
+  p.innerHTML=`<div class="cabecalhoSecao"><h2>Painel por setor</h2>
         <span class="meta">${setores.length} setor(es) · ${criticos.length?`${criticos.length} com operação vencida`:'nenhum com operação vencida'} · referência ${br(ref)}</span></div>
       ${setores.length?`<div class="setores">${cartoes}</div>`:'<div class="vazio">Nada encontrado com os filtros atuais.</div>'}
       ${setores.length?`<div class="cabecalhoSecao" style="border-top:1px solid var(--borda)"><h2>Aderência por setor</h2>
@@ -1972,13 +2058,15 @@ function desenhar(){
         <b>Vencidas</b> = operações sem conclusão, com previsão anterior a ${br(ref)}, em ordem ainda em aberto — o mesmo critério do achado "Operação vencida e não concluída". Operação pendente em ordem já concluída não é fila de trabalho: aparece nos Achados como inconsistência de apontamento.
         <b>Desvio médio</b> = média de (conclusão − previsão do processo) nas operações já concluídas, em <b>dias úteis</b>; positivo indica que o setor entrega depois do programado.
         <b>Saldo</b> = peças ainda não apontadas nas operações do setor.</div>`:''}`;
-  }
-  if(ABA==='leit'){
-    const m3=d=>d.ofs.reduce((s,o)=>s+(o.m3||0),0);
-    const cards=DOCS.map(d=>{
-      const confere=d.totalM3!=null&&Math.abs(m3(d)-d.totalM3)<=0.02;
-      const cls=d.erro?'erro':d.avisos.length?'atencao':'ok';
-      return `<div class="cartao ${cls}">
+}
+
+/* ---- LEITURA DOS ARQUIVOS: a prova de que o PDF foi lido inteiro ---- */
+function desenharLeitura(p){
+  const m3=d=>d.ofs.reduce((s,o)=>s+(o.m3||0),0);
+  const cards=DOCS.map(d=>{
+    const confere=d.totalM3!=null&&Math.abs(m3(d)-d.totalM3)<=0.02;
+    const cls=d.erro?'erro':d.avisos.length?'atencao':'ok';
+    return `<div class="cartao ${cls}">
         <div class="nome">${esc(d.arquivo)} ${confere?'<span class="selo ok">M³ confere</span>':''}</div>
         <div class="det">Lote ${esc(d.lote||'?')} — LT ${esc(d.lt||'?')} ${esc(d.descricao||'')} · ${d.paginas} página(s) ·
           início ${br(d.dataInicio)} · previsão ${br(d.dataPrevisao)} · relatório emitido em ${br(d.dataRelatorio)}<br>
@@ -1986,11 +2074,20 @@ function desenhar(){
           M³ lido <span class="num">${nf(m3(d),3)}</span> · M³ do rodapé <span class="num">${nf(d.totalM3,3)}</span></div>
         ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}">${esc(a)}</div>`).join('')}
       </div>`;});
-    p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
+  p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
       <div class="leitura">${cards.join('')}</div>
       <div class="nota">A conferência do total de M³ contra o rodapé do próprio relatório é a verificação automática de que o arquivo foi lido por inteiro.
       Se aparecer divergência ou linha não reconhecida, não confie nos números desta tela até revisar o PDF.</div>`;
-  }
+}
+
+/* Uma função por seção. Cada uma recebe o painel e a data de referência e
+   escreve o próprio HTML; `render` embrulha a chamada num try para que uma
+   seção quebrada mostre o erro no lugar dela, sem levar a tela junto. */
+const DESENHO={setor:desenharSetor,apont:desenharApont,ach:desenharAchados,
+  ord:desenharOrdens,op:desenharOperacoes,ader:desenharPainel,leit:desenharLeitura};
+function desenhar(){
+  const fn=DESENHO[ABA]; if(!fn) return;
+  fn($('#painel'), $('#fRef').value);
 }
 
 /* ============================================================================
@@ -2033,42 +2130,6 @@ function filtrosNoPapel(secao){
   return t.length?t.join(' · '):'nenhum filtro — lote inteiro';
 }
 
-/**
- * QUEM NÃO APONTOU, EM UMA TABELA SÓ.
- *
- * O corpo do documento já separa as pendências por setor, mas quem abre a
- * folha numa reunião precisa ver a responsabilidade consolidada antes de
- * entrar no detalhe: qual setor concentra o problema e qual é só respingo.
- * Ordenado por apontamento esquecido, que é o que tem prova.
- */
-function quadroSetores(faltas){
-  const m={};
-  faltas.forEach(x=>{
-    const r=m[x.op.descricao]=m[x.op.descricao]||{n:0,furos:0,pecas:0,pcFuro:0,ordens:new Set()};
-    r.n++; r.pecas+=x.pecas; r.ordens.add(x.of.of);
-    if(x.furo){ r.furos++; r.pcFuro+=x.pecas; }
-  });
-  const linhas=Object.entries(m)
-    .sort((a,b)=>b[1].furos-a[1].furos||b[1].pcFuro-a[1].pcFuro||b[1].pecas-a[1].pecas);
-  if(!linhas.length)return '';
-  return `<section class="doc-setor">
-    <h2>Responsabilidade por setor <span>quem deixou de apontar, e quanto · a soma das colunas de peças é maior que o lote, porque a mesma peça passa por vários setores</span></h2>
-    <table>
-      <colgroup><col style="width:26%"><col style="width:13%"><col style="width:16%"><col style="width:13%">
-        <col style="width:16%"><col style="width:16%"></colgroup>
-      <thead><tr><th>Setor</th><th class="n">Esquecidos</th><th class="n">Peças esquecidas</th>
-        <th class="n">A apontar</th><th class="n">Peças do setor</th><th class="n">Ordens</th></tr></thead>
-      <tbody>${linhas.map(([nome,r])=>`<tr>
-        <td><b>${esc(nome)}</b></td>
-        <td class="n">${r.furos?`<b>${r.furos}</b>`:'—'}</td>
-        <td class="n">${r.pcFuro?`<b>${nf(r.pcFuro)}</b>`:'—'}</td>
-        <td class="n">${r.n}</td>
-        <td class="n">${nf(r.pecas)}</td>
-        <td class="n">${r.ordens.size}</td></tr>`).join('')}</tbody>
-    </table>
-  </section>`;
-}
-
 /* Imprime a LISTA QUE ESTÁ NA TELA, com o mesmo recorte que o usuário está
    vendo. Serve para levar a evidência bruta quando alguém questiona o
    resumo — a tabela inteira, do jeito que o app leu o relatório. */
@@ -2106,16 +2167,12 @@ function montarImpresso(soSetor){
   const hoje=new Date().toISOString().slice(0,10);
 
   const furos=f.filter(x=>x.furo);
-  const pecas=pecasDistintas(f), pcFuro=pecasDistintas(furos);
-
-  // Setores ordenados pelo que exige conversa primeiro.
-  const porSetor={};
-  f.forEach(x=>{(porSetor[x.op.descricao]=porSetor[x.op.descricao]||[]).push(x);});
-  const setores=Object.entries(porSetor).map(([nome,itens])=>({
-    nome, itens,
-    furos:itens.filter(i=>i.furo).length,
-    pecas:itens.reduce((s,i)=>s+i.pecas,0),
-  })).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+  const pecas=pecasDistintas(f);
+  // A mesma agregação da tela, ordenada duas vezes: o ranking pelo critério
+  // do ranking da tela; os blocos de detalhe pelo que exige conversa primeiro,
+  // com o nome como desempate para a folha sair sempre na mesma ordem.
+  const rank=rankSetores(f);
+  const setores=agregarPorSetor(f).sort((a,b)=>b.furos-a.furos||b.somaPecas-a.somaPecas||a.nome.localeCompare(b.nome));
 
   const cab=`<div class="doc-topo">
       <div class="doc-marca">
@@ -2138,46 +2195,31 @@ function montarImpresso(soSetor){
     return;
   }
 
-  /* A conclusão primeiro, em uma frase. Os cinco números vêm depois, para
-     quem precisa do detalhe — não para quem só quer saber o que fazer. */
-  const porSetorImp={};
-  f.forEach(x=>{const r=porSetorImp[x.op.descricao]=porSetorImp[x.op.descricao]||{n:0,furos:0,itens:[]};
-    r.n++; if(x.furo)r.furos++; r.itens.push(x);});
-  const rankImp=Object.entries(porSetorImp).map(([nome,r])=>({nome,...r,pecas:pecasDistintas(r.itens)}))
-    .sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
-  const maiorImp=Math.max(1,...rankImp.map(r=>r.pecas));
-  const comFuro=rankImp.filter(r=>r.furos).length;
+  /* A conclusão primeiro, em uma frase; a comparação (ranking) depois; o
+     detalhe por setor por último, que é onde está a ação. */
+  const maior=Math.max(1,...rank.map(r=>r.pecas));
   const veredito=`<div class="doc-veredito">
       <div>
-        <h2>${furos.length?`${furos.length} apontamento${furos.length>1?'s':''} esquecido${furos.length>1?'s':''} em ${comFuro} setor${comFuro>1?'es':''}`
-                          :`${f.length} apontamento${f.length>1?'s':''} pendente${f.length>1?'s':''} em ${rankImp.length} setor${rankImp.length>1?'es':''}`}</h2>
-        <p>${rankImp.length?`Comece por <b>${esc(rankImp[0].nome)}</b>, com ${nf(rankImp[0].pecas)} peças sem registro.`:''}
+        <h2>${tituloVeredito(f,furos,rank)}</h2>
+        <p>${rank.length?`Comece por <b>${esc(rank[0].nome)}</b>, com ${nf(rank[0].pecas)} peças sem registro.`:''}
         ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}</p>
       </div>
       <div class="big">${nf(pecas)}<span>peças sem apontar</span></div>
     </div>`;
 
-  const rankHtml=rankImp.length?`<div class="doc-rank">
+  const rankHtml=rank.length?`<div class="doc-rank">
       <div class="tit">Onde falta apontamento — do pior para o menor</div>
-      <div class="grade">${rankImp.map(r=>`<div class="l">
+      <div class="grade">${rank.map(r=>`<div class="l">
         <span class="nome">${esc(r.nome)}</span>
-        <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maiorImp*100))}%"></i></span>
+        <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maior*100))}%"></i></span>
         <span class="qtd">${nf(r.pecas)}</span>
-        <span class="marca">${r.furos?`${r.furos} esquecido${r.furos>1?'s':''}`:`${r.n} a apontar`}</span>
+        <span class="marca">${marcaSetor(r)}</span>
       </div>`).join('')}</div>
     </div>`:'';
 
-  const resumo=`<div class="doc-resumo">
-      <div><div class="v">${furos.length}</div><div class="r">Apontamentos esquecidos</div></div>
-      <div><div class="v">${nf(pcFuro)}</div><div class="r">Peças que passaram sem registro</div></div>
-      <div><div class="v">${f.length}</div><div class="r">Apontamentos a fazer</div></div>
-      <div><div class="v">${nf(pecas)}</div><div class="r">Peças sem apontamento</div></div>
-      <div><div class="v">${setores.length}</div><div class="r">Setores envolvidos</div></div>
-    </div>`;
-
   const blocos=setores.map(st=>`<section class="doc-setor">
       <h2>${esc(st.nome)}
-        <span>${st.itens.length} operação(ões) · ${nf(st.pecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
+        <span>${st.itens.length} operação(ões) · ${nf(st.somaPecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
       <table>
         <colgroup>
           <col style="width:13%"><col style="width:9%"><col style="width:12%"><col style="width:17%">
@@ -2188,26 +2230,24 @@ function montarImpresso(soSetor){
           <th>Previsão</th><th class="n">Peças</th><th>Por que</th><th>Tratativa</th>
         </tr></thead>
         <tbody>${st.itens.map(x=>`<tr>
-          <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem qtd':'pendente'}</span></td>
+          <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${rotuloFalta(x)}</span></td>
           <td class="cod">${esc(x.of.of)}</td>
           <td class="cod">${esc(x.of.produto)}</td>
           <td>${esc(x.of.descricao)}</td>
           <td class="cod">${br(x.op.previsao)}${x.vencida?'<span class="venc">venc.</span>':''}</td>
           <td class="n">${nf(x.pecas)}</td>
-          <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td>
+          <td>${esc(motivoFalta(x))}</td>
           <td><span class="doc-tratativa"></span></td>
         </tr>`).join('')}</tbody>
       </table>
     </section>`).join('');
 
   /* MENOS, MAS MELHOR.
-     A folha trazia a mesma conclusão quatro vezes: veredito, ranking, um
+     A folha já trouxe a mesma conclusão quatro vezes: veredito, ranking, um
      resumo de cinco números e um quadro por setor. Informação repetida não
      reforça — faz o leitor procurar qual das quatro é a certa, que é
      exatamente o oposto de entender em dois segundos. Ficam o veredito (a
-     conclusão), o ranking (a comparação) e o detalhe por setor (a ação).
-     `resumo` e `quadroSetores` continuam no código, disponíveis se um dia a
-     folha precisar do consolidado numérico. */
+     conclusão), o ranking (a comparação) e o detalhe por setor (a ação). */
   $('#impresso').innerHTML=cab+veredito+rankHtml+blocos+rodape(ref);
 }
 
@@ -2245,12 +2285,7 @@ function imprimirFolhaSetor(nome){
   orientar('portrait'); montarImpresso(nome); window.print(); montarImpresso();
 }
 function csvDoSetor(nome){
-  const d=dadosDoSetor(nome);
-  csv(`sem-apontamento-${nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,
-    ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
-    d.faltas.map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',nome,dec(x.pecas),
-      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
-      x.prova||(x.vencida?'Previsao vencida, nada apontado':'Ainda dentro do prazo')]));
+  csvFaltas(`sem-apontamento-${nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`, dadosDoSetor(nome).faltas);
 }
 
 $('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); window.print(); };
@@ -2268,11 +2303,18 @@ function csv(nome,cols,linhas){
 }
 const dec=v=>v==null?'':String(v).replace('.',',');
 
-$('#btnCsvApont').onclick=()=>csv('sem-apontamento.csv',
-  ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
-  faltasFiltradas().map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',x.op.descricao,dec(x.pecas),x.of.arquivo,x.of.lote,x.of.of,
-    x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
-    x.prova||(x.vencida?'Previsao vencida, nada apontado':'Ainda dentro do prazo')]));
+/* Sem acento no motivo: o CSV vai para Excel e Power BI, onde acento em
+   texto de coluna vira problema de codificação com mais frequência do que
+   deveria. A tela e o papel usam o texto acentuado de `motivoFalta`. */
+const semAcento=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function csvFaltas(nome,faltas){
+  csv(nome,
+    ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
+    faltas.map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',x.op.descricao,dec(x.pecas),
+      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
+      x.prova||semAcento(motivoFalta(x))]));
+}
+$('#btnCsvApont').onclick=()=>csvFaltas('sem-apontamento.csv',faltasFiltradas());
 
 $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
