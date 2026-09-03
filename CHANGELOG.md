@@ -3,6 +3,41 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.5.0] — 2026-09-03
+
+### Corrigido
+
+- **Ordem de reposição derrubava a integridade do conjunto inteiro.** Achado nos dados reais do
+  LT 163: o CORTAR estava **99,98% pronto** (faltavam **5 peças em 20.168**) e a tela dizia que
+  INTENSE e SPACE não rodavam inteiros a partir de **nenhuma** fase.
+
+  As responsáveis eram 3 ordens de reposição de 1 e 2 peças (`804037`, `803971`, `803970`),
+  abertas depois por refugo. Ninguém para a serra para cortar 1 peça — é racional — mas o
+  indicador binário `Roda inteiro até` virava mentira sobre as outras 20.163.
+
+  **O argumento não é conveniência, é o próprio plano:** o ERP deu a essas ordens previsão
+  15 e 16/09, contra 03/09 do lote. Ele já declara que não são para hoje, e travar o conjunto
+  por elas era a tela ignorando o plano. É a mesma razão pela qual a reposição já ficava fora
+  da aderência: o prazo dela começa na criação da ordem, não no início do lote.
+
+- A reposição sai da conta de **fases** e do **% pronto**, não da tela: fica declarada na coluna
+  Ordens como `+N rep` (com peças no title), no cabeçalho da seção e no CSV
+  (`OrdensReposicaoFora`, `PecasReposicaoFora`). Se o recorte tiver **só** reposição, ela volta
+  a valer — senão o conjunto sumiria da lista.
+
+- O padrão passa a mostrar o que antes só aparecia marcando **"Ocultar reposição"** à mão. Um
+  indicador que precisa de filtro manual para não mentir vai mentir na maioria das vezes que
+  alguém olhar.
+
+### Notas
+
+- Conferido contra o LT 163 real (113 ordens, 3 lotes, 32 páginas, M³ confere): INTENSE passa de
+  "inteiro até NENHUMA" para **inteiro até CORTAR, trava em FURAR 41/43** — 2 ordens e 2.000 pç
+  atrás. `% pronto` (63%) não mudou, porque sempre contou a história certa; o binário é que era
+  sensível demais.
+- `avancoPorLote` (tela do setor) **não** muda: ali a reposição é trabalho real que o setor tem
+  de fazer, e a conta em peças já a dilui sozinha (o CORTAR aparece 100% com 2 ordens abertas).
+
 ## [3.4.0] — 2026-09-03
 
 ### Adicionado

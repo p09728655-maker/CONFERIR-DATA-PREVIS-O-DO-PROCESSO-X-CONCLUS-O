@@ -644,6 +644,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.5.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Ordem de reposição deixa de derrubar o conjunto.</b> No LT 163 o CORTAR estava <b>99,98% pronto</b> — faltavam 5 peças em 20.168 — e a tela dizia que INTENSE e SPACE não saíam inteiros de <b>nenhuma</b> fase. As responsáveis eram 3 ordens de reposição de 1 e 2 peças, abertas por refugo. Ninguém para a serra para cortar 1 peça, e o indicador virava mentira sobre as outras 20.163.</li>
+    <li><b>O argumento não é conveniência, é o próprio plano:</b> o ERP deu a essas ordens previsão 15 e 16/09, contra 03/09 do lote. Ele já diz que não são para hoje — travar o conjunto por elas era a tela ignorando o plano. Mesma razão pela qual a reposição já ficava fora da aderência.</li>
+    <li>A reposição sai da conta de fases e do % pronto, <b>não da tela</b>: fica declarada na coluna Ordens como <b>+N rep</b>, no cabeçalho e no CSV. Se o recorte tiver só reposição, ela volta a valer — senão o conjunto sumiria.</li>
+    <li>Com isso o padrão passa a mostrar o que antes só aparecia marcando "Ocultar reposição" à mão. Um indicador que precisa de filtro manual para não mentir vai mentir na maioria das vezes que alguém olhar.</li>
+  </ul>
   <h3>3.4.0 — 03/09/2026</h3>
   <ul>
     <li><b>Avanço por lote na tela de cada setor.</b> O CORTAR abre a tela dele e lê <b>lote 025139 — 100%</b>, <b>lote 025140 — 80%</b>, <b>lote 025141 — 0%</b>. A regra de despacho fica escrita no cabeçalho: <b>feche o mais adiantado antes de começar outro</b>, com a frase dizendo qual lote e quantas peças faltam.</li>
@@ -1405,7 +1412,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.4.0';
+const VERSAO='3.5.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1906,7 +1913,23 @@ function conjuntos(){
     if(!g.has(k))g.set(k,[]);
     g.get(k).push(o);
   });
-  return [...g.entries()].map(([cod,ofs])=>{
+  return [...g.entries()].map(([cod,todas])=>{
+    /* REPOSIÇÃO NÃO DECIDE A INTEGRIDADE DO CONJUNTO.
+       No LT 163 o CORTAR estava 99,98% pronto — faltavam 5 peças em 20.168 — e
+       o conjunto aparecia como "inteiro até NENHUMA fase". As responsáveis eram
+       3 ordens de reposição de 1 e 2 peças, abertas depois por refugo. Ninguém
+       para a serra para cortar 1 peça, e o indicador virava mentira sobre as
+       outras 20.163.
+       O argumento não é conveniência: o ERP deu a essas ordens previsão 15 e
+       16/09, contra 03/09 do lote. O próprio plano diz que elas não são para
+       hoje — travar o conjunto por elas é a tela ignorando o plano. É a mesma
+       razão pela qual a reposição já fica fora da aderência: o prazo dela
+       começa na criação da ordem, não no início do lote.
+       Elas saem da conta, não da tela: ficam declaradas com ordens e peças. Se
+       o recorte só tiver reposição, ela volta a valer — senão o conjunto
+       sumiria. */
+    const repo=todas.filter(ehReposicao);
+    const ofs=(repo.length&&repo.length<todas.length)?todas.filter(o=>!ehReposicao(o)):todas;
     const naConta=(o,nome)=>o.operacoes.filter(op=>op.descricao===nome&&!foraDaConta(o,op,flagEmb));
     const soma={}, cont={};
     ofs.forEach(o=>o.operacoes.forEach((op,i)=>{
@@ -1953,6 +1976,9 @@ function conjuntos(){
 
     return {cod, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
       pf, pfTotal, pct:pfTotal?pf/pfTotal:0,
+      // Reposição fora da conta acima, declarada aqui.
+      repo:ofs===todas?0:repo.length,
+      repoPecas:ofs===todas?0:repo.reduce((s,o)=>s+(o.qtd||0),0),
       ordens:ofs.length, pecas:ofs.reduce((s,o)=>s+(o.qtd||0),0),
       /* SEM FASE APONTÁVEL: todo o roteiro do conjunto está fora da conta
          (setor que não aponta, EMBALAR isenta). Não dá para afirmar nada sobre
@@ -2417,6 +2443,7 @@ function desenharConjuntos(p,ref){
   const quebrados=cs.filter(c=>c.disperso);
   const juntos=emCurso.filter(c=>!c.disperso);
   const completos=cs.filter(c=>c.completo);
+  const totRepo=cs.reduce((a,c)=>a+c.repo,0);
   const fora=ordensFiltradas().reduce((a,o)=>{const t=tipoProduto(o.produto);if(t!=='componente')a[t]=(a[t]||0)+1;return a;},{});
   const foraTxt=[fora.acabado?`${fora.acabado} de produto acabado`:'',fora.volume?`${fora.volume} de volume`:'']
     .filter(Boolean).join(' e ');
@@ -2449,7 +2476,7 @@ function desenharConjuntos(p,ref){
       :c.disperso?['critico','quebrado']:['neutro','junto'];
     return `<tr>
       <td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
-      <td class="n">${c.ordens}</td>
+      <td class="n">${c.ordens}${c.repo?` <small class="cod" title="${c.repo} ordem(ns) de reposição, ${nf(c.repoPecas)} pç, fora da conta de integridade">+${c.repo} rep</small>`:''}</td>
       <td class="n">${nf(c.pecas)}</td>
       <td class="n">${pctBarra(c.pct)}</td>
       <td>${c.fechada?`<b>${esc(c.fechada.nome)}</b>`:'<small>nenhuma fase fechada</small>'}</td>
@@ -2475,7 +2502,7 @@ function desenharConjuntos(p,ref){
     </div>`;
 
   p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Conjunto incompleto</h2>
-      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}</span></div>
+      <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}${totRepo?` · ${totRepo} ordem(ns) de reposição fora da conta de integridade`:''}</span></div>
     ${cartoes?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
       <th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th><th class="n">% pronto</th>
@@ -2501,6 +2528,9 @@ function desenharConjuntos(p,ref){
       <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
       <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
       <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
+      <b>Ordem de reposição não decide integridade.</b> Ela é aberta depois, por refugo, e o ERP dá a ela previsão posterior à do lote — o próprio plano diz que não é para hoje, e travar o conjunto por ela seria ignorar o plano.
+      Fica fora da conta de fases e do % pronto, declarada na coluna Ordens como <b>+N rep</b>. É a mesma razão pela qual a reposição já fica fora da aderência: o prazo dela começa na criação da ordem, não no início do lote.
+      Se o recorte tiver <b>só</b> reposição, ela volta a valer — senão o conjunto sumiria.
       <b>Só componente entra.</b> Produto acabado (1…) e volume (5…) são o <b>resultado</b> do conjunto, não peça dele, e ficam fora do agrupamento — a tela declara quantas ordens de cada tipo.
       A ordem do acabado tem praticamente só EMBALAR no roteiro, que é isenta de apontamento; e todo volume começa em 501, então agrupá-las pelo 1º bloco juntaria os volumes de todos os produtos num grupo só.
       <b>Sem fase apontável</b> = conjunto cujo roteiro inteiro está fora da conta (setor que não aponta, EMBALAR isenta). Sai da lista porque não dá para afirmar nada sobre kit completo — "todas as fases fecharam" seria verdade só por não haver fase nenhuma.
@@ -2917,11 +2947,11 @@ $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
    é feito aqui — sem ele sai "0,6666666666666666" em toda linha. */
 const pct4=v=>dec(Math.round((v||0)*10000)/10000);
 $('#btnCsvConj').onclick=()=>csv('conjuntos.csv',
-  ['Produto','CodigoProduto','Ordens','Pecas','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
+  ['Produto','CodigoProduto','Ordens','Pecas','OrdensReposicaoFora','PecasReposicaoFora','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
    'RodaInteiroAte','TravaEm','Fase','SeqFase','OrdensNaFase','OrdensQuePassaram','PctPassouFase',
    'PecasQuePassaram','OrdensAtras','PecasAFazer','FaseFechada','OrdensFaltantes'],
   conjuntos().flatMap(c=>c.fases.map((x,i)=>[
-    c.rotulo,c.cod,c.ordens,dec(c.pecas),
+    c.rotulo,c.cod,c.ordens,dec(c.pecas),c.repo,dec(c.repoPecas),
     c.completo?'completo':c.naoComecou?'nao comecou':c.disperso?'quebrado':'junto',
     pct4(c.pct),dec(c.pf),dec(c.pfTotal),
     c.fechada?c.fechada.nome:'',c.proxima?c.proxima.nome:'',

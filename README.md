@@ -375,6 +375,23 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Reposição não decide integridade
+
+Ordem de reposição é aberta depois, por refugo, e o ERP dá a ela previsão **posterior à do lote**.
+Ela fica fora da conta de fases e do `% pronto`, declarada como `+N rep` na coluna Ordens, no
+cabeçalho e no CSV.
+
+> Achado nos dados reais do LT 163: o CORTAR estava **99,98% pronto** — faltavam **5 peças em
+> 20.168** — e a tela dizia que INTENSE e SPACE não rodavam inteiros a partir de nenhuma fase. As
+> responsáveis eram 3 ordens de reposição de 1 e 2 peças. O ERP tinha dado a elas previsão 15 e
+> 16/09, contra 03/09 do lote: o próprio plano já dizia que não eram para hoje.
+
+É a mesma razão pela qual a reposição já ficava fora da aderência — o prazo dela começa na criação
+da ordem, não no início do lote. Se o recorte tiver **só** reposição, ela volta a valer.
+
+Na tela do **setor** a reposição continua contando: ali é trabalho real que o setor tem de fazer,
+e a conta em peças já a dilui sozinha.
+
 ### O que fica de fora
 
 **Só componente entra.** Produto acabado (`1…`) e volume (`5…`) são o **resultado** do conjunto, não
