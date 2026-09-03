@@ -3,6 +3,82 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.10.0] — 2026-09-03
+
+### Alterado
+
+- **A navegação lateral parou de rolar.** Com um lote aberto ela media **~1.540px numa viewport de
+  900px** — 1,7 tela; em notebook 1366×768 (~660px úteis), 2,3 telas. Agora mede **755px** e não rola
+  em monitor comum.
+
+  O incômodo não era o comprimento em si. `.lateral` é um *scroller* independente do `.conteudo`:
+  rolar o menu para alcançar o CSV **empurrava "Onde travou" para fora da tela**. O usuário perdia a
+  navegação para chegar a uma ação de baixa frequência.
+
+- **A causa era conteúdo, não densidade.** Dos nove blocos, apenas dois navegavam. **552px (36%) eram
+  ação disfarçada de navegação**: sete botões de CSV que espelhavam 1:1 sete telas já listadas 250px
+  acima, dois de impressão e um de instalar — treze `.item` com a mesma aparência dos quatro que
+  trocam de tela, dentro de um `<nav aria-label="Navegação">`.
+
+- **Exportar e imprimir viraram ação da tela**, na barra de filtros: **Folha da reunião**,
+  **Imprimir a lista** e **Exportar CSV**. O padrão já existia na tela do setor desde a 2.0.0
+  (`btnFolhaSetor` + `btnCsvSetor`).
+
+  O rótulo passa a declarar **o grão**, porque três CSVs deliberadamente **não** são a tela:
+  `operacoes.csv` leva o roteiro inteiro com a coluna `ForaDaConta`, `conjuntos.csv` é uma linha por
+  conjunto × fase e `operacao-fechada.csv` uma linha por lote × operação. Um botão dizendo "exporta
+  esta lista" mentiria sobre o número de linhas — e a promessa da ferramenta é que tela, papel e CSV
+  nunca discordem.
+
+  **A lista completa dos sete continua na lateral**, no rodapé, fechada, em "Todos os CSVs": quem
+  alimenta o Power BI baixa os sete de um lugar só, e espalhá-los por sete telas seria regressão
+  para o único usuário que de fato usa esse bloco.
+
+- **Os dois documentos de impressão deixaram de se parecer.** `btnImprimir` usa `faltasFiltradas()`
+  **independentemente da aba**: é sempre a folha de apontamento por setor. Ele ficava colado em
+  "Imprimir a lista da tela", com a mesma classe e o mesmo peso visual, sob o mesmo título "Reunião"
+  — de "Onde travou" ou de "Ordens", clicar nele **trocava de assunto em silêncio**. Agora tem rótulo
+  próprio (**Folha da reunião**), peso próprio e o escopo escrito na dica.
+
+- **Três zonas na lateral**, `grid-template-rows:auto minmax(0,1fr) auto`: topo (marca + "Abrir
+  PDFs"), miolo rolável (só navegação) e rodapé (arquivos, "Todos os CSVs", nota). Antes, o botão de
+  abrir arquivo, o estado do aplicativo e a nota de privacidade dependiam de 1.500px de rolagem.
+
+  Em janela com menos de 700px de altura as zonas se **dissolvem** e a lateral volta a rolar
+  inteira: com 326px fixos sobrariam ~330px de miolo, e rolar uma janelinha é pior que rolar a
+  coluna.
+
+- **Conferência subiu para antes de Setores.** É bloco fixo — quatro telas, sempre as mesmas — e é
+  por onde a manhã começa. Setores vem de `setoresDisponiveis()` e cresce com o roteiro; fica
+  embaixo para que a rolagem, quando houver, corte o que muda de lote para lote e não o que é sempre
+  igual. O setor aberto é trazido para dentro da faixa visível (`scrollIntoView`).
+
+- **"Arquivos abertos" fechado por padrão**, e o resumo **responde** em vez de rotular:
+  `3 arquivos · 6 lotes · 260 ordens` — diz mais numa linha do que a lista dizia em quatro, e para de
+  crescer sem teto (oito PDFs eram 360px de menu).
+
+  **Falha de leitura abre a lista sozinha** e marca o selo em vermelho; aviso sem falha marca em
+  âmbar. Esconder aviso atrás de um triângulo, numa ferramenta cuja premissa é "não use os números
+  antes de conferir", seria inaceitável. A mensagem de lote repetido passou a apontar o caminho
+  certo ("abra Arquivos abertos no rodapé da lateral").
+
+- **`<nav>` passou a envolver só navegação.** As ações saíram do landmark: quem chega pelo leitor de
+  tela encontrava nove comandos anunciados como itens de menu.
+
+- Densidade: `.item` 36→32px e `.setor-item` 34→30px **no mouse**, com 40/38px preservados em
+  `max-width:900px`, que é o modo de toque. Marca em duas linhas (o subtítulo já está no `<title>`,
+  na tela vazia e no cabeçalho de toda folha impressa), dicas fixas de bloco viradas `title`, e
+  "Instalar no aparelho" recolhido ao rodapé.
+
+### Corrigido
+
+- **PDF ilegível travava a tela sem reação nenhuma.** O registro de falha
+  (`{arquivo,ofs:[],avisos,erro:true}`) nascia **sem `lotes`**, e `montarFiltros` desreferencia
+  `d.lotes` logo em seguida — a exceção subia antes de `renderArquivos()` e `recalc()`, então nada
+  era desenhado, nem o aviso que existe justamente para relatar a falha. O mesmo valia para a tela
+  "Leitura dos arquivos" e para o rodapé impresso. O registro de falha passa a nascer com o mesmo
+  formato do registro lido.
+
 ## [3.9.1] — 2026-09-03
 
 ### Corrigido

@@ -73,7 +73,7 @@ Não há backend, não há banco, não há log de uso.
 A ferramenta pode ser instalada no computador, tablet ou celular e passa a abrir pelo ícone,
 como qualquer programa. Instalada, **funciona sem internet** — inclusive a leitura dos PDFs.
 
-- **Chrome / Edge (Windows, Android):** o item **Instalar no aparelho** aparece na lateral.
+- **Chrome / Edge (Windows, Android):** o item **Instalar no aparelho** aparece no rodapé da lateral.
 - **iPhone / iPad:** o Safari não oferece o botão. Use **Compartilhar → Adicionar à Tela de
   Início**; a própria lateral mostra essa instrução no iOS.
 
@@ -537,7 +537,11 @@ fora da conta. Não vira completo nem quebrado, porque não dá para afirmar nad
 
 ### Levar para a reunião com os líderes
 
-**Imprimir para os líderes** gera uma folha A4 agrupada **por setor** — cada líder responde pelo
+As três ações ficam na **barra de filtros**, no alto da tela: **Folha da reunião**, **Imprimir a
+lista** e **Exportar CSV**. Ficam ali, e não no menu, porque duas delas seguem o recorte que está
+na frente do usuário — e porque o menu é para navegar.
+
+**Folha da reunião** gera uma folha A4 agrupada **por setor** — cada líder responde pelo
 processo dele. Cada linha traz a situação, a ordem, o produto, a previsão, as peças, o motivo, e
 uma **coluna em branco para a tratativa**: o que a reunião decidir é escrito ali, e a folha vira o
 registro em vez de uma lista que se perde. Tem campo de assinatura do PPCP, do responsável pelo
@@ -549,14 +553,23 @@ operações e quantas peças, do pior para o menor. É a resposta consolidada an
 Feita para impressora preto e branco: a situação é dita por palavra, e o que é certeza
 (`ESQUECIDO`) leva tarja preta que sobrevive à fotocópia.
 
-**Imprimir a lista da tela** leva a tabela que está sendo vista (Operações, Ordens, Achados)
-deitada no papel — para quando alguém questiona o resumo e é preciso mostrar a evidência bruta.
+A folha da reunião é **sempre este documento**, seja qual for a tela aberta — é o apontamento por
+setor, não a tela impressa. Os dois botões ficam lado a lado justamente para que a diferença seja
+visível na hora de clicar.
+
+**Imprimir a lista** leva a tela que está sendo vista — conclusão, cartões, lista e nota — deitada
+no papel, para quando alguém questiona o resumo e é preciso mostrar a evidência bruta. Fica
+desabilitado nas telas sem lista.
 
 Os dois documentos **declaram o recorte impresso** no cabeçalho: qual filtro estava aplicado,
 ou que não havia nenhum. Uma folha que mostra 12 linhas de um lote com 195 operações, sem
 dizer que estava filtrada, faz o problema parecer menor do que é.
 
 ## 6.1 Exportação
+
+**Exportar CSV**, na barra da tela, baixa o CSV da tela aberta; o rótulo do botão declara o grão,
+porque três deles **não** são a tela (ver abaixo). A lista completa dos sete continua no rodapé do
+menu, em **Todos os CSVs**, para quem alimenta o Power BI de uma vez só.
 
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
@@ -620,6 +633,11 @@ usa laranja queimado, sempre acompanhado de texto — a cor nunca informa sozinh
 **Lateral escura, conteúdo claro.** A navegação nunca vai para a impressora nem para o Excel;
 o conteúdo, sim. Escurecer o menu separa navegação de conteúdo com a coisa mais barata que existe,
 a cor do fundo, e devolve o branco inteiro para o trabalho.
+
+**A lateral navega; a tela age.** Ela tem três zonas — marca e "Abrir PDFs" no topo, navegação no
+meio, arquivos e nota embaixo — e só a do meio rola. Exportar e imprimir não moram ali: são ações
+do recorte que está na frente do usuário e ficam na barra da tela. Menu que acumula ação cresce
+sem limite, e rolar até o fim dele custa justamente a navegação que se estava usando.
 
 ### Compatibilidade
 
