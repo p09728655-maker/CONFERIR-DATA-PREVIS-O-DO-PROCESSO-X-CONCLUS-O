@@ -553,6 +553,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <button type="button" class="item" data-t="trav" aria-current="page"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
     <button type="button" class="item" data-t="apont"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
     <button type="button" class="item" data-t="conj"><span class="t">Conjunto incompleto</span><span class="contagem" id="nConj">0</span></button>
+    <button type="button" class="item" data-t="fech"><span class="t">Operação fechada</span><span class="contagem" id="nFech">0</span></button>
     <details class="detalhe" id="navDetalhe">
       <summary>Detalhe <span class="grupo-dica">ordens, operações, achados, leitura</span></summary>
       <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
@@ -581,6 +582,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <button type="button" class="item" id="btnCsvApont"><span class="t">CSV sem apontamento</span></button>
     <button type="button" class="item" id="btnCsvTrav"><span class="t">CSV onde travou</span></button>
     <button type="button" class="item" id="btnCsvConj"><span class="t">CSV de conjuntos</span></button>
+    <button type="button" class="item" id="btnCsvFech"><span class="t">CSV de operação fechada</span></button>
     <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
     <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
     <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
@@ -673,6 +675,15 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.9.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Tela nova: Operação fechada por lote.</b> A regra do PPCP virada em número — o lote finaliza <b>por completo</b> cada operação antes de andar, independente de haver peça ou setup diferente dentro dele. Resto de operação é o que faz o produto nunca chegar inteiro na embalagem.</li>
+    <li>No LT 163 + LT 164: <b>12 de 27 operações fechadas, 44%</b>. Os três lotes que venciam 03/09 estão em 2/4, 1/4 e 1/5.</li>
+    <li><b>Fechada = todas as ordens do lote apontadas naquela operação</b>, não o percentual arredondado. 100% em peças com duas ordens abertas <b>não</b> é fechada — essa distinção é o ponto inteiro da regra.</li>
+    <li>O grão é <b>lote × operação</b>, como a fábrica fala ("o 025139 fechou o corte"), e por isso <b>EMBALAR aparece</b>: ela só existe nas ordens de acabado e volume e nunca entrava na matriz de conjuntos.</li>
+    <li><b>O que não se aponta não entra na meta.</b> Setor cego no ERP e EMBALAR isenta nunca recebem registro; contá-los como aberta tornaria 100% inatingível por construção. Ficam visíveis na faixa, com selo apagado, fora do denominador — a tela declara quantos são.</li>
+    <li>Cartão por lote com a faixa do roteiro, o prazo, o selo de vencido e <b>o que falta para fechar a primeira operação aberta</b>. Mais tabela completa e <b>CSV de operação fechada</b> para acumular o indicador entre lotes no Power BI.</li>
+  </ul>
   <h3>3.8.0 — 03/09/2026</h3>
   <ul>
     <li><b>Prazo por lote na tela do setor, e o vencido vem primeiro.</b> A tabela de avanço por lote não mostrava data nenhuma: ordenava só pelo mais adiantado. Com isso deixava passar a inversão de prioridade — o setor fechando o lote que vence depois e deixando aberto o que já venceu.</li>
@@ -1472,7 +1483,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.8.0';
+const VERSAO='3.9.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2385,6 +2396,11 @@ function renderContadores(g){
   const cj=conjuntos(), quebrados=cj.filter(c=>c.disperso).length;
   $('#nConj').textContent=quebrados;
   $('#nConj').classList.toggle('alerta',quebrados>0);
+  const F=fechamentoPorLote(), fechAbertas=F.total-F.fechadas;
+  $('#nFech').textContent=fechAbertas;
+  $('#nFech').classList.toggle('alerta',F.lotes.some(l=>l.vencido));
+  $('#nFech').title=fechAbertas?`${fechAbertas} de ${F.total} operações do lote ainda não fecharam por completo`
+    :'Todas as operações dos lotes estão fechadas';
   $('#nConj').title=quebrados?`${quebrados} produto(s) com parte do conjunto adiante e parte atrás`
     :`${cj.length} produto(s) no recorte, nenhum conjunto quebrado`;
   $('#nAch').textContent=achFiltrados().length;
@@ -2417,7 +2433,7 @@ $('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
   renderResposta(); render();};
 
 const SECOES={setor:'Setor',trav:'Onde travou',apont:'Sem apontamento',conj:'Conjunto incompleto',
-  ach:'Achados',ord:'Ordens',op:'Operações',leit:'Leitura dos arquivos'};
+  fech:'Operação fechada por lote',ach:'Achados',ord:'Ordens',op:'Operações',leit:'Leitura dos arquivos'};
 // Setor aberto na tela dedicada. Independente do filtro de operação da barra:
 // o filtro muda TODAS as telas, e abrir o setor do líder não pode reescrever o
 // recorte que o usuário montou para a conferência.
@@ -2748,6 +2764,92 @@ function frentes(){
   return {cs,linhas,abertas,fechadas,zeradas};
 }
 
+/**
+ * OPERAÇÃO FECHADA POR LOTE — a regra do PPCP virada em número.
+ *
+ * A REGRA: o lote tem de finalizar POR COMPLETO cada operação antes de andar,
+ * independente de haver peça diferente ou setup diferente dentro dele. Resto
+ * de operação é o que faz o produto nunca chegar inteiro na embalagem.
+ *
+ * O grão é LOTE × OPERAÇÃO, e não conjunto × setor como na matriz de frentes.
+ * Três diferenças que importam:
+ *   - inclui EMBALAR, que só existe nas ordens de acabado e volume e por isso
+ *     nunca aparece na matriz de conjuntos — e é justamente onde a regra dói;
+ *   - inclui setor que ainda não aponta no ERP, declarado, porque a pergunta
+ *     aqui é "fechou?" e não "é cobrável?";
+ *   - é como a fábrica fala: "o 025139 fechou o corte".
+ *
+ * FECHADA = todas as ordens do lote naquela operação apontadas. Não é o
+ * percentual arredondado: 100% em peças com duas ordens abertas NÃO é fechada,
+ * e essa distinção é o ponto inteiro da regra.
+ *
+ * Reposição fica de fora, como no resto da tela: o ERP dá a ela previsão
+ * posterior à do lote, então cobrá-la junto seria cobrar o que o próprio plano
+ * não pede para hoje. A tela declara quantas saíram.
+ */
+function fechamentoPorLote(){
+  const f=filtros(), ref=$('#fRef').value, flagEmb=$('#fEmb').checked;
+  const ord=ordemRoteiro();
+  const porLote=new Map();
+  const lotesInfo={};
+  DOCS.flatMap(d=>d.lotes).forEach(l=>lotesInfo[l.lote]={lt:l.lt,desc:l.descricao,prev:l.dataPrevisao});
+  let repo=0;
+  DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f)).forEach(of=>{
+    if(ehReposicao(of)){ repo++; return; }
+    const k=of.lote||'—';
+    if(!porLote.has(k)) porLote.set(k,new Map());
+    const ops=porLote.get(k);
+    of.operacoes.forEach(op=>{
+      if(!ops.has(op.descricao)) ops.set(op.descricao,{nome:op.descricao,qtd:0,feito:0,ordens:new Set(),abertas:[],prev:null,naoApontavel:true});
+      const x=ops.get(op.descricao);
+      // Basta UMA ordem apontável para a operação entrar na conta do lote.
+      if(!foraDaConta(of,op,flagEmb)) x.naoApontavel=false;
+      x.qtd+=op.qtd||0;
+      x.feito+=op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
+      x.ordens.add(of.of);
+      if(!apontada(op)){
+        x.abertas.push({of,op,falta:(op.qtd||0)-Math.min(op.pronto||0,op.qtd||0)});
+        if(op.previsao&&(!x.prev||op.previsao<x.prev)) x.prev=op.previsao;
+      }
+    });
+  });
+  const lotes=[...porLote.entries()].map(([lote,m])=>{
+    const ops=[...m.values()]
+      .map(x=>({...x, ordens:x.ordens.size,
+        pct:x.qtd?x.feito/x.qtd:0,
+        fechada:x.abertas.length===0,
+        falta:x.abertas.reduce((s,a)=>s+a.falta,0),
+        /* Ordens abertas SEM REPETIR: uma ordem com três passes do mesmo setor
+           aparecia três vezes na lista de "para fechar". */
+        ordensAbertas:[...new Set(x.abertas.map(a=>a.of.of))],
+        vencida:!!x.prev&&x.prev<ref&&!x.naoApontavel}))
+      .sort((a,b)=>(ord[a.nome]==null?99:ord[a.nome])-(ord[b.nome]==null?99:ord[b.nome])||a.nome.localeCompare(b.nome));
+    /* O QUE NÃO SE APONTA NÃO ENTRA NA META.
+       Setor cego no ERP e EMBALAR isenta nunca recebem registro — contá-los
+       como "aberta" tornaria 100% inatingível por construção, e uma meta que
+       não se alcança não é meta, é ruído. Eles continuam VISÍVEIS na faixa,
+       com selo próprio, porque a pergunta "e a embalagem?" é legítima; só não
+       entram no denominador. */
+    const conta=ops.filter(x=>!x.naoApontavel);
+    const fechadas=conta.filter(x=>x.fechada).length;
+    const info=lotesInfo[lote]||{};
+    // A primeira aberta é a ação: fechar as de trás antes de empurrar as da frente.
+    const primeira=conta.find(x=>!x.fechada)||null;
+    return {lote, lt:info.lt||null, desc:info.desc||'', prev:info.prev||null,
+      vencido:!!info.prev&&info.prev<ref&&fechadas<conta.length,
+      ops, fechadas, total:conta.length, naoApontaveis:ops.length-conta.length, primeira,
+      pct:conta.length?fechadas/conta.length:0};
+  }).sort((a,b)=>
+    // Vencido primeiro, depois pelo prazo do lote, depois pelo que falta menos.
+    (b.vencido?1:0)-(a.vencido?1:0)
+    ||String(a.prev||'9999').localeCompare(String(b.prev||'9999'))
+    ||(b.pct-a.pct)||String(a.lote).localeCompare(String(b.lote)));
+  const total=lotes.reduce((s,l)=>s+l.total,0);
+  const fechadas=lotes.reduce((s,l)=>s+l.fechadas,0);
+  const naoApontaveis=lotes.reduce((s,l)=>s+l.naoApontaveis,0);
+  return {lotes,total,fechadas,repo,naoApontaveis,pct:total?fechadas/total:0};
+}
+
 function desenharConjuntos(p,ref){
   const todos=conjuntos();
   const cs=todos.filter(c=>!c.semFase);
@@ -2874,6 +2976,73 @@ function desenharConjuntos(p,ref){
       Fase fora da conta não bloqueia conjunto.</div>`;
 }
 
+/* ---- OPERAÇÃO FECHADA: a regra do lote, lote a lote ---- */
+function desenharFechamento(p,ref){
+  const F=fechamentoPorLote();
+  if(!F.lotes.length){ p.innerHTML='<div class="vazio">Nenhuma ordem com os filtros atuais.</div>'; return; }
+  const abertos=F.total-F.fechadas;
+  const vencidos=F.lotes.filter(l=>l.vencido);
+  const alvo=vencidos[0]||F.lotes.find(l=>l.primeira)||null;
+
+  const faixa=l=>l.ops.map(x=>{
+    if(x.naoApontavel)
+      return `<span class="selo neutro" style="opacity:.6" title="${esc(x.nome)}: não recebe apontamento no ERP — fora da meta, mas listada">${esc(x.nome)} —</span>`;
+    const cls=x.fechada?'ok':x.vencida?'critico':'neutro';
+    const t=x.fechada?'fechada — todas as ordens do lote apontadas aqui'
+      :`aberta — ${x.ordensAbertas.length} ordem(ns), ${nf(x.falta)} pç${x.prev?`, prazo ${br(x.prev)}`:''}`;
+    return `<span class="selo ${cls}" title="${esc(x.nome)}: ${t}">${esc(x.nome)} ${x.fechada?'✓':Math.round(x.pct*100)+'%'}</span>`;
+  }).join(' ');
+
+  const cartoes=F.lotes.map(l=>`<div class="setor ${l.vencido?'critico':l.fechadas===l.total?'':'atencao'}">
+      <div class="topo"><span class="nome" title="${esc(l.desc)}">${esc(l.lote)} <small class="cod">${l.lt?'LT '+esc(l.lt):''}</small></span>
+        <span class="selo ${l.fechadas===l.total?'ok':l.vencido?'critico':'atencao'}">${l.fechadas}/${l.total} fechadas</span></div>
+      <div class="linha">${esc(l.desc||'')}${l.prev?` · previsão <b>${br(l.prev)}</b>${l.vencido?' <span class="selo critico">venceu</span>':''}`:''}</div>
+      <div class="barra" title="${Math.round(l.pct*100)}% das operações fechadas"><i style="width:${Math.round(l.pct*100)}%"></i></div>
+      <div class="linha" style="margin-top:var(--sm)">${faixa(l)}</div>
+      ${l.primeira?`<div class="linha"><b>Para fechar ${esc(l.primeira.nome)}</b>: ${l.primeira.ordensAbertas.length} ordem(ns), <b>${nf(l.primeira.falta)}</b> pç —
+        <span class="cod">${l.primeira.ordensAbertas.slice(0,5).map(esc).join(', ')}${l.primeira.ordensAbertas.length>5?` <small>+${l.primeira.ordensAbertas.length-5}</small>`:''}</span></div>`
+        :'<div class="linha">Todas as operações deste lote estão fechadas.</div>'}
+    </div>`).join('');
+
+  const linhas=F.lotes.flatMap(l=>l.ops.map((x,i)=>`<tr>
+      <td class="forte">${i?'':esc(l.lote)}</td>
+      <td>${i?'':esc(l.desc||'')}</td>
+      <td class="forte">${esc(x.nome)}</td>
+      <td class="cod">${x.prev?br(x.prev):''}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
+      <td class="n">${x.ordens}</td>
+      <td class="n">${x.ordens-x.ordensAbertas.length}/${x.ordens}</td>
+      <td class="n">${x.naoApontavel?'—':pctBarra(x.pct)}</td>
+      <td class="n ${!x.naoApontavel&&x.falta?'c-critico':''}">${x.falta?nf(x.falta):'—'}</td>
+      <td class="cod">${x.ordensAbertas.slice(0,4).map(esc).join(', ')}${x.ordensAbertas.length>4?` <small>+${x.ordensAbertas.length-4}</small>`:''}</td>
+      <td><span class="selo ${x.naoApontavel?'neutro':x.fechada?'ok':x.vencida?'critico':'neutro'}">${x.naoApontavel?'não aponta':x.fechada?'fechada':x.vencida?'vencida':'aberta'}</span></td></tr>`)).join('');
+
+  p.innerHTML=`<div class="veredito ${F.fechadas===F.total?'ok':vencidos.length?'critico':'atencao'}">
+      <span class="ico" aria-hidden="true">${F.fechadas===F.total?'✓':'!'}</span>
+      <div class="txt"><h2>${F.fechadas===F.total
+          ? `Todas as ${F.total} operações dos lotes estão fechadas`
+          : `${abertos} de ${F.total} operações do lote seguem abertas`}</h2>
+        <p>${alvo&&alvo.primeira
+          ? `A regra é fechar a operação inteira antes do lote andar. Comece pelo <b>lote ${esc(alvo.lote)}</b>${alvo.vencido?' <b class="c-critico">(vencido)</b>':''}: falta <b>${esc(alvo.primeira.nome)}</b>, ${alvo.primeira.abertas.length} ordem(ns) e ${nf(alvo.primeira.falta)} pç.`
+          : 'A regra é fechar a operação inteira antes do lote andar.'}</p></div>
+      <div class="big">${Math.round(F.pct*100)}%<span>operações fechadas</span></div>
+    </div>
+    ${avisoForaDaConta()}
+    <div class="cabecalhoSecao"><h2>Operação fechada por lote</h2>
+      <span class="meta">${F.lotes.length} lote(s) · ${F.fechadas} de ${F.total} operações fechadas${vencidos.length?` · ${vencidos.length} lote(s) vencido(s) com operação aberta`:''}${F.naoApontaveis?` · ${F.naoApontaveis} operação(ões) que não recebem apontamento, fora da meta`:''}${F.repo?` · ${F.repo} ordem(ns) de reposição fora da conta`:''}</span></div>
+    <div class="setores">${cartoes}</div>
+    <div class="wrap"><table><thead><tr>
+      <th>Lote</th><th>Produto</th><th>Operação</th><th>Prazo</th><th class="n">Ordens</th><th class="n">Fechadas</th>
+      <th class="n">% peças</th><th class="n">Peças a fazer</th><th>Ordens abertas</th><th>Estado</th></tr></thead>
+      <tbody>${linhas}</tbody></table></div>
+    <div class="nota"><b>A regra:</b> o lote finaliza <b>por completo</b> cada operação antes de andar, independente de haver peça ou setup diferente dentro dele. Resto de operação é o que faz o produto nunca chegar inteiro na embalagem.
+      <b>Fechada</b> = <b>todas</b> as ordens do lote naquela operação apontadas. Não é o percentual arredondado: 100% em peças com duas ordens abertas <b>não</b> é fechada, e essa distinção é o ponto da regra.
+      <b>% peças</b> é o avanço em peça-fase, para dimensionar o quanto falta — quem decide o estado é a contagem de ordens.
+      Diferente da matriz de conjuntos, aqui <b>EMBALAR aparece</b> — ela só existe nas ordens de acabado e volume e por isso nunca entra na matriz de conjuntos.
+      <b>O que não se aponta não entra na meta.</b> Setor cego no ERP e EMBALAR isenta nunca recebem registro; contá-los como aberta tornaria 100% inatingível por construção, e meta que não se alcança é ruído. Ficam <b>visíveis na faixa</b>, com selo apagado, fora do denominador.
+      <b>Reposição fica de fora</b>: o ERP dá a ela previsão posterior à do lote, então cobrá-la junto seria cobrar o que o próprio plano não pede para hoje.
+      <b>Vencida</b> = a operação tem ordem aberta com previsão anterior à data de referência.</div>`;
+}
+
 /* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
 function desenharAchados(p){
   const a=achFiltrados();
@@ -2996,7 +3165,7 @@ function desenharLeitura(p){
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
    escreve o próprio HTML; `render` embrulha a chamada num try para que uma
    seção quebrada mostre o erro no lugar dela, sem levar a tela junto. */
-const DESENHO={setor:desenharSetor,trav:desenharTravadas,apont:desenharApont,conj:desenharConjuntos,ach:desenharAchados,
+const DESENHO={setor:desenharSetor,trav:desenharTravadas,apont:desenharApont,conj:desenharConjuntos,fech:desenharFechamento,ach:desenharAchados,
   ord:desenharOrdens,op:desenharOperacoes,leit:desenharLeitura};
 function desenhar(){
   const fn=DESENHO[ABA]; if(!fn) return;
@@ -3052,6 +3221,11 @@ function filtrosNoPapel(secao){
   /* O volume fora do agrupamento NÃO é filtro escolhido pelo usuário: é o
      recorte estrutural da tela. Somado à lista, fazia "nenhum filtro" sumir e
      a folha parecer filtrada quando não estava. */
+  if(secao==='fech'){
+    const F=fechamentoPorLote();
+    if(F.repo) return `${base} · ${F.repo} ordem(ns) de reposição fora da conta`;
+    return base;
+  }
   if(secao==='conj'){
     const n=ordensFiltradas().filter(o=>tipoProduto(o.produto)!=='componente').length;
     if(n) return `${base} · ${n} ordem(ns) de produto acabado e volume fora do agrupamento por componente`;
@@ -3307,6 +3481,17 @@ $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
    % e a divisão original fica preservada. `dec` não arredonda, então o corte
    é feito aqui — sem ele sai "0,6666666666666666" em toda linha. */
 const pct4=v=>dec(Math.round((v||0)*10000)/10000);
+/* Uma linha por LOTE x OPERACAO: e o grao da regra ("o 025139 fechou o
+   corte") e o que o Power BI precisa para acumular "% de operacoes fechadas"
+   entre lotes ao longo do tempo. */
+$('#btnCsvFech').onclick=()=>{const F=fechamentoPorLote();csv('operacao-fechada.csv',
+  ['Lote','LT','Produto','PrevisaoLote','LoteVencido','Operacao','SeqRoteiro','PrevisaoAberta','OperacaoVencida',
+   'Ordens','OrdensFechadas','OrdensAbertas','PctPecas','PecasAFazer','Fechada','OperacoesFechadasNoLote','OperacoesNoLote'],
+  F.lotes.flatMap(l=>l.ops.map((x,i)=>[
+    l.lote,l.lt||'',l.desc,br(l.prev),l.vencido?'Sim':'Nao',
+    x.nome,i+1,br(x.prev),x.vencida?'Sim':'Nao',
+    x.ordens,x.ordens-x.abertas.length,x.abertas.length,pct4(x.pct),dec(x.falta),
+    x.fechada?'Sim':'Nao',l.fechadas,l.total])));};
 $('#btnCsvConj').onclick=()=>csv('conjuntos.csv',
   ['Produto','CodigoProduto','Lote','Ordens','Pecas','OrdensReposicaoFora','PecasReposicaoFora','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
    'RodaInteiroAte','TravaEm','Fase','SeqFase','OrdensNaFase','OrdensQuePassaram','PctPassouFase',
