@@ -52,6 +52,59 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [3.0.0] — 2026-09-03
+
+### Duas telas, duas perguntas
+
+O app tinha crescido por acréscimo: 7 seções, uma tela por setor, veredito, ranking, quatro
+cartões, nove números de contexto e oito filtros sempre abertos. Três telas respondiam a mesma
+pergunta com números diferentes (Sem apontamento, Painel por setor, Onde travou), todos certos, e
+o leitor não sabia qual valia. Esta versão **apaga** em vez de acrescentar.
+
+O PPCP faz duas perguntas por dia, nesta ordem. Cada uma tem uma tela, e o resto é evidência:
+
+| Pergunta | Tela |
+|---|---|
+| Onde o lote está travado, e por quê? | **Onde travou** — abre por padrão |
+| Quem não apontou? | **Sem apontamento** — veredito, ranking e lista |
+| Evidência | **Detalhe** (fechado): Ordens, Operações, Achados, Leitura |
+
+### Removido por redundância
+
+- **Painel por setor.** Dizia o mesmo que "Onde travou" com outra conta (operações vencidas em vez de
+  ordens paradas). `painelPorSetor`/`desenharPainel` apagados.
+- **Os quatro cartões e a linha de contexto** do topo. Aderência e demais números continuam no
+  Detalhe, onde são consultados quando alguém pergunta.
+- Na **tela do setor**: "Parado no setor", "Já concluído", desvio médio e saldo. Ficam dois blocos,
+  os mesmos das duas perguntas: **Parado aqui** (ordens que o setor está segurando, da mesma conta
+  de "Onde travou") e **Cobrar apontamento**.
+
+### Alterado — vocabulário
+
+Dez estados viraram três palavras que o líder entende sem manual:
+
+- **parado** — a ordem está atrás do programado e a próxima fase a apontar é deste setor. Se a
+  fase começou (parcial) ou nada foi apontado ainda, é texto de apoio ao lado, não selo.
+- **esquecido** — a fase seguinte já tem apontamento, ou a ordem foi fechada, ou a fase foi fechada
+  sem lançar quantidade. A peça passou; faltou o registro.
+- **a confirmar** — nada apontado e a previsão venceu, sem prova de que a peça passou.
+
+A folha dos líderes e o CSV de faltas seguem as mesmas palavras (`Esquecido`,
+`Esquecido (sem quantidade)`, `A confirmar`; `Parado - nada apontado / parcial / aguardando`).
+
+### Alterado — filtros
+
+Lote e data de referência ficam à vista. Produto, setor, tipo, reposição, severidade e a isenção
+da EMBALAR ficam em "Mais filtros", cujo título diz quantos estão ativos — para um recorte
+esquecido nunca fazer a tela mentir em silêncio.
+
+### Verificação
+
+Snapshot antes × depois nos dois lotes de teste: Ordens, Operações, Achados, Leitura, os cinco CSVs
+e a impressão da lista **idênticos**; a folha dos líderes só muda as palavras. Testes de
+apontamento, impressão, volume, "Onde travou", responsividade e PWA offline passando. Lote real
+LT 162/26: abre em "81 de 88 ordens em aberto estão atrás do programado — comece por PINTAR PU".
+
 ## [2.3.0] — 2026-09-03
 
 Primeiro lote real (LT 162/26, 45 páginas, 137 ordens, 832 operações). O que ele ensinou:

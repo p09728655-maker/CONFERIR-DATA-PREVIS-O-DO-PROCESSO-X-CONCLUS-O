@@ -58,12 +58,11 @@ primeira cobrança errada.
 1. No ERP, emita o relatório **Situação do Lote de Produção** com *Status das Ordens: Todas*.
 2. Salve em PDF.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
-4. Comece por **Sem apontamento** — abre por padrão. É a lista de fases sem registro, com a
-   quantidade de peças e o setor. O que estiver marcado como `esquecido` é cobrança direta.
-5. **Onde travou** responde *por que* uma ordem ficou para trás: onde deveria estar hoje, onde
-   está, e qual setor a está segurando (ver seção 5.2).
-6. Use **Achados** para as demais inconsistências e **Painel por setor** para ver onde o lote
-   está travado. **Ordens** e **Operações** trazem o detalhe.
+4. **Onde travou** abre por padrão: *por que* cada ordem ficou para trás — onde deveria estar
+   hoje, onde está, e qual setor a está segurando (ver seção 5.2).
+5. **Sem apontamento** é a segunda pergunta: fases sem registro, com peças e setor. O que estiver
+   marcado como `esquecido` é cobrança direta; `a confirmar` é dúvida a esclarecer no setor.
+6. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
 7. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
@@ -191,7 +190,11 @@ a aba **Leitura dos arquivos** exibe alerta.
 
 ---
 
-## 5.1 Painel por setor
+## 5.1 Painel por setor (removido na 3.0.0)
+
+Existiu até a 2.3.0. Dizia o mesmo que "Onde travou" com outra conta (operações vencidas em vez de
+ordens paradas) e foi removido por redundância. O texto abaixo fica como registro do critério.
+
 
 Setor, aqui, é o **processo do roteiro** — o centro de trabalho onde a operação é apontada
 (CORTAR, FURAR, PINTAR UV, COLAR FITA, EMBALAR). A seção existe para responder a pergunta do
