@@ -60,9 +60,11 @@ primeira cobrança errada.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
 4. Comece por **Sem apontamento** — abre por padrão. É a lista de fases sem registro, com a
    quantidade de peças e o setor. O que estiver marcado como `esquecido` é cobrança direta.
-5. Use **Achados** para as demais inconsistências e **Painel por setor** para ver onde o lote
+5. **Onde travou** responde *por que* uma ordem ficou para trás: onde deveria estar hoje, onde
+   está, e qual setor a está segurando (ver seção 5.2).
+6. Use **Achados** para as demais inconsistências e **Painel por setor** para ver onde o lote
    está travado. **Ordens** e **Operações** trazem o detalhe.
-6. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
+7. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
 Não há backend, não há banco, não há log de uso.
@@ -212,6 +214,36 @@ Não é medição de capacidade nem de eficiência do setor. Ele lê **datas de 
 apontamento de hora, ritmo ou parada. Um setor com desvio médio alto pode estar sem capacidade,
 sem material, sem programação — ou apenas sem apontar. O painel diz onde olhar; a causa se
 investiga no chão de fábrica.
+
+## 5.2 Onde travou
+
+A aba Ordens diz *se* a ordem está atrasada. Esta seção diz **por quê e onde ir buscá-la**: "o
+produto estava previsto para embalar hoje e ainda tem peça na coladeira" — a ordem está travada
+na coladeira, e é lá que a conversa acontece.
+
+Para cada ordem **em aberto**:
+
+| Campo | O que significa |
+|---|---|
+| Deveria estar em | A última fase do roteiro com previsão do processo até a data de referência: o que o PPCP programou a ordem alcançar até hoje |
+| Está em | A fase seguinte à última com apontamento. Se a última apontada ainda tem saldo e não foi fechada, é ela mesma (`parcial`). Nenhuma fase apontada: `não começou` |
+| Fases atrás | Quantas fases separam onde está de onde deveria estar. `—` com dias parada = atrasada dentro da própria fase |
+| Parada há | Dias úteis desde a previsão da fase onde está |
+| Peças na fase | Saldo ainda não apontado na fase onde está |
+
+Os cartões agrupam pelo **setor que está segurando** as ordens — quantas, quantas peças, e a que
+está há mais tempo parada. É a ordem de visita ao chão de fábrica.
+
+Regras que evitam leitura errada:
+
+- **Fase anterior em branco com uma posterior apontada não é posição.** É apontamento esquecido
+  (seção "Sem apontamento"), e a peça já passou dali. As duas seções não se contradizem: uma
+  cobra registro, a outra localiza a peça.
+- A EMBALAR isenta por convenção não conta como posição (não é apontada nesta ordem), mas conta
+  como programação: "prevista para embalar hoje" continua sendo a régua.
+- **Roteiro concluído, ordem não fechada** fica em lista à parte: todas as fases apontadas e a
+  ordem em aberto não é atraso de produção, é ordem por encerrar.
+- Com filtro de operação, a seção mostra as ordens travadas **naquele** setor.
 
 ---
 
