@@ -375,6 +375,33 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Começou × terminou — a matriz de frentes
+
+Uma linha por setor, uma coluna por produto, o avanço em peça-fase em cada cruzamento. É o
+indicador de **"começa tudo e não termina nada"**.
+
+| Setor | INTENSE | SLEEP | SPACE | Abertas |
+|---|---|---|---|---|
+| CORTAR | 100% | 100% | 100% | — |
+| FURAR | 75% | 86% | 100% | 2 |
+| USINAR | 0% | — | — | — |
+| COLAR BORDA | 65% | 41% | 32% | **3** |
+| PINTAR UV | 14% | 18% | 5% | **3** |
+
+> LT 163 real: **8 frentes abertas ao mesmo tempo, 4 fechadas.** COLAR BORDA e PINTAR UV com os
+> três produtos começados e nenhum fechado.
+
+- **Frente** = um par setor × produto. **Aberta** quando o setor começou aquele produto e não
+  fechou. A célula pintada é a aberta — o olho bate no problema, não no que está pronto.
+- **Não ter começado não é pecado** e aparece neutro: é o estado correto de quem ainda não chegou
+  a vez. O pecado é abrir muitas e fechar poucas.
+- Enquanto a linha de um setor não tiver um 100%, o setor seguinte não recebe produto inteiro.
+- Sai também na **folha impressa dos líderes**, logo depois do veredito. Fica fora da folha de um
+  setor, onde teria uma coluna só.
+
+"Conjunto incompleto" olha um produto de cada vez e pergunta se ele fecha; a matriz olha a fábrica
+inteira e mostra o padrão. Mesma verdade — só a matriz faz o padrão saltar.
+
 ### Reposição não decide integridade
 
 Ordem de reposição é aberta depois, por refugo, e o ERP dá a ela previsão **posterior à do lote**.
