@@ -25,11 +25,27 @@ Versionamento semântico.
   `rotuloConjunto()` tira o nome legível da primeira palavra da descrição, porque "387"
   não diz nada numa reunião e "SPACE" diz.
 
-- **Inteiro até** = a última fase que **todas** as ordens do conjunto passaram; daí para
-  frente o setor da frente não pega o produto completo. **Quebra em** = a primeira fase que
-  não fechou, com quantas ordens já passaram, quantas peças faltam e **quais ordens** —
-  é a ação do dia. Uma ordem passou a fase quando **todas** as operações dela estão
-  apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
+- **Roda inteiro até** = a última fase que **todas** as ordens do conjunto passaram. O setor
+  seguinte a ela pega o produto completo; daí para frente, não. **Trava em** = a primeira fase
+  que não fechou, com quantas peças faltam e **quais ordens** — é a ação do dia. Uma ordem
+  passou a fase quando **todas** as operações dela estão apontadas: dois passes de COLAR BORDA
+  são um setor, e passar só o primeiro não é passar.
+
+- **% pronto por conjunto**, com barra: avanço do roteiro medido em **peça-fase** — quanto das
+  quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade
+  lançada conta cheia, pela mesma regra do `apontada()`. No desempate da ordenação, o conjunto
+  mais adiantado vem antes: é o que fecha antes.
+
+  **Não é percentual de tempo**, e a nota da tela declara isso. Peça-fase trata corte e
+  embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta
+  possível com o que o relatório traz; ler "60% pronto" como "60% do tempo" erra a estimativa
+  do que falta.
+
+- **Correram na frente** = ordens que já passaram a fase que trava enquanto outras ficaram
+  atrás. Aparece em vermelho porque **não é alívio**: são exatamente elas que criam produto
+  incompleto nos setores seguintes. Zero aqui é o número bom. A primeira versão desta coluna
+  se chamava "liberado p/ a frente" e sugeria o contrário — o que o setor seguinte pode rodar
+  completo é o que está **até** `Roda inteiro até`, não o que correu além da trava.
 
 - **Ordem das fases pela sequência média** do roteiro das ordens do conjunto. O roteiro
   varia de peça para peça (uma leva pintura, outra não), então "a 3ª linha" não serve como

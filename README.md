@@ -317,10 +317,21 @@ da descrição, porque "387" não diz nada numa reunião e "SPACE" diz.
 
 ### O que a tela mede
 
-- **Inteiro até** — a última fase que **todas** as ordens do conjunto passaram. Daí para frente o
-  setor da frente não pega o produto completo.
-- **Quebra em** — a primeira fase que não fechou, com quantas ordens já passaram, quantas peças
-  faltam e **quais ordens**. É a ação do dia.
+- **Roda inteiro até** — a última fase que **todas** as ordens do conjunto passaram. O setor
+  seguinte a ela pega o produto completo; daí para frente, não.
+- **Trava em** — a primeira fase que não fechou, com quantas peças faltam e **quais ordens**.
+  É a ação do dia.
+- **% pronto** — avanço do roteiro em **peça-fase**: quanto das quantidades de todas as fases de
+  todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia.
+
+  > **Não é percentual de tempo.** Peça-fase trata corte e embalagem como esforços iguais, e não
+  > são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz —
+  > ler "60% pronto" como "60% do tempo" erra a estimativa do que falta.
+
+- **Correram na frente** — ordens que já passaram a fase que trava enquanto outras ficaram atrás.
+  Não é alívio: são elas que criam produto incompleto nos setores seguintes. **Zero é o número
+  bom.** O que o setor seguinte roda completo é o que está *até* **Roda inteiro até**, não o que
+  correu além da trava.
 - Uma ordem **passou** a fase quando **todas** as operações dela estão apontadas: dois passes de
   COLAR BORDA são um setor, e passar só o primeiro não é passar.
 - As fases são ordenadas pela **sequência média** do roteiro das ordens do conjunto. O roteiro varia
@@ -381,7 +392,7 @@ dizer que estava filtrada, faz o problema parecer menor do que é.
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
 | CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |
-| CSV de conjuntos | `conjuntos.csv` | Uma linha por **conjunto × fase**, com ordens na fase, quantas passaram, quantas faltam e quais |
+| CSV de conjuntos | `conjuntos.csv` | Uma linha por **conjunto × fase**, com `% pronto` do conjunto, ordens na fase, quantas passaram, quantas faltam e quais |
 | CSV achados | `achados.csv` | Uma linha por achado, com severidade, regra e detalhe |
 | CSV ordens | `ordens.csv` | Uma linha por ordem de fabricação |
 | CSV operações | `operacoes.csv` | Uma linha por operação de roteiro, **inclusive as fora da conta**, com a coluna `ForaDaConta` (sim/não) |
