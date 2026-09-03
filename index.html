@@ -619,6 +619,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.1.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Refatoração interna, sem mudança de comportamento.</b> Tela, folhas impressas e CSVs foram comparados byte a byte antes e depois, em dois lotes de teste.</li>
+    <li>A conta de "quanto cada setor deve" passou a existir em <b>um único lugar</b>: veredito, ranking, lateral e folha dos líderes não podem mais divergir entre si.</li>
+    <li>Cada seção da tela virou uma função própria; código morto da folha antiga foi removido.</li>
+  </ul>
   <h3>2.1.0 — 03/09/2026</h3>
   <ul>
     <li><b>Ordens de reposição</b> — abertas a partir de perda — passam a ser reconhecidas e marcadas. Elas nascem depois do lote e trazem previsão própria, então o prazo delas não se compara com o das demais.</li>
@@ -1180,7 +1186,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='2.1.0';
+const VERSAO='2.1.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE

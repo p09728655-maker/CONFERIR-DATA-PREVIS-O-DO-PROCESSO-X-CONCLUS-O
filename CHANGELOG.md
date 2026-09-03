@@ -52,6 +52,33 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [2.1.1] — 2026-09-03
+
+### Refatoração — sem mudança de comportamento
+
+O código tinha crescido por acréscimo: a mesma agregação de faltas por setor estava escrita
+seis vezes (veredito, ranking, lateral, painel, folha impressa duas vezes), a função que
+desenha a tela tinha 312 linhas com todas as seções dentro, e havia código morto da folha
+antiga (`quadroSetores`, `resumo` e o CSS deles). Seis cópias da mesma conta são seis lugares
+onde tela e papel podem divergir — e a divergência seria descoberta na reunião.
+
+- `agregarPorSetor` / `rankSetores`: a conta por setor existe em um lugar só, e todos os usos
+  leem dela. `tituloVeredito`, `marcaSetor`, `rotuloFalta` e `motivoFalta` fazem o mesmo com
+  os textos repetidos entre tela, papel e CSV.
+- `resumoGeral` calcula tudo do topo da tela uma vez; `renderVeredito`, `renderRanking`,
+  `renderCartoes`, `renderContexto`, `renderListaSetores` e `renderContadores` só desenham.
+- Uma função por seção (`desenharSetor`, `desenharApont`, `desenharAchados`, `desenharOrdens`,
+  `desenharOperacoes`, `desenharPainel`, `desenharLeitura`), escolhida por uma tabela. O
+  painel por setor separou cálculo (`painelPorSetor`) de desenho.
+- CSV das faltas em `csvFaltas`, usada pelo botão geral e pelo botão da tela do setor.
+- Removidos `quadroSetores`, `resumo`, o CSS `.doc-resumo` e um cabeçalho de seção duplicado.
+
+**Verificação:** um script fotografa o HTML de todas as seções, de cada tela de setor, de cada
+filtro isolado, das três folhas impressas e dos cinco CSVs, em dois lotes de teste (um sintético
+e um com o layout real do relatório). Antes e depois da refatoração o resultado é idêntico
+byte a byte (484.989 bytes), sem erro de console. A regressão de impressão, volume, PWA e
+recuperação do pdf.js também passou.
+
 ## [2.1.0] — 2026-09-03
 
 ### Ordens de reposição
