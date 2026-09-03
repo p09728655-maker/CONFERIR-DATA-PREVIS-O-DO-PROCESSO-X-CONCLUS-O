@@ -52,6 +52,51 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [2.0.0] — 2026-09-03
+
+### Uma tela por setor
+
+Os setores viraram **navegação**: a lateral lista cada processo do roteiro com um ponto de
+estado e as peças pendentes ao lado — o ponto nunca informa sozinho, a quantidade diz o mesmo
+em número. Clicar abre a tela daquele setor.
+
+A tela traz três blocos, **em ordem de ação**:
+
+1. **Cobrar apontamento** — o que tem prova de que a peça passou. É o bloco que abre a conversa
+   com o líder, e tem os botões de imprimir a folha do setor e exportar o CSV dele.
+2. **Parado no setor** — vencido, começado e travado no meio. Aqui pode ser falta de produção,
+   não de registro: é outra conversa.
+3. **Já concluído** — recolhido, porque não pede ação. Existe para o líder ver o histórico dele
+   no lote, não só a cobrança.
+
+O veredito geral e o ranking somem na tela do setor: eles falam do lote inteiro enquanto o
+cabeçalho fala do setor, e dois títulos com números diferentes fazem o leitor parar para
+descobrir qual vale.
+
+`dadosDoSetor()` alimenta os três lugares que precisam concordar sobre o mesmo processo — a
+tela, a lista da lateral e a folha impressa. Calcula sobre os filtros da tela, mas ignora o
+filtro de operação: abrir o setor do líder não pode reescrever o recorte que o usuário montou.
+
+### Corrigido — a isenção do EMBALAR reconhecia menos produtos do que devia
+
+`CFG.produtoAcabado` era `/^103\./`, que só casa com os códigos começados exatamente em
+`103.`. Na convenção da Patrimar o que define o tipo é o **primeiro dígito**: um produto
+acabado `104.` ou `102.` ficava de fora da isenção e virava **falso apontamento esquecido**.
+
+Agora `1` é produto acabado e `5` é volume.
+
+### Adicionado — filtro Tipo de produto
+
+Acabado (1…), Volume (5…) ou Componentes (demais). Entra na declaração de recorte da folha
+impressa, como os outros filtros.
+
+### Verificado
+
+Classificação por primeiro dígito, filtro por tipo em quatro estados, lista da lateral
+ordenada por gravidade, navegação entre setor e conferência (o veredito geral aparece e some
+na hora certa), folha e CSV de um setor só — sem alterar o filtro da tela —, mais a regressão
+completa em desktop, 1600px e celular.
+
 ## [1.9.1] — 2026-09-03
 
 ### Nome da peça
