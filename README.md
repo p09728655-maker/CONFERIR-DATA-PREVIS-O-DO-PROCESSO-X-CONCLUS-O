@@ -79,6 +79,19 @@ como qualquer programa. Instalada, **funciona sem internet** — inclusive a lei
 Correções continuam chegando: o app busca a versão publicada sempre que há rede e só usa a
 cópia local quando não há. Uma regra de conferência corrigida não fica presa no aparelho.
 
+### Dias úteis
+
+Todo prazo é contado em **dias úteis**: segunda a sexta, descontando feriados nacionais e do
+estado de São Paulo — incluindo Carnaval, Sexta-feira Santa e Corpus Christi, calculados a
+partir da Páscoa para qualquer ano.
+
+A fábrica não produz no fim de semana. Contar dias corridos inflaria todo atraso que cruzasse
+um sábado, sempre para cima: uma ordem prevista para sexta e concluída na segunda apareceria
+com 3 dias de atraso quando a produção perdeu 1.
+
+- Jornada: constante `DIAS_UTEIS` no `index.html`. Para incluir sábado, acrescente `6`.
+- Feriado municipal e parada coletiva: `CFG.feriadosExtras`, no formato `'aaaa-mm-dd'`.
+
 ### Data de referência
 
 O que conta como "vencido" é medido contra a **data de emissão do relatório**, lida do cabeçalho do próprio

@@ -52,6 +52,48 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [1.8.0] — 2026-09-02
+
+### Prazo em dias úteis, não em dias corridos
+
+A fábrica não produz sábado, domingo nem feriado. Contar dias corridos inflava **todo** atraso
+que cruzasse um fim de semana, e sempre para cima — o indicador acusava a fábrica de um atraso
+que não houve.
+
+| Previsão | Conclusão | Corridos | Úteis |
+|---|---|---|---|
+| sexta 11/09 | segunda 14/09 | 3 | **1** |
+| sexta 28/08 | quarta 02/09 | 5 | **3** |
+| sexta 14/08 | quarta 02/09 | 19 | **13** |
+
+Numa semana com feriado a diferença chega a 3 dias numa única comparação.
+
+### Como ficou
+
+- **Jornada:** segunda a sexta (`DIAS_UTEIS`). Se a fábrica passar a produzir aos sábados,
+  basta incluir `6` na constante.
+- **Feriados:** nacionais e do estado de **São Paulo** (09/07, Revolução Constitucionalista).
+  Os móveis saem da Páscoa, calculada pelo algoritmo de Meeus/Jones/Butcher e conferida
+  contra 2024–2027. Carnaval e Corpus Christi são ponto facultativo em lei, mas a fábrica
+  para — por isso entram.
+- **Feriado municipal e parada coletiva:** `CFG.feriadosExtras`, no formato `aaaa-mm-dd`.
+- A conta é feita uma vez por ano consultado e guardada: um lote tem centenas de comparações
+  de data, e recalcular a Páscoa em cada uma seria desperdício.
+- O sinal se mantém: negativo continua sendo adiantamento.
+
+### Na tela
+
+As colunas passam a dizer `(d.ú.)`, as notas explicam a regra, o rodapé dos dois documentos
+impressos registra a base de contagem, e a coluna do CSV virou `DesvioDiasUteis` — quem abrir
+no Power BI precisa saber o que está somando.
+
+### Verificado
+
+Onze casos: fim de semana no meio, mesmo dia, adiantamento com sinal negativo, feriado
+nacional, feriado de São Paulo, Natal, Carnaval e um intervalo de três semanas. Dois deles
+acusaram falha e **a expectativa do teste é que estava errada** — 07/09/2026 cai numa
+segunda-feira, e de 14/08 a 02/09 há 13 dias úteis, não 12. O cálculo estava correto nos onze.
+
 ## [1.7.0] — 2026-09-02
 
 ### Corrigido — o total de peças contava a mesma peça várias vezes
