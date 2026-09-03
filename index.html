@@ -673,6 +673,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.7.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Conjunto passa a ser por lote + produto, não só por produto.</b> Com LT 163 e LT 164 abertos juntos, o SLEEP 778 aparecia fundido: 74 ordens, 27.600 pç, "trava FURAR 66/68". Separado, são dois produtos com histórias opostas — lote 025141 com 58% travando em FURAR 12/14, e lote 025144 com 43% já além da furação e parado na coladeira em 1/58. O fundido escondia isso e ainda misturava prazos (03/09 e 04/09).</li>
+    <li>O código da peça <b>não</b> separa: <code>778.001.116 SLEEP BASE</code> é exatamente a mesma peça nos dois lotes. Só o lote distingue, e o lote é a unidade de entrega.</li>
+    <li><b>Abrir o mesmo lote duas vezes deixa de somar.</b> A defesa era pelo nome do arquivo e não cobria o caso real: reler o lote mais tarde e salvar com outro nome. Medido — 113 ordens viravam 226, INTENSE de 10.000 para 20.000 peças, com os percentuais certos, que é o que tornava o erro perigoso.</li>
+    <li>Agora a <b>leitura nova substitui a antiga</b>, lote a lote, e a tela declara o que foi trocado e de onde veio. Nas duas leituras do LT 163 desta sessão a USINAR sai de 0% para 40% e a COLAR BORDA de 49% para 57%: ficar com a primeira faria a tela parecer congelada.</li>
+    <li>Os demais lotes do arquivo entram normalmente — um PDF traz vários lotes, e descartar o arquivo inteiro por causa de um repetido perderia dado bom.</li>
+  </ul>
   <h3>3.6.1 — 03/09/2026</h3>
   <ul>
     <li><b>Listas de setor passam a sair na ordem do roteiro</b> — corte, fura, usina, cola, pinta, embala — na lateral, no ranking, na matriz e nos blocos da folha impressa. Ranking por tamanho <b>mente sobre causa</b> numa linha sequencial: PINTAR UV tinha o maior número de peças sem apontar porque é a última, e listá-la como "a pior" sugeria que o problema era a UV, quando ela nem tinha recebido o trabalho. Na ordem do roteiro a pilha crescendo rio abaixo mostra a causa.</li>
@@ -1456,7 +1464,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.6.1';
+const VERSAO='3.7.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1627,11 +1635,49 @@ async function carregar(files){
   for(const f of novos){
     i++;
     $('#status').textContent=`Lendo ${f.name}… (${i} de ${novos.length})`;
-    try{ DOCS.push(await lerPdf(f)); }
+    try{ DOCS.push(trocarLoteRepetido(await lerPdf(f))); }
     catch(err){ DOCS.push({arquivo:f.name,ofs:[],avisos:['Falha ao ler o arquivo: '+err.message],erro:true,paginas:0}); }
   }
   $('#status').textContent='';
   montarFiltros(); renderArquivos(); recalc();
+}
+
+/**
+ * O MESMO LOTE DUAS VEZES SOMA, E SOMAR DUAS FOTOS DO MESMO OBJETO É SEMPRE ERRADO.
+ *
+ * A defesa que existia era pelo NOME do arquivo, e ela não cobre o caso real:
+ * reler o mesmo lote mais tarde e salvar como "LT 163 manhã.pdf" e
+ * "LT 163 tarde.pdf". Os nomes diferem, os dois entram, e as ordens se somam —
+ * medido: 113 ordens viraram 226, INTENSE de 10.000 para 20.000 peças. Os
+ * percentuais continuam certos, porque são razão, e é isso que torna o erro
+ * perigoso: a tela não parece quebrada, só mente nos absolutos.
+ *
+ * Duas leituras do mesmo lote são duas FOTOS do mesmo objeto em momentos
+ * diferentes; a união delas não existe. A leitura NOVA SUBSTITUI a antiga,
+ * porque quem abre um arquivo de novo quer o dado de agora — nas duas leituras
+ * do LT 163 desta sessão, a USINAR sai de 0% para 40% e a COLAR BORDA de 49%
+ * para 57%. Ficar com a primeira faria a tela parecer congelada.
+ *
+ * Só o lote repetido é trocado, não o arquivo inteiro: um PDF traz vários
+ * lotes, e descartar os outros perderia dado bom. O que saiu fica declarado no
+ * aviso, de onde veio e o quê — trocar em silêncio seria pior que somar.
+ */
+function trocarLoteRepetido(doc){
+  const meus=new Set((doc.lotes||[]).map(l=>l.lote));
+  if(!meus.size) return doc;
+  const trocados=[];
+  DOCS.forEach(d=>{
+    const tinha=(d.lotes||[]).filter(l=>meus.has(l.lote)).map(l=>l.lote);
+    if(!tinha.length) return;
+    d.lotes=d.lotes.filter(l=>!meus.has(l.lote));
+    d.ofs=d.ofs.filter(o=>!meus.has(o.lote));
+    trocados.push(`${tinha.join(', ')} (estava${tinha.length>1?'m':''} em «${d.arquivo}»)`);
+  });
+  if(trocados.length)
+    doc.avisos.push(`Leitura mais recente: ${trocados.join('; ')} — as ordens da leitura anterior foram SUBSTITUÍDAS pelas deste arquivo. `
+      +`Somar duas leituras do mesmo lote dobraria ordens e peças; a tela mostra sempre uma foto só. `
+      +`Para voltar à leitura anterior, remova este arquivo na lateral e abra o antigo de novo.`);
+  return doc;
 }
 
 function renderArquivos(){
@@ -2015,12 +2061,27 @@ function rotuloConjunto(ofs){
 function conjuntos(){
   const flagEmb=$('#fEmb').checked;
   const g=new Map();
+  /* CONJUNTO É POR LOTE + PRODUTO, não só por produto.
+     O mesmo produto reaparece em lotes diferentes, e fundir os dois produz um
+     número que não serve para nada. Com LT 163 e LT 164 abertos juntos, o
+     SLEEP 778 saía assim:
+
+       fundido      74 ord  27.600 pç  47%  trava FURAR 66/68
+       lote 025141  16 ord   6.400 pç  58%  trava FURAR 12/14
+       lote 025144  58 ord  21.200 pç  43%  trava COLAR BORDA 1/58
+
+     O fundido esconde que o 025144 já passou a furação inteira e está parado
+     na coladeira com 1 de 58 — e mistura prazos diferentes (03/09 e 04/09) e
+     quantidades de escala diferente (400 e 2.650 peças de produto).
+     O LOTE é a unidade de entrega: fechar o SLEEP do 163 não depende do SLEEP
+     do 164, e é por lote que a fábrica embala e o comercial cobra. */
   ordensFiltradas().filter(o=>tipoProduto(o.produto)==='componente').forEach(o=>{
-    const k=prefixoProduto(o.produto);
+    const k=(o.lote||'—')+'\u0000'+prefixoProduto(o.produto);
     if(!g.has(k))g.set(k,[]);
     g.get(k).push(o);
   });
-  return [...g.entries()].map(([cod,todas])=>{
+  return [...g.entries()].map(([chave,todas])=>{
+    const [lote,cod]=chave.split('\u0000');
     /* REPOSIÇÃO NÃO DECIDE A INTEGRIDADE DO CONJUNTO.
        No LT 163 o CORTAR estava 99,98% pronto — faltavam 5 peças em 20.168 — e
        o conjunto aparecia como "inteiro até NENHUMA fase". As responsáveis eram
@@ -2090,7 +2151,7 @@ function conjuntos(){
       pfTotal+=(op.qtd||0); pf+=feitoPF(op);
     }));
 
-    return {cod, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
+    return {cod, lote, rotulo:rotuloConjunto(ofs), ofs, fases, fechada, proxima,
       pf, pfTotal, pct:pfTotal?pf/pfTotal:0,
       // Reposição fora da conta acima, declarada aqui.
       repo:ofs===todas?0:repo.length,
@@ -2118,7 +2179,7 @@ function conjuntos(){
     ||((a.proxima&&b.proxima)?a.proxima.faltam.length-b.proxima.faltam.length:0)
     // Empate em ordens atrás: o mais adiantado primeiro — é o que fecha antes.
     ||b.pct-a.pct
-    ||b.pecas-a.pecas||a.cod.localeCompare(b.cod));
+    ||b.pecas-a.pecas||a.cod.localeCompare(b.cod)||String(a.lote).localeCompare(String(b.lote)));
 }
 
 function faltasFiltradas(){
@@ -2618,7 +2679,7 @@ function desenharConjuntos(p,ref){
           ? `Cada linha é um setor, cada coluna um produto. <b>Célula pintada de laranja é frente aberta</b> — o setor começou aquele produto e não fechou. Enquanto houver linha sem nenhum 100%, o setor seguinte não recebe produto inteiro.`
           : `Cada linha é um setor, cada coluna um produto. Mais frentes fechadas que abertas: a fábrica está terminando o que começa.`}</div>
       <div class="wrap"><table class="matriz"><thead><tr><th>Setor</th>
-        ${fr.cs.map(c=>`<th class="c">${esc(c.rotulo||c.cod)}</th>`).join('')}
+        ${fr.cs.map(c=>`<th class="c" title="lote ${esc(c.lote)}">${esc(c.rotulo||c.cod)}<br><small>${esc(c.lote)}</small></th>`).join('')}
         <th class="c">Abertas</th></tr></thead>
         <tbody>${fr.linhas.map(l=>`<tr><td class="forte">${esc(l.nome)}</td>
           ${l.cels.map(x=>x===null?'<td class="c naotem" title="não passa por este setor">—</td>'
@@ -2633,7 +2694,7 @@ function desenharConjuntos(p,ref){
      que quebrou. Cartão para conjunto que está junto ou completo ocuparia a
      tela dizendo "está tudo bem" — isso é o lugar da tabela, não do alerta. */
   const cartoes=quebrados.map(c=>`<div class="setor critico">
-      <div class="topo"><span class="nome" title="${esc(c.cod)} ${esc(c.rotulo)}">${esc(c.rotulo||c.cod)} <small class="cod">${esc(c.cod)}</small></span>
+      <div class="topo"><span class="nome" title="${esc(c.cod)} ${esc(c.rotulo)} — lote ${esc(c.lote)}">${esc(c.rotulo||c.cod)} <small class="cod">${esc(c.cod)} · ${esc(c.lote)}</small></span>
         <span class="selo critico">quebrado</span></div>
       <div class="numeros">
         <span class="n1"><span class="v">${Math.round(c.pct*100)}%</span><span class="r">Pronto (roteiro)</span></span>
@@ -2656,7 +2717,7 @@ function desenharConjuntos(p,ref){
     const est=c.completo?['ok','completo']:c.naoComecou?['neutro','não começou']
       :c.disperso?['critico','quebrado']:['neutro','junto'];
     return `<tr>
-      <td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
+      <td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small><br><small class="cod">lote ${esc(c.lote)}</small></td>
       <td class="n">${c.ordens}${c.repo?` <small class="cod" title="${c.repo} ordem(ns) de reposição, ${nf(c.repoPecas)} pç, fora da conta de integridade">+${c.repo} rep</small>`:''}</td>
       <td class="n">${nf(c.pecas)}</td>
       <td class="n">${pctBarra(c.pct)}</td>
@@ -2676,7 +2737,7 @@ function desenharConjuntos(p,ref){
       <div class="txt"><h2>${!cs.length?'Nenhuma ordem de componente nos filtros atuais'
           :quebrados.length?`${quebrados.length} de ${cs.length} produto${cs.length>1?'s':''} não fecha${quebrados.length>1?'m':''} para o setor da frente`
           :`Os ${cs.length} produto${cs.length>1?'s':''} do recorte estão inteiros — o setor da frente roda completo`}</h2>
-        <p>${pior?`Comece por <b>${esc(pior.rotulo||pior.cod)}</b>: ${Math.round(pior.pct*100)}% pronto, roda inteiro até <b>${pior.fechada?esc(pior.fechada.nome):'nenhuma fase'}</b> e trava em <b>${esc(pior.proxima.nome)}</b> — ${pior.proxima.faltam.length} ordem(ns), ${nf(pior.proxima.pecas)} pç atrás.`
+        <p>${pior?`Comece por <b>${esc(pior.rotulo||pior.cod)}</b> (lote ${esc(pior.lote)}): ${Math.round(pior.pct*100)}% pronto, roda inteiro até <b>${pior.fechada?esc(pior.fechada.nome):'nenhuma fase'}</b> e trava em <b>${esc(pior.proxima.nome)}</b> — ${pior.proxima.faltam.length} ordem(ns), ${nf(pior.proxima.pecas)} pç atrás.`
           :juntos.length?`Nenhum conjunto quebrado: cada produto está inteiro até onde parou, e o setor seguinte pega o produto completo. É o estado que se quer.`
           :completos.length?`${completos.length} produto(s) com o roteiro inteiro apontado.`:'Sem ordens de componente nos filtros atuais.'}</p></div>
       <div class="big">${quebrados.length}<span>conjuntos quebrados</span></div>
@@ -2694,15 +2755,16 @@ function desenharConjuntos(p,ref){
     ${semFase.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
       <summary>Sem fase apontável <small>${semFase.length} produto(s) — todo o roteiro está fora da conta, não dá para afirmar se o conjunto fecha</small></summary>
       <div class="wrap"><table><thead><tr><th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th></tr></thead>
-      <tbody>${semFase.map(c=>`<tr><td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)}</small></td>
+      <tbody>${semFase.map(c=>`<tr><td class="forte">${esc(c.rotulo||'—')} <small class="cod">${esc(c.cod)} · lote ${esc(c.lote)}</small></td>
         <td class="n">${c.ordens}</td><td class="n">${nf(c.pecas)}</td></tr>`).join('')}</tbody></table></div>
     </details></div>`:''}
     ${cs.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
       <summary>Roteiro de cada conjunto <small>fase por fase, quantas ordens já passaram</small></summary>
       <div style="padding:var(--md) 0">${cs.map(c=>`<div class="linha" style="margin-bottom:var(--sm)">
-        <b>${esc(c.rotulo||c.cod)}</b> <small class="cod">${esc(c.cod)}</small><br>${faixaFases(c)}</div>`).join('')}</div>
+        <b>${esc(c.rotulo||c.cod)}</b> <small class="cod">${esc(c.cod)} · lote ${esc(c.lote)}</small><br>${faixaFases(c)}</div>`).join('')}</div>
     </details></div>`:''}
-    <div class="nota"><b>Conjunto</b> = todas as ordens de componente do mesmo produto, agrupadas pelo <b>1º bloco do código da peça</b>:
+    <div class="nota"><b>Conjunto</b> = as ordens de componente do mesmo produto <b>dentro do mesmo lote</b>. O lote é a unidade de entrega: o mesmo produto em dois lotes tem prazos, quantidades e fechamento independentes, e fundir os dois daria um número que não serve para nada.
+      Agrupado pelo <b>1º bloco do código da peça</b>:
       387 SPACE, 778 SLEEP, 754 INTENSE. O 2º bloco é a peça dentro do produto, o 3º é a cor. O relatório não traz estrutura de produto — o código traz, e é ele que agrupa.
       <b>% pronto</b> = avanço do roteiro do conjunto em <b>peça-fase</b>: quanto das quantidades de todas as fases de todas as ordens já tem registro. Fase fechada sem quantidade lançada conta cheia, pela mesma regra do resto da tela.
       <b>Não é percentual de tempo.</b> Peça-fase trata corte e embalagem como esforços iguais, e não são. Sem tempo padrão por operação essa é a única conta possível com o que o relatório traz — ler "60% pronto" como "60% do tempo" erra o que falta.
@@ -2979,7 +3041,7 @@ function montarImpresso(soSetor){
     if(fr.cs.length<2) return '';
     return `<div class="doc-matriz">
       <div class="tit">Começou × terminou — ${fr.abertas} frente(s) aberta(s) ao mesmo tempo, ${fr.fechadas} fechada(s)</div>
-      <table><thead><tr><th>Setor</th>${fr.cs.map(c=>`<th class="c">${esc(c.rotulo||c.cod)}</th>`).join('')}<th class="c">Abertas</th></tr></thead>
+      <table><thead><tr><th>Setor</th>${fr.cs.map(c=>`<th class="c">${esc(c.rotulo||c.cod)}<br>${esc(c.lote)}</th>`).join('')}<th class="c">Abertas</th></tr></thead>
         <tbody>${fr.linhas.map(l=>`<tr><td class="setor">${esc(l.nome)}</td>
           ${l.cels.map(x=>x===null?'<td class="c naotem">—</td>'
             :`<td class="c ${x.st}">${Math.round(x.pct*100)}%</td>`).join('')}
@@ -3156,11 +3218,11 @@ $('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
    é feito aqui — sem ele sai "0,6666666666666666" em toda linha. */
 const pct4=v=>dec(Math.round((v||0)*10000)/10000);
 $('#btnCsvConj').onclick=()=>csv('conjuntos.csv',
-  ['Produto','CodigoProduto','Ordens','Pecas','OrdensReposicaoFora','PecasReposicaoFora','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
+  ['Produto','CodigoProduto','Lote','Ordens','Pecas','OrdensReposicaoFora','PecasReposicaoFora','Estado','PctProntoConjunto','PecaFaseFeita','PecaFaseTotal',
    'RodaInteiroAte','TravaEm','Fase','SeqFase','OrdensNaFase','OrdensQuePassaram','PctPassouFase',
    'PecasQuePassaram','OrdensAtras','PecasAFazer','FaseFechada','OrdensFaltantes'],
   conjuntos().flatMap(c=>c.fases.map((x,i)=>[
-    c.rotulo,c.cod,c.ordens,dec(c.pecas),c.repo,dec(c.repoPecas),
+    c.rotulo,c.cod,c.lote,c.ordens,dec(c.pecas),c.repo,dec(c.repoPecas),
     c.completo?'completo':c.naoComecou?'nao comecou':c.disperso?'quebrado':'junto',
     pct4(c.pct),dec(c.pf),dec(c.pfTotal),
     c.fechada?c.fechada.nome:'',c.proxima?c.proxima.nome:'',

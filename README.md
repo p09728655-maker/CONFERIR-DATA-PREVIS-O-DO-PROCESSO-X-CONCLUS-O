@@ -375,6 +375,28 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Vários lotes ao mesmo tempo
+
+O app aceita vários PDFs e cruza tudo — LT 163 e LT 164 juntos dão 6 lotes e 260 ordens, com a
+conferência de M³ por lote. O filtro **Lote** isola um quando preciso.
+
+**Conjunto é por lote + produto**, não só por produto. O mesmo produto em dois lotes tem prazos,
+quantidades e fechamento independentes:
+
+| | Ordens | Peças | % | Trava em |
+|---|---|---|---|---|
+| SLEEP fundido | 74 | 27.600 | 47% | FURAR 66/68 |
+| SLEEP lote 025141 | 16 | 6.400 | 58% | FURAR 12/14 |
+| SLEEP lote 025144 | 58 | 21.200 | 43% | **COLAR BORDA 1/58** |
+
+O código da peça **não** separa: `778.001.116 SLEEP BASE` é a mesma peça nos dois lotes — produto
+comercial diferente, componente idêntico. Só o lote distingue.
+
+**O mesmo lote aberto duas vezes não soma.** Duas leituras são duas fotos do mesmo objeto; a união
+delas não existe. A leitura nova **substitui** a antiga, lote a lote, e a tela declara o que saiu.
+Sem isso, reler o lote com outro nome de arquivo dobrava ordens e peças mantendo os percentuais
+certos — o pior tipo de erro, porque a tela não parece quebrada.
+
 ### Ordem do roteiro em toda lista de setor
 
 Lateral, ranking, matriz e blocos da folha impressa saem na ordem do roteiro — corte, fura, usina,
