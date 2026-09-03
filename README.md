@@ -375,6 +375,35 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
+### Ordem do roteiro em toda lista de setor
+
+Lateral, ranking, matriz e blocos da folha impressa saem na ordem do roteiro — corte, fura, usina,
+cola, pinta, embala. A folha inteira lê como uma caminhada pela linha.
+
+**Ranking por tamanho mente sobre causa numa linha sequencial.** PINTAR UV tem o maior número de
+peças sem apontar porque é a **última** — tudo precisa passar por ela. Listá-la como "a pior"
+sugere que o problema é a UV, quando ela nem recebeu o trabalho. Na ordem do roteiro a pilha
+crescendo rio abaixo mostra a causa:
+
+```
+CORTAR            5 pç
+FURAR         2.818 pç
+USINAR        2.500 pç
+COLAR BORDA   8.488 pç
+PINTAR UV    11.548 pç
+```
+
+A prioridade não se perde: o **comece por** do veredito continua nomeando o maior, calculado à
+parte. Ordem conta a história; o veredito dá a ação. Na lateral há um ganho extra — a ordem é
+estável entre lotes, e um menu que se reordena a cada arquivo obriga o líder a procurar o próprio
+setor toda vez.
+
+A ordem vem da **precedência observada** (em toda ordem onde dois setores aparecem, quem vem antes
+de quem), não de média de posição — média erra quando os roteiros têm tamanhos diferentes: a
+sequência absoluta joga `EMBALAR` para o começo (a ordem do acabado só tem ela), e a posição
+relativa joga `USINAR` para depois de `COLAR BORDA` (nas ordens `CORTAR > FURAR > USINAR` ela vale
+3/3). Empate vai para a posição relativa, que é o que separa `PINTAR UV` de `EMBALAR`.
+
 ### Começou × terminou — a matriz de frentes
 
 Uma linha por setor, uma coluna por produto, o avanço em peça-fase em cada cruzamento. É o
