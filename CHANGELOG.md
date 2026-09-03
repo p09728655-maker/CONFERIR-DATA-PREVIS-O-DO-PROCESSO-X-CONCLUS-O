@@ -52,6 +52,36 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [2.2.0] — 2026-09-03
+
+### Onde travou — por que a ordem ficou para trás
+
+A aba Ordens já dizia *se* a ordem estava atrasada. Não dizia *por quê*, nem *onde ir buscá-la*.
+A pergunta do PPCP é a segunda: "o produto estava previsto para embalar hoje e ainda tem peça na
+coladeira" — a ordem está travada na coladeira, e é lá que a conversa acontece.
+
+- **Deveria estar em** = a última fase do roteiro com previsão do processo até a data de
+  referência. É o que o PPCP programou a ordem alcançar até hoje.
+- **Está em** = a fase seguinte à última com apontamento. Se a última apontada ainda tem saldo e
+  não foi fechada, é ela mesma (**parcial**). Ordem sem nenhuma fase apontada: **não começou**.
+- Fase anterior em branco com uma posterior apontada **não** é posição: é apontamento esquecido
+  (seção "Sem apontamento"), e a peça já passou dali. As duas seções não se contradizem — uma
+  cobra registro, a outra localiza a peça.
+- **Fases atrás**, **parada há** (dias úteis desde a previsão da fase atual) e **peças na fase**
+  (saldo ainda não apontado ali).
+- Cartões por **setor que está segurando** as ordens, com a que está parada há mais tempo.
+- **Roteiro concluído, ordem não fechada** em lista à parte: todas as fases apontadas e a ordem
+  em aberto não é atraso de produção — é ordem por encerrar.
+- A EMBALAR isenta por convenção (produto acabado) não conta como posição, mas continua contando
+  como programação: "prevista para embalar hoje" segue sendo a régua.
+- Só ordens em aberto. Reposição entra, marcada. Com filtro de operação, a seção mostra as ordens
+  travadas **naquele** setor.
+- Contador no menu, CSV `onde-travou.csv` e impressão pela "lista da tela".
+
+Verificado com um lote sintético que reproduz o exemplo (prevista para EMBALAR, peça na COLAR
+BORDA), mais os casos de ordem não começada, parcial, adiantada, apontamento esquecido no meio e
+roteiro concluído sem fechar. As demais seções continuam idênticas ao snapshot da 2.1.1.
+
 ## [2.1.1] — 2026-09-03
 
 ### Refatoração — sem mudança de comportamento

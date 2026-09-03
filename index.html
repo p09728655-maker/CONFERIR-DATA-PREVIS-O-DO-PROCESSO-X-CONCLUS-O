@@ -506,6 +506,7 @@ dialog form{margin-top:var(--lg);text-align:right}
   <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
     <div class="grupo">Conferência</div>
     <button type="button" class="item" data-t="apont" aria-current="page"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
+    <button type="button" class="item" data-t="trav"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
     <button type="button" class="item" data-t="ach"><span class="t">Achados</span><span class="contagem" id="nAch">0</span></button>
     <button type="button" class="item" data-t="ord"><span class="t">Ordens</span><span class="contagem" id="nOrd">0</span></button>
     <button type="button" class="item" data-t="op"><span class="t">Operações</span><span class="contagem" id="nOp">0</span></button>
@@ -530,6 +531,7 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="grupo">Exportar</div>
     <div class="grupo-dica">CSV para Excel e Power BI · respeita os filtros</div>
     <button type="button" class="item" id="btnCsvApont"><span class="t">CSV sem apontamento</span></button>
+    <button type="button" class="item" id="btnCsvTrav"><span class="t">CSV onde travou</span></button>
     <button type="button" class="item" id="btnCsvAch"><span class="t">CSV de achados</span></button>
     <button type="button" class="item" id="btnCsvOrd"><span class="t">CSV de ordens</span></button>
     <button type="button" class="item" id="btnCsvOp"><span class="t">CSV de operações</span></button>
@@ -619,6 +621,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.2.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Seção nova: "Onde travou".</b> Responde <i>por que</i> a ordem ficou para trás: onde ela <b>deveria estar</b> hoje pela previsão do processo e onde ela <b>está</b> (a fase seguinte à última apontada). Ex.: prevista para EMBALAR hoje, ainda na COLAR BORDA desde 28/08 — 2 fases atrás, 3 dias úteis parada, 100 peças.</li>
+    <li>Cartões por <b>setor que está segurando</b> as ordens: quantas, quantas peças e a que está parada há mais tempo. É por onde a conversa começa.</li>
+    <li>Fase em branco com uma posterior já apontada não conta como posição — é apontamento esquecido, e a peça já passou. Fase começada e parada no meio aparece como <b>parcial</b>; ordem sem nenhuma fase apontada, como <b>não começou</b>.</li>
+    <li>Lista à parte de ordens com <b>roteiro concluído e ordem não fechada</b>: não é atraso de produção, é ordem por encerrar.</li>
+    <li>CSV "onde travou" para Excel e Power BI; a lista imprime pelo botão "Imprimir a lista da tela".</li>
+  </ul>
   <h3>2.1.1 — 03/09/2026</h3>
   <ul>
     <li><b>Refatoração interna, sem mudança de comportamento.</b> Tela, folhas impressas e CSVs foram comparados byte a byte antes e depois, em dois lotes de teste.</li>
@@ -1064,6 +1074,54 @@ function faltasApontamento(ordens,ref,flagEmb){
 const ehReposicao=of=>!!(of.previsaoLote&&of.previsao&&of.previsao>of.previsaoLote);
 
 /**
+ * ONDE A ORDEM ESTÁ × ONDE DEVERIA ESTAR — por que ficou para trás.
+ *
+ * A pergunta do PPCP não é só "está atrasada?" (a aba Ordens responde) e sim
+ * "atrasada POR QUÊ, e onde vou buscá-la": um produto previsto para embalar
+ * hoje que ainda tem peça na coladeira está travado na coladeira, e é lá que
+ * a conversa acontece.
+ *
+ *   deveria — a última fase do roteiro com previsão até a referência: até
+ *             hoje, o PPCP programou a ordem chegar aí.
+ *   esta    — a fase atual: a seguinte à ÚLTIMA com apontamento. Se a última
+ *             apontada ainda tem saldo e não foi fechada, é ela mesma (fase
+ *             começada e parada no meio, `parcial`). Fase anterior em branco
+ *             com uma posterior apontada NÃO é posição: é apontamento
+ *             esquecido (faltasApontamento) — a peça já passou dali.
+ *
+ *   atrasada — está numa fase anterior à que deveria (`fasesAtras` > 0), ou
+ *             na própria fase com a previsão dela vencida.
+ *   roteiroPronto — todas as fases apontadas e a ordem ainda em aberto: não
+ *             é atraso de produção, é ordem por fechar.
+ *
+ * A EMBALAR isenta por convenção fica de fora: ela não é apontada nesta ordem,
+ * e contá-la como posição faria toda ordem de acabado "travar" na embalagem.
+ */
+function posicaoOrdem(of,ref,flagEmb){
+  const todas=of.operacoes.map((op,i)=>({op,seq:i+1}));
+  // A posição ignora a EMBALAR isenta; a PROGRAMAÇÃO não: "prevista para
+  // embalar hoje" continua sendo a régua, mesmo que a embalagem se aponte na
+  // ordem do volume.
+  const ops=todas.filter(x=>!ignoraEmbalagem(of,x.op,flagEmb));
+  if(!ops.length) return null;
+  const saldoOp=op=>Math.max(0,(op.qtd||0)-(op.pronto||0));
+  let deveria=null; todas.forEach(x=>{ if(x.op.previsao&&x.op.previsao<=ref) deveria=x; });
+  let iUlt=-1; ops.forEach((x,i)=>{ if(apontada(x.op)) iUlt=i; });
+  const parcial=iUlt>=0&&!ops[iUlt].op.conclusao&&saldoOp(ops[iUlt].op)>0;
+  const esta=ops[parcial?iUlt:iUlt+1]||null;
+  const fasesAtras=esta&&deveria?Math.max(0,deveria.seq-esta.seq):0;
+  const vencidaNaFase=!!(esta&&esta.op.previsao&&esta.op.previsao<ref);
+  return {
+    esta, deveria, fasesAtras, parcial,
+    naoComecou:iUlt<0,
+    roteiroPronto:!esta,
+    atrasada:!!esta&&!!deveria&&(fasesAtras>0||vencidaNaFase),
+    pecas:esta?saldoOp(esta.op):0,
+    diasParada:vencidaNaFase?dias(esta.op.previsao,ref):null,
+  };
+}
+
+/**
  * A ORDEM É JULGADA PELO ROTEIRO, NÃO PELA CAPA.
  *
  * A ordem tem uma previsão própria — a data de entrega — e cada operação tem a
@@ -1186,7 +1244,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='2.1.1';
+const VERSAO='2.2.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1538,6 +1596,17 @@ function tituloVeredito(faltas,furos,rank){
 }
 const marcaSetor=r=>r.furos?`${r.furos} ${plural(r.furos,'esquecido')}`:`${r.n} a apontar`;
 
+/* Ordens em aberto com a posição no roteiro. Com filtro de setor, mostra as
+   que estão TRAVADAS naquele setor — é o que se quer ao isolar um setor aqui. */
+function ordensTravadas(){
+  const f=filtros(), ref=$('#fRef').value, flagEmb=$('#fEmb').checked;
+  return ordensFiltradas().filter(o=>!o.conclusao)
+    .map(of=>({of,pos:posicaoOrdem(of,ref,flagEmb)}))
+    .filter(x=>x.pos&&(!f.oper||!x.pos.esta||x.pos.esta.op.descricao===f.oper));
+}
+const travadasAtrasadas=()=>ordensTravadas().filter(x=>x.pos.atrasada)
+  .sort((a,b)=>b.pos.fasesAtras-a.pos.fasesAtras||(b.pos.diasParada||0)-(a.pos.diasParada||0)||b.pos.pecas-a.pos.pecas);
+
 function faltasFiltradas(){
   const f=filtros();
   return faltasApontamento(ordensFiltradas(),$('#fRef').value,$('#fEmb').checked)
@@ -1610,6 +1679,7 @@ function resumoGeral(){
   const ops=opsFiltradas();
   return {
     ord, ach, ref, abertas, vencidas, crit, ops,
+    travadas:travadasAtrasadas().length,
     julgaveis, inconsist, nRepo, noPrazo, ader, saldo,
     falt, furos, rank,
     pcFuro:pecasDistintas(furos), pcFalt:pecasDistintas(falt),
@@ -1706,6 +1776,8 @@ function renderContadores(g){
   $('#nApont').textContent=g.falt.length;
   $('#nApont').classList.toggle('alerta',g.furos.length>0);
   $('#nApont').title=g.furos.length?`${g.furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
+  $('#nTrav').textContent=g.travadas;
+  $('#nTrav').classList.toggle('alerta',g.travadas>0);
   $('#nAch').textContent=g.ach.length;
   $('#nOrd').textContent=g.ord.length;
   $('#nOp').textContent=g.ops.length;
@@ -1743,7 +1815,7 @@ $('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
   // esta chamada ele ficava escondido ao voltar da tela de um setor.
   renderResposta(); render();};
 
-const SECOES={setor:'Setor',apont:'Sem apontamento',ach:'Achados',ord:'Ordens',op:'Operações',ader:'Painel por setor',leit:'Leitura dos arquivos'};
+const SECOES={setor:'Setor',apont:'Sem apontamento',trav:'Onde travou',ach:'Achados',ord:'Ordens',op:'Operações',ader:'Painel por setor',leit:'Leitura dos arquivos'};
 // Setor aberto na tela dedicada. Independente do filtro de operação da barra:
 // o filtro muda TODAS as telas, e abrir o setor do líder não pode reescrever o
 // recorte que o usuário montou para a conferência.
@@ -1885,6 +1957,69 @@ function desenharApont(p){
     'A coluna <b>Peças</b> traz a quantidade prevista daquela fase. '+
     '<b>Atenção ao somar:</b> uma peça que passou por três fases sem apontamento aparece em três linhas — o total do cabeçalho conta cada peça UMA vez, mas somar a coluna à mão conta três. '+
     'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
+}
+
+/* ---- ONDE TRAVOU: a ordem atrasada, e o setor que a está segurando ---- */
+const faseTxt=x=>x?`<b>${esc(x.op.descricao)}</b> <small class="cod">${br(x.op.previsao)||'sem prev.'}</small>`:'—';
+function desenharTravadas(p,ref){
+  const todas=ordensTravadas(), atr=travadasAtrasadas();
+  const prontas=todas.filter(x=>x.pos.roteiroPronto);
+
+  // Quem segura o quê: o setor onde a ordem está parada, não o que ela deveria estar.
+  const m=new Map();
+  atr.forEach(x=>{
+    const k=x.pos.esta.op.descricao;
+    const r=m.get(k)||{nome:k,n:0,pecas:0,fases:0,pior:null};
+    r.n++; r.pecas+=x.pos.pecas; r.fases=Math.max(r.fases,x.pos.fasesAtras);
+    if(x.pos.diasParada!=null&&(!r.pior||x.pos.diasParada>r.pior.d)) r.pior={of:x.of.of,peca:x.of.descricao,d:x.pos.diasParada};
+    m.set(k,r);
+  });
+  const setores=[...m.values()].sort((a,b)=>b.n-a.n||b.fases-a.fases||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+
+  const cartoes=setores.map(r=>`<div class="setor critico">
+      <div class="topo"><span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span><span class="selo critico">segurando</span></div>
+      <div class="numeros">
+        <span class="n1"><span class="v c-critico">${r.n}</span><span class="r">${r.n>1?'Ordens':'Ordem'}</span></span>
+        <span class="n1"><span class="v">${nf(r.pecas)}</span><span class="r">Peças paradas</span></span>
+        <span class="n1"><span class="v ${r.fases?'c-critico':''}">${r.fases||'—'}</span><span class="r">Fases atrás (máx.)</span></span>
+      </div>
+      ${r.pior?`<div class="linha">Há mais tempo: ordem <b>${esc(r.pior.of)}</b> — ${esc(r.pior.peca)}, <b>${r.pior.d}</b> dia(s) útil(eis) parada</div>`
+              :'<div class="linha">Atrasadas, mas ainda dentro da previsão desta fase</div>'}
+    </div>`).join('');
+
+  const situacao=x=>x.pos.naoComecou?'<span class="selo critico">não começou</span>'
+    :x.pos.parcial?'<span class="selo atencao">parcial</span>':'<span class="selo neutro">aguardando</span>';
+  const linhas=atr.map(x=>`<tr>
+      <td class="cod">${esc(x.of.of)}${ehReposicao(x.of)?' <span class="selo neutro">reposição</span>':''}</td>
+      <td>${esc(x.of.descricao)}</td><td class="cod">${esc(x.of.produto)}</td>
+      <td>${faseTxt(x.pos.deveria)}</td>
+      <td>${faseTxt(x.pos.esta)} ${situacao(x)}</td>
+      <td class="n ${x.pos.fasesAtras?'c-critico':''}"><b>${x.pos.fasesAtras||'—'}</b></td>
+      <td class="n">${x.pos.diasParada!=null?`<span class="c-critico">${x.pos.diasParada} d</span>`:'—'}</td>
+      <td class="n"><b>${nf(x.pos.pecas)}</b></td>
+      <td class="cod">${esc(x.of.lote)}</td></tr>`);
+
+  const abertas=ordensFiltradas().filter(o=>!o.conclusao).length;
+  p.innerHTML=`<div class="cabecalhoSecao"><h2>Onde travou</h2>
+      <span class="meta">${atr.length} ${atr.length===1?'ordem':'ordens'} em aberto atrás do programado · de ${abertas} em aberto · referência ${br(ref)}</span></div>
+    ${setores.length?`<div class="setores">${cartoes}</div>`:''}
+    ${linhas.length?`<div class="wrap"><table><thead><tr>
+      <th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th><th>Está em</th>
+      <th class="n">Fases atrás</th><th class="n">Parada há (d.ú.)</th><th class="n">Peças na fase</th><th>Lote</th>
+      </tr></thead><tbody>${linhas.join('')}</tbody></table></div>`
+      :'<div class="vazio">Nenhuma ordem em aberto atrás do programado com os filtros atuais.</div>'}
+    ${prontas.length?`<div class="setorBloco" style="margin:var(--lg) var(--xl)"><details>
+      <summary>Roteiro concluído, ordem não fechada <small>${prontas.length} ordem(ns) — todas as fases apontadas, falta encerrar a ordem</small></summary>
+      <div class="wrap"><table><thead><tr><th>Ordem</th><th>Peça</th><th>Produto</th><th>Prev. ordem</th><th class="n">Qtd.</th><th class="n">Pronto</th><th>Lote</th></tr></thead>
+      <tbody>${prontas.map(x=>`<tr><td class="cod">${esc(x.of.of)}</td><td>${esc(x.of.descricao)}</td><td class="cod">${esc(x.of.produto)}</td>
+        <td class="cod">${br(x.of.previsao)}</td><td class="n">${nf(x.of.qtd)}</td><td class="n">${nf(x.of.pronto)}</td><td class="cod">${esc(x.of.lote)}</td></tr>`).join('')}</tbody></table></div>
+    </details></div>`:''}
+    <div class="nota"><b>Deveria estar em</b> = a última fase do roteiro com previsão do processo até ${br(ref)}: até hoje o PPCP programou a ordem chegar aí.
+      <b>Está em</b> = a fase seguinte à última apontada — fase anterior em branco com uma posterior apontada é apontamento esquecido (seção "Sem apontamento"), não posição; a peça já passou.
+      <b>Parcial</b> = a fase começou, tem quantidade lançada e não terminou. <b>Não começou</b> = nenhuma fase apontada.
+      <b>Fases atrás</b> = quantas fases separam onde está de onde deveria estar; "—" com dias parada = atrasada na própria fase.
+      <b>Peças na fase</b> = saldo ainda não apontado na fase onde está. Só ordens em aberto; a EMBALAR isenta por convenção não conta como posição.
+      Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.</div>`;
 }
 
 /* ---- ACHADOS: tudo que as regras apontaram, por severidade ---- */
@@ -2083,7 +2218,7 @@ function desenharLeitura(p){
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
    escreve o próprio HTML; `render` embrulha a chamada num try para que uma
    seção quebrada mostre o erro no lugar dela, sem levar a tela junto. */
-const DESENHO={setor:desenharSetor,apont:desenharApont,ach:desenharAchados,
+const DESENHO={setor:desenharSetor,apont:desenharApont,trav:desenharTravadas,ach:desenharAchados,
   ord:desenharOrdens,op:desenharOperacoes,ader:desenharPainel,leit:desenharLeitura};
 function desenhar(){
   const fn=DESENHO[ABA]; if(!fn) return;
@@ -2315,6 +2450,13 @@ function csvFaltas(nome,faltas){
       x.prova||semAcento(motivoFalta(x))]));
 }
 $('#btnCsvApont').onclick=()=>csvFaltas('sem-apontamento.csv',faltasFiltradas());
+
+$('#btnCsvTrav').onclick=()=>csv('onde-travou.csv',
+  ['Arquivo','Lote','Ordem','Produto','Descricao','Reposicao','DeveriaEstarEm','PrevisaoDeveria','EstaEm','PrevisaoEsta',
+   'Situacao','FasesAtras','DiasParadaUteis','PecasNaFase'],
+  travadasAtrasadas().map(({of,pos})=>[of.arquivo,of.lote,of.of,of.produto,of.descricao,ehReposicao(of)?'Sim':'Nao',
+    pos.deveria.op.descricao,br(pos.deveria.op.previsao),pos.esta.op.descricao,br(pos.esta.op.previsao),
+    pos.naoComecou?'Nao comecou':pos.parcial?'Parcial':'Aguardando',pos.fasesAtras,pos.diasParada==null?'':pos.diasParada,dec(pos.pecas)]));
 
 $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
