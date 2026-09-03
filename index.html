@@ -137,6 +137,60 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .aviso ul{margin:var(--sm) 0 0;padding-left:var(--xxl)}
 .aviso li{margin-top:var(--xs)}
 
+/* ---------------------------------------------------- Lista de setores */
+.setor-item{width:calc(100% + var(--lg)*2);margin-left:calc(var(--lg)*-1);min-height:34px;
+  padding:0 var(--lg);display:flex;align-items:center;gap:var(--sm);
+  background:transparent;border:0;color:var(--esc-texto-medio);font:inherit;font-size:14px;
+  text-align:left;cursor:pointer;transition:background var(--rapida),color var(--rapida)}
+.setor-item:hover{background:var(--esc-superficie);color:var(--esc-texto)}
+.setor-item[aria-current="page"]{background:var(--esc-alta);color:var(--esc-texto);font-weight:700;
+  box-shadow:inset 3px 0 0 var(--vermelho)}
+/* O ponto nunca informa sozinho: a quantidade ao lado diz o mesmo em número. */
+.setor-item .pt{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.setor-item .pt.c{background:var(--critico)} .setor-item .pt.a{background:var(--atencao)}
+.setor-item .pt.o{background:var(--ok)}
+.setor-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setor-item .qt{flex-shrink:0;font-family:var(--mono);font-size:12px;color:var(--esc-fraco)}
+
+/* ---------------------------------------------------- Tela do setor */
+.setorTopo{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--xl);flex-wrap:wrap;
+  padding:var(--lg) var(--xl);background:var(--papel);border-radius:var(--r-lg);box-shadow:var(--elev-media);
+  border-left:6px solid var(--borda);margin-bottom:var(--lg)}
+.setorTopo.critico{border-left-color:var(--critico)} .setorTopo.atencao{border-left-color:var(--atencao)}
+.setorTopo.ok{border-left-color:var(--ok)}
+.setorTopo h1{margin:0;font-size:30px;line-height:1.1;letter-spacing:-.02em}
+.setorTopo .frase{margin:2px 0 0;font-size:16px;color:var(--texto-medio);max-width:90ch}
+.setorTopo .big{flex-shrink:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:44px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.setorTopo.critico .big{color:var(--critico)} .setorTopo.atencao .big{color:var(--atencao)}
+.setorTopo.ok .big{color:var(--ok)}
+.setorTopo .big span{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--texto-fraco);font-family:var(--fonte)}
+
+.setorNums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--borda);
+  border:1px solid var(--borda);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--lg)}
+.setorNums .n{background:var(--papel);padding:var(--md) var(--lg)}
+.setorNums .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;line-height:1.2}
+.setorNums .v.c{color:var(--critico)} .setorNums .v.a{color:var(--atencao)} .setorNums .v.o{color:var(--ok)}
+.setorNums .v small{font-size:14px;font-weight:400;color:var(--texto-fraco)}
+.setorNums .s{font-size:12px;color:var(--texto-fraco)}
+
+.setorBloco{background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-lg);
+  margin-bottom:var(--lg);overflow:hidden}
+.setorBloco>h2{margin:0;padding:var(--md) var(--xl);font-size:15px;border-bottom:1px solid var(--borda);
+  display:flex;justify-content:space-between;align-items:baseline;gap:var(--md);flex-wrap:wrap}
+.setorBloco>h2 small{font-weight:400;font-size:12px;color:var(--texto-fraco)}
+.setorBloco.critico>h2{background:var(--critico-fundo)}
+.setorBloco .acoes{padding:var(--md) var(--xl);display:flex;gap:var(--sm);flex-wrap:wrap;
+  border-top:1px solid var(--borda);background:#FAFBFC}
+.setorBloco summary{padding:var(--md) var(--xl);cursor:pointer;font-size:15px;font-weight:700;
+  display:flex;justify-content:space-between;align-items:baseline;gap:var(--md);flex-wrap:wrap}
+.setorBloco summary small{font-weight:400;font-size:12px;color:var(--texto-fraco)}
+.setorBloco details[open] summary{border-bottom:1px solid var(--borda)}
+.btnPri{min-height:36px;padding:0 var(--lg);background:var(--vermelho);border:0;border-radius:var(--r-md);
+  color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.btnPri:hover{background:var(--bordeaux)}
+
 /* ================================================== VEREDITO E RANKING
    A tela dizia quatro números de peso igual e deixava a conclusão por conta
    do leitor. Aqui a conclusão vem escrita, em uma frase, e logo abaixo o
@@ -448,6 +502,12 @@ dialog form{margin-top:var(--lg);text-align:right}
     <input type="file" id="file" accept="application/pdf" multiple hidden>
   </div>
 
+  <div class="bloco hide" id="navSetores" role="group" aria-label="Setores">
+    <div class="grupo">Setores</div>
+    <div class="grupo-dica">Uma tela por processo do roteiro</div>
+    <div id="listaSetores"></div>
+  </div>
+
   <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
     <div class="grupo">Conferência</div>
     <button type="button" class="item" data-t="apont" aria-current="page"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
@@ -532,7 +592,12 @@ dialog form{margin-top:var(--lg);text-align:right}
           <option value="">Todas</option><option value="critico">Só crítico</option>
           <option value="critico,atencao">Crítico e atenção</option></select></div>
         <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef" title="O que conta como vencido é medido contra esta data. Padrão: data de emissão do relatório."></div>
-        <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (103.)</label>
+        <div class="f"><label for="fTipo">Tipo de produto</label><select id="fTipo">
+        <option value="">Todos</option>
+        <option value="acabado">Produto acabado (código 1…)</option>
+        <option value="volume">Volume (código 5…)</option>
+        <option value="componente">Componentes (demais)</option></select></div>
+      <label class="check" for="fEmb"><input type="checkbox" id="fEmb" checked>Ignorar EMBALAR sem apontamento em produto acabado (código 1…)</label>
       </div>
       <details>
         <summary>Regras de conferência ativas</summary>
@@ -554,6 +619,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>2.0.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Uma tela por setor.</b> Os setores viraram navegação na lateral, com ponto de estado e as peças pendentes de cada um. Clicar abre a tela daquele processo.</li>
+    <li>A tela do setor traz três blocos, em ordem de ação: <b>Cobrar apontamento</b> (o que tem prova), <b>Parado no setor</b> (vencido e travado) e <b>Já concluído</b>, recolhido.</li>
+    <li>Botão para <b>imprimir a folha só daquele setor</b> e exportar o CSV dele, sem mexer nos filtros da tela.</li>
+    <li><b>Correção importante:</b> a isenção do EMBALAR só reconhecia códigos começados exatamente em "103.". Um produto acabado 104. ou 102. ficava de fora e virava falso apontamento esquecido. Agora vale o primeiro dígito: <b>1 é produto acabado, 5 é volume</b>.</li>
+    <li>Novo filtro <b>Tipo de produto</b>: acabado, volume ou componentes.</li>
+  </ul>
   <h3>1.9.1 — 03/09/2026</h3>
   <ul>
     <li><b>Nome da peça na aba Operações.</b> O código do produto sozinho não diz nada numa reunião: "479.006.001" só vira informação com "MADERO LAT DIR 350X320X12" ao lado.</li>
@@ -649,7 +722,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 const CFG = {
   // produtos que, por convenção, não recebem apontamento de embalagem na própria OF
   // (o apontamento acontece na OF do volume 501.x)
-  produtoAcabado: /^103\./,
+  /* CLASSIFICAÇÃO PELO PRIMEIRO DÍGITO DO CÓDIGO — convenção da Patrimar.
+     Era /^103\./, que só reconhecia os códigos começados exatamente em "103.".
+     Um produto acabado 104. ou 102. ficava de fora da isenção de embalagem e
+     virava falso "apontamento esquecido". O que define o tipo é o primeiro
+     dígito, não os três primeiros. */
+  produtoAcabado: /^1/,
+  produtoVolume: /^5/,
   operacaoEmbalagem: /^EMBAL/i,
   // tolerância de quantidade (peças) para considerar divergência
   tolQtd: 0.001,
@@ -1064,7 +1143,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='1.9.1';
+const VERSAO='2.0.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1280,9 +1359,15 @@ function montarFiltros(){
 
 function filtros(){
   return {lote:$('#fLote').value,prod:$('#fProduto').value.trim().toUpperCase(),
-          oper:$('#fOper').value,sev:$('#fSev').value.split(',').filter(Boolean),ref:$('#fRef').value};
+          oper:$('#fOper').value,sev:$('#fSev').value.split(',').filter(Boolean),
+          tipo:$('#fTipo')?$('#fTipo').value:'',ref:$('#fRef').value};
 }
-const casaOf=(o,f)=>(!f.lote||o.lote===f.lote)&&(!f.prod||(o.produto+' '+o.descricao).toUpperCase().includes(f.prod));
+/* Tipo pelo primeiro dígito do código: 1 acabado, 5 volume, o resto componente. */
+const tipoProduto=cod=>CFG.produtoAcabado.test(cod||'')?'acabado'
+  :CFG.produtoVolume.test(cod||'')?'volume':'componente';
+const casaOf=(o,f)=>(!f.lote||o.lote===f.lote)
+  &&(!f.prod||(o.produto+' '+o.descricao).toUpperCase().includes(f.prod))
+  &&(!f.tipo||tipoProduto(o.produto)===f.tipo);
 
 function ordensFiltradas(){
   const f=filtros();
@@ -1294,6 +1379,47 @@ function opsFiltradas(){
   return DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f))
     .flatMap(o=>o.operacoes.filter(x=>!f.oper||x.descricao===f.oper).map(x=>({of:o,op:x})));
 }
+/**
+ * TUDO DE UM SETOR, NUMA ESTRUTURA SÓ.
+ *
+ * A tela do setor, a lista da lateral e a folha impressa do setor saem daqui —
+ * três lugares que precisam concordar sobre o mesmo processo. Calculado sobre
+ * os filtros da tela (lote, produto, data), mas ignorando o filtro de operação:
+ * abrir o setor do líder não pode reescrever o recorte que o usuário montou.
+ */
+function dadosDoSetor(nome){
+  const ref=$('#fRef').value, flagEmb=$('#fEmb').checked, f=filtros();
+  const ordens=DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f));
+  const ops=[];
+  ordens.forEach(of=>of.operacoes.forEach(op=>{ if(op.descricao===nome) ops.push({of,op}); }));
+  const faltas=faltasApontamento(ordens,ref,flagEmb).filter(x=>x.op.descricao===nome);
+
+  // "Parado no setor": vencida, sem conclusão, e que NÃO está na lista de
+  // faltas — lá é falta de registro, aqui é fase começada e parada no meio.
+  const chave=x=>x.of.of+'|'+x.seq;
+  const naFalta=new Set(faltas.map(chave));
+  const parado=ops.filter(({of,op},i)=>!op.conclusao&&op.previsao&&op.previsao<ref&&!of.conclusao
+    &&!naFalta.has(of.of+'|'+(of.operacoes.indexOf(op)+1))&&!ignoraEmbalagem(of,op,flagEmb));
+
+  const concluidas=ops.filter(({op})=>op.conclusao);
+  const desvios=concluidas.filter(({op})=>op.previsao).map(({op})=>dias(op.previsao,op.conclusao));
+  return {
+    nome, ops, faltas, parado, concluidas,
+    furos:faltas.filter(x=>x.furo).length,
+    pecas:pecasDistintas(faltas),
+    ordens:new Set(ops.map(({of})=>of.of)).size,
+    saldo:ops.reduce((s,{op})=>s+Math.max(0,(op.qtd||0)-(op.pronto||0)),0),
+    desvioMedio:desvios.length?desvios.reduce((a,b)=>a+b,0)/desvios.length:null,
+  };
+}
+
+const setoresDisponiveis=()=>{
+  const f=filtros();
+  const n=new Set();
+  DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f)).forEach(o=>o.operacoes.forEach(x=>n.add(x.descricao)));
+  return [...n];
+};
+
 /* As faltas de apontamento respeitam os mesmos filtros da tela, inclusive o de
    operação: é assim que o PPCP isola um setor para cobrar. */
 /**
@@ -1342,7 +1468,7 @@ function recalc(){
   const tem=DOCS.length>0;
   $('#app').classList.toggle('hide',!tem);
   $('#vazio').classList.toggle('hide',tem);
-  ['#navSecoes','#navArquivos','#navExportar','#navImprimir'].forEach(s=>$(s).classList.toggle('hide',!tem));
+  ['#navSecoes','#navArquivos','#navExportar','#navImprimir','#navSetores'].forEach(s=>$(s).classList.toggle('hide',!tem));
   if(!tem)return;
   ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
   renderAviso(); renderResposta(); render();
@@ -1411,6 +1537,13 @@ function renderResposta(){
   const detalhe=falt.length
     ? `${nf(pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${furos.length?' — há prova de que a peça passou por lá.':'.'}`
     : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
+  /* Na tela de um setor, o veredito GERAL sai: ele fala do lote inteiro (62
+     peças) enquanto o cabeçalho do setor fala do setor (42). Dois títulos com
+     números diferentes na mesma tela é o que faz o leitor parar para descobrir
+     qual vale — o oposto de responder em dois segundos. */
+  const noSetor=ABA==='setor'&&SETOR_SEL;
+  $('#veredito').classList.toggle('hide',!!noSetor);
+  $('#ranking').classList.toggle('hide',!!noSetor);
   $('#veredito').innerHTML=`<div class="veredito ${estado}">
       <span class="ico" aria-hidden="true">${estado==='ok'?'✓':'!'}</span>
       <div class="txt"><h2>${titulo}</h2><p>${detalhe}</p></div>
@@ -1453,6 +1586,21 @@ function renderResposta(){
   $('#nSet').textContent=setoresTodos.size;
   $('#nSet').classList.toggle('alerta',falt.some(x=>x.furo));
 
+  /* ---- LISTA DE SETORES na lateral ----
+     Ordenada pelo que exige conversa primeiro. O ponto colorido tem a
+     quantidade ao lado: quem não distingue a cor lê o número. */
+  const setoresLat=setoresDisponiveis().map(nome=>{
+    const r=porSetor[nome];
+    return {nome, furos:r?r.furos:0, n:r?r.n:0, pecas:r?pecasDistintas(r.itens):0};
+  }).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+  $('#listaSetores').innerHTML=setoresLat.map(x=>`
+    <button type="button" class="setor-item" data-setor="${esc(x.nome)}"
+      ${SETOR_SEL===x.nome&&ABA==='setor'?'aria-current="page"':''} title="${esc(x.nome)}">
+      <span class="pt ${x.furos?'c':x.n?'a':'o'}" aria-hidden="true"></span>
+      <span class="nm">${esc(x.nome)}</span>
+      <span class="qt">${x.pecas?nf(x.pecas)+' pç':'—'}</span>
+    </button>`).join('');
+
   $('#nApont').textContent=falt.length;
   $('#nApont').classList.toggle('alerta',furos.length>0);
   $('#nApont').title=furos.length?`${furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
@@ -1461,14 +1609,30 @@ function renderResposta(){
   $('#nOp').textContent=opsFiltradas().length;
 }
 
+$('#listaSetores').onclick=e=>{
+  const b=e.target.closest('.setor-item'); if(!b)return;
+  SETOR_SEL=b.dataset.setor; ABA='setor';
+  $('#navSecoes').querySelectorAll('.item').forEach(x=>x.removeAttribute('aria-current'));
+  renderResposta(); render();
+  document.querySelector('.conteudo').scrollIntoView({block:'start',behavior:'smooth'});
+};
+
 $('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
+  SETOR_SEL=null;
+  $('#listaSetores').querySelectorAll('.setor-item').forEach(x=>x.removeAttribute('aria-current'));
   ABA=b.dataset.t;
   $('#navSecoes').querySelectorAll('.item').forEach(x=>{
     if(x===b)x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current');
   });
-  render();};
+  // renderResposta também: é ela que decide se o veredito geral aparece, e sem
+  // esta chamada ele ficava escondido ao voltar da tela de um setor.
+  renderResposta(); render();};
 
-const SECOES={apont:'Sem apontamento',ach:'Achados',ord:'Ordens',op:'Operações',ader:'Painel por setor',leit:'Leitura dos arquivos'};
+const SECOES={setor:'Setor',apont:'Sem apontamento',ach:'Achados',ord:'Ordens',op:'Operações',ader:'Painel por setor',leit:'Leitura dos arquivos'};
+// Setor aberto na tela dedicada. Independente do filtro de operação da barra:
+// o filtro muda TODAS as telas, e abrir o setor do líder não pode reescrever o
+// recorte que o usuário montou para a conferência.
+let SETOR_SEL=null;
 
 function tabela(titulo,meta,cols,linhas,nota){
   const corpo=linhas.length
@@ -1494,6 +1658,96 @@ function render(){
 
 function desenhar(){
   const p=$('#painel'), ref=$('#fRef').value;
+  if(ABA==='setor'){
+    if(!SETOR_SEL){ p.innerHTML='<div class="vazio">Escolha um setor na lateral.</div>'; return; }
+    const d=dadosDoSetor(SETOR_SEL);
+    const estado=d.furos?'critico':(d.faltas.length||d.parado.length)?'atencao':'ok';
+    const frase=d.furos
+      ? `<b>${d.furos} apontamento${d.furos>1?'s':''} esquecido${d.furos>1?'s':''}</b> — a peça passou por aqui e o registro não foi feito.`
+      : d.faltas.length
+      ? `<b>${d.faltas.length} apontamento${d.faltas.length>1?'s':''} pendente${d.faltas.length>1?'s':''}</b> — sem prova de que a peça passou; confirmar no setor.`
+      : d.parado.length
+      ? `<b>${d.parado.length} operação(ões) vencida(s)</b>, começadas e paradas no meio.`
+      : 'Nenhuma pendência de apontamento neste setor, com os filtros atuais.';
+
+    const linhaFalta=x=>`<tr>
+      <td><span class="selo ${x.furo?'critico':'atencao'}">${x.tipo==='furo'?'esquecido':x.tipo==='semQtd'?'sem qtd':'pendente'}</span></td>
+      <td class="cod">${esc(x.of.of)}</td><td>${esc(x.of.descricao)}</td>
+      <td class="cod">${esc(x.of.produto)}</td>
+      <td class="cod">${br(x.op.previsao)}${x.vencida?' <span class="selo critico">venceu</span>':''}</td>
+      <td class="n"><b>${nf(x.pecas)}</b></td>
+      <td>${x.prova?esc(x.prova):x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo'}</td></tr>`;
+
+    const linhaParado=({of,op})=>{
+      const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
+      return `<tr><td><span class="selo critico">vencida</span></td>
+        <td class="cod">${esc(of.of)}</td><td>${esc(of.descricao)}</td><td class="cod">${esc(of.produto)}</td>
+        <td class="cod">${br(op.previsao)}</td><td class="n">${prazo(dias(op.previsao,ref))}</td>
+        <td class="n">${nf(op.qtd)}</td><td class="n">${nf(op.pronto)}</td>
+        <td class="n c-atencao"><b>${nf(saldo)}</b></td></tr>`;};
+
+    const linhaConc=({of,op})=>{
+      const dv=op.previsao?dias(op.previsao,op.conclusao):null;
+      return `<tr><td class="cod">${esc(of.of)}</td><td>${esc(of.descricao)}</td><td class="cod">${esc(of.produto)}</td>
+        <td class="cod">${br(op.previsao)}</td><td class="cod">${br(op.conclusao)}</td>
+        <td class="n">${desvio(dv)}</td><td class="n">${nf(op.qtd)}</td></tr>`;};
+
+    p.innerHTML=`
+      <div class="setorTopo ${estado}">
+        <div><h1>${esc(d.nome)}</h1><p class="frase">${frase}</p></div>
+        <div class="big">${nf(d.pecas)}<span>peças sem apontar</span></div>
+      </div>
+
+      <div class="setorNums">
+        <div class="n"><div class="v ${d.furos?'c':'o'}">${d.furos||'—'}</div><div class="s">Apontamentos esquecidos</div></div>
+        <div class="n"><div class="v ${d.parado.length?'a':'o'}">${d.parado.length||'—'}</div><div class="s">Vencidas e paradas</div></div>
+        <div class="n"><div class="v">${d.concluidas.length} <small>de ${d.ops.length}</small></div><div class="s">Operações concluídas</div></div>
+        <div class="n"><div class="v ${d.saldo?'a':'o'}">${d.saldo?nf(d.saldo):'—'}</div><div class="s">Saldo a produzir (pç)</div></div>
+        <div class="n"><div class="v ${d.desvioMedio>0?'c':d.desvioMedio<0?'o':''}">${d.desvioMedio==null?'—':(d.desvioMedio>0?'+':'')+d.desvioMedio.toFixed(1).replace('.',',')}</div><div class="s">Desvio médio (d.ú.)</div></div>
+        <div class="n"><div class="v">${d.ordens}</div><div class="s">Ordens no setor</div></div>
+      </div>
+
+      ${d.faltas.length?`<div class="setorBloco critico">
+        <h2>Cobrar apontamento
+          <small>${d.faltas.length} operação(ões) · ${nf(d.pecas)} peças${d.furos?` · ${d.furos} com prova de que a peça passou`:''}</small></h2>
+        <div class="wrap"><table><thead><tr><th>Situação</th><th>Ordem</th><th>Peça</th><th>Produto</th>
+          <th>Previsão</th><th class="n">Peças</th><th>Por que</th></tr></thead>
+          <tbody>${d.faltas.map(linhaFalta).join('')}</tbody></table></div>
+        <div class="acoes">
+          <button type="button" class="btnPri" id="btnFolhaSetor">Imprimir a folha do ${esc(d.nome)}</button>
+          <button type="button" class="secundario" id="btnCsvSetor">CSV deste setor</button>
+        </div>
+      </div>`:''}
+
+      ${d.parado.length?`<div class="setorBloco">
+        <h2>Parado no setor <small>${d.parado.length} operação(ões) vencida(s), começada(s) e parada(s) no meio</small></h2>
+        <div class="wrap"><table><thead><tr><th>Situação</th><th>Ordem</th><th>Peça</th><th>Produto</th>
+          <th>Previsão</th><th class="n">Prazo</th><th class="n">Qtd.</th><th class="n">Pronto</th><th class="n">Saldo</th></tr></thead>
+          <tbody>${d.parado.map(linhaParado).join('')}</tbody></table></div>
+      </div>`:''}
+
+      ${d.concluidas.length?`<div class="setorBloco">
+        <details>
+          <summary>Já concluído <small>${d.concluidas.length} operação(ões) — o histórico do setor neste lote</small></summary>
+          <div class="wrap"><table><thead><tr><th>Ordem</th><th>Peça</th><th>Produto</th><th>Previsão</th>
+            <th>Conclusão</th><th class="n">Desvio (d.ú.)</th><th class="n">Qtd.</th></tr></thead>
+            <tbody>${d.concluidas.map(linhaConc).join('')}</tbody></table></div>
+        </details>
+      </div>`:''}
+
+      ${!d.faltas.length&&!d.parado.length&&!d.concluidas.length
+        ?'<div class="vazio">Nenhuma operação deste setor com os filtros atuais.</div>':''}
+
+      <div class="nota" style="border:1px solid var(--borda);border-radius:var(--r-lg);background:var(--papel)">
+        Prazos em <b>dias úteis</b>. <b>Esquecido</b> = a fase seguinte do roteiro já foi apontada, ou a ordem foi
+        dada como concluída: a peça passou por aqui, logo o apontamento existe para ser feito.
+        <b>Pendente</b> = nada apontado e a previsão venceu, sem prova de que a peça passou.
+        <b>Parado no setor</b> = a fase começou, tem apontamento parcial e não terminou.</div>`;
+
+    const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
+    const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
+    return;
+  }
   if(ABA==='apont'){
     const f=faltasFiltradas();
     const furos=f.filter(x=>x.furo), pecasFuro=pecasDistintas(furos);
@@ -1717,6 +1971,8 @@ function filtrosNoPapel(secao){
   if(f.lote) t.push(`lote ${f.lote}`);
   if(f.prod) t.push(`produto ou descrição contendo "${f.prod}"`);
   if(f.oper) t.push(`somente o setor ${f.oper}`);
+  if(f.tipo) t.push(f.tipo==='acabado'?'somente produto acabado (código 1…)'
+    :f.tipo==='volume'?'somente volume (código 5…)':'somente componentes');
   // Severidade só filtra a lista de Achados. Declará-la numa folha de Ordens
   // ou Operações faria o leitor descontar linhas que nunca foram descartadas —
   // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
@@ -1790,8 +2046,8 @@ function montarImpressoLista(){
     </div>`;
 }
 
-function montarImpresso(){
-  const f=faltasFiltradas(), ref=$('#fRef').value;
+function montarImpresso(soSetor){
+  const f=faltasFiltradas().filter(x=>!soSetor||x.op.descricao===soSetor), ref=$('#fRef').value;
   const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
   const lotes=[...new Set(f.map(x=>x.of.lote).filter(Boolean))];
   const desc=DOCS.filter(d=>lotes.includes(d.lote)).map(d=>[d.lt?'LT '+d.lt:'',d.descricao].filter(Boolean).join(' ')).filter(Boolean);
@@ -1816,7 +2072,7 @@ function montarImpresso(){
         <p class="doc-sub">
           ${lotes.length?`Lote <b>${esc(lotes.join(', '))}</b>${desc.length?' — '+esc(desc.join(' · ')):''}<br>`:''}
           Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b><br>
-          Recorte impresso: <b>${esc(filtrosNoPapel('apont'))}</b>
+          Recorte impresso: <b>${soSetor?`somente o setor ${esc(soSetor)}`:esc(filtrosNoPapel('apont'))}</b>
         </p>
       </div>
       <div class="doc-carimbo">
@@ -1929,6 +2185,20 @@ function orientar(modo){
   let st=document.getElementById('orientacao');
   if(!st){ st=document.createElement('style'); st.id='orientacao'; document.head.appendChild(st); }
   st.textContent=`@media print{@page{size:A4 ${modo};margin:${modo==='landscape'?'10mm':'12mm'}}}`;
+}
+
+/* Folha e CSV de UM setor: o filtro da tela não é tocado, para o usuário não
+   voltar da impressão com o recorte mudado sem perceber. */
+function imprimirFolhaSetor(nome){
+  orientar('portrait'); montarImpresso(nome); window.print(); montarImpresso();
+}
+function csvDoSetor(nome){
+  const d=dadosDoSetor(nome);
+  csv(`sem-apontamento-${nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,
+    ['Situacao','Setor','PecasPrevistas','Arquivo','Lote','Ordem','Produto','DescricaoProduto','Seq','PrevisaoProcesso','Vencida','Motivo'],
+    d.faltas.map(x=>[x.tipo==='furo'?'Esquecido':x.tipo==='semQtd'?'Sem quantidade':'Pendente',nome,dec(x.pecas),
+      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,x.seq,br(x.op.previsao),x.vencida?'Sim':'Nao',
+      x.prova||(x.vencida?'Previsao vencida, nada apontado':'Ainda dentro do prazo')]));
 }
 
 $('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); window.print(); };
