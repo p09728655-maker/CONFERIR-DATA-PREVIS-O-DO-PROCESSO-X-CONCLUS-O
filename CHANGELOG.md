@@ -3,6 +3,60 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.6.1] — 2026-09-03
+
+### Alterado
+
+- **Toda lista de setor sai na ordem do roteiro** — lateral, ranking (tela e folha), matriz de
+  frentes e blocos de detalhe da folha impressa. A folha inteira passa a ler como uma caminhada
+  pela linha: corte, fura, usina, cola, pinta, embala.
+
+  **Ranking por tamanho mente sobre causa numa linha sequencial.** PINTAR UV tinha o maior número
+  de peças sem apontar porque é a **última** — tudo precisa passar por ela. Listá-la como "a pior"
+  sugeria que o problema era a UV, quando ela nem tinha recebido o trabalho. Na ordem do roteiro a
+  pilha crescendo rio abaixo mostra o que de fato acontece:
+
+  ```
+  CORTAR            5 pç
+  FURAR         2.818 pç
+  USINAR        2.500 pç
+  COLAR BORDA   8.488 pç
+  PINTAR UV    11.548 pç
+  ```
+
+  A prioridade não se perde: o **comece por** do veredito continua nomeando o maior, calculado à
+  parte por `piorSetor()`. Ordem conta a história; o veredito dá a ação.
+
+  Na lateral há um ganho extra: a ordem é **estável entre lotes**. Um menu que se reordena a cada
+  arquivo obriga o líder a procurar o próprio setor toda vez.
+
+- **A ordem vem da precedência observada**, não de média de posição. Média não funciona quando os
+  roteiros têm tamanhos diferentes, e as duas tentativas erraram de formas opostas neste lote:
+
+  | Régua | Erro |
+  |---|---|
+  | Sequência absoluta | A ordem do acabado só tem `EMBALAR`, que virava seq 1 e puxava a média dela para o começo da linha |
+  | Posição relativa | As ordens `CORTAR > FURAR > USINAR` fazem USINAR valer 3/3 = fim do roteiro, e ela caía depois de COLAR BORDA |
+
+  O que o relatório de fato afirma é **precedência**: em toda ordem onde dois setores aparecem,
+  quem vem antes de quem. No LT 163 essa relação é consistente, sem um único par em conflito —
+  CORTAR antes de FURAR 88×, FURAR antes de COLAR BORDA 132×, USINAR antes de COLAR BORDA 4×,
+  COLAR BORDA antes de PINTAR UV 188×. Cada setor é pontuado por quantos outros ele precede;
+  empate vai para a posição relativa, que é o que separa PINTAR UV (~0,95) de EMBALAR (1,0) —
+  EMBALAR nunca divide ordem com ninguém, logo não tem precedência com ninguém, e sem esse
+  desempate ficaria no meio da lista.
+
+### Corrigido
+
+- **Na folha impressa a célula de frente aberta perdia o fundo cinza.** O Chrome descarta fundos
+  quando **"Gráficos de segundo plano"** está desmarcado — que é o **padrão** do diálogo. O CSS de
+  impressão do app já trata isso em tudo que depende de fundo (as barras do ranking, o selo
+  `sit-certeza`); a matriz da v3.6.0 tinha ficado sem.
+
+  Agora leva `print-color-adjust:exact` como o resto da folha, **mais** traço de 2pt à esquerda e
+  negrito: borda e peso imprimem sempre, mesmo que driver ou impressora ignorem fundo. A legenda
+  deixou de dizer "célula cinza" e passou a "célula destacada, com traço à esquerda".
+
 ## [3.6.0] — 2026-09-03
 
 ### Adicionado

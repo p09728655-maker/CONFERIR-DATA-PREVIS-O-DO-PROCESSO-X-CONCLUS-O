@@ -447,7 +447,14 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-matriz th{font-size:7pt;text-transform:uppercase;letter-spacing:.2pt}
   .doc-matriz td.c,.doc-matriz th.c{text-align:right;font-variant-numeric:tabular-nums}
   .doc-matriz td.setor{font-weight:700}
-  .doc-matriz td.aberta{background:#e0e0e0;font-weight:700}
+  /* DOIS MARCADORES, DE PROPOSITO. O fundo cinza precisa de
+     print-color-adjust:exact, como todo fundo desta folha — sem ele o Chrome
+     descarta o cinza quando "Gráficos de segundo plano" está desmarcado, que é
+     o PADRAO do diálogo. E mesmo com a propriedade, driver e impressora ainda
+     podem ignorar fundo. Por isso a frente aberta também leva traço grosso à
+     esquerda e negrito: borda e peso imprimem sempre. */
+  .doc-matriz td.aberta{background:#d5d5d5;font-weight:700;border-left:2pt solid #000;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
   .doc-matriz td.zero,.doc-matriz td.naotem{color:#666}
   .doc-matriz .leg{font-size:7pt;margin-top:1mm}
   .doc-setor h2{font-size:11pt;margin:0 0 1.5mm;padding-bottom:1mm;border-bottom:1pt solid #000;
@@ -666,6 +673,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.6.1 — 03/09/2026</h3>
+  <ul>
+    <li><b>Listas de setor passam a sair na ordem do roteiro</b> — corte, fura, usina, cola, pinta, embala — na lateral, no ranking, na matriz e nos blocos da folha impressa. Ranking por tamanho <b>mente sobre causa</b> numa linha sequencial: PINTAR UV tinha o maior número de peças sem apontar porque é a última, e listá-la como "a pior" sugeria que o problema era a UV, quando ela nem tinha recebido o trabalho. Na ordem do roteiro a pilha crescendo rio abaixo mostra a causa.</li>
+    <li>A prioridade não se perdeu: o <b>comece por</b> continua nomeando o maior, calculado à parte.</li>
+    <li>A ordem vem da <b>precedência observada</b> — em toda ordem onde dois setores aparecem, quem vem antes de quem — e não de média de posição, que erra quando os roteiros têm tamanhos diferentes.</li>
+    <li>Correção: na folha impressa a célula de frente aberta perdia o fundo cinza, porque o Chrome descarta fundos quando <b>Gráficos de segundo plano</b> está desmarcado, que é o padrão do diálogo. Agora leva <code>print-color-adjust:exact</code> como o resto da folha, mais traço grosso à esquerda e negrito — borda e peso imprimem sempre.</li>
+  </ul>
   <h3>3.6.0 — 03/09/2026</h3>
   <ul>
     <li><b>Começou × terminou: a matriz que mostra "começa tudo e não termina nada".</b> Uma linha por setor, uma coluna por produto, o avanço em peças em cada cruzamento. No LT 163 o padrão salta: <b>8 frentes abertas ao mesmo tempo, 4 fechadas</b> — COLAR BORDA e PINTAR UV com os três produtos começados e nenhum fechado.</li>
@@ -1442,7 +1456,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.6.0';
+const VERSAO='3.6.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1845,7 +1859,70 @@ function agregarPorSetor(faltas){
    O terceiro estado, PARADO, é da tela "Onde travou". */
 const rotuloFalta=x=>x.furo?'esquecido':'a confirmar';
 const motivoFalta=x=>x.prova||(x.vencida?'Previsão vencida, nada apontado':'Ainda dentro do prazo');
-const rankSetores=faltas=>agregarPorSetor(faltas).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas);
+/**
+ * ORDEM DO ROTEIRO — sequência média de cada setor entre as ordens do recorte.
+ *
+ * Por que as listas de setor saem nesta ordem e não da maior para a menor:
+ * numa linha sequencial, ranking por tamanho MENTE SOBRE CAUSA. A PINTAR UV
+ * tem o maior número de peças sem apontar porque é a ÚLTIMA — tudo precisa
+ * passar por ela. Listá-la como "a pior" sugere que o problema é a UV, quando
+ * ela nem recebeu o trabalho ainda.
+ *
+ * Na ordem do roteiro a pilha crescendo rio abaixo mostra o que de fato
+ * acontece: CORTAR 5 pç, FURAR 2.818, COLAR BORDA 8.488, PINTAR UV 11.548 — o
+ * trabalho se acumula à frente porque atrás não entregou.
+ *
+ * A prioridade não se perde: o "comece por" do veredito continua nomeando o
+ * MAIOR, calculado à parte por piorSetor(). Ordem conta a história; o veredito
+ * dá a ação.
+ *
+ * Ordem também é estável entre lotes — um menu que se reordena a cada arquivo
+ * obriga o líder a procurar o próprio setor toda vez.
+ */
+function ordemRoteiro(){
+  /* POR PRECEDÊNCIA OBSERVADA, não por média de posição.
+     Média não funciona quando os roteiros têm tamanhos diferentes, e as duas
+     tentativas erraram de formas opostas neste lote:
+       - sequência ABSOLUTA: a ordem do acabado só tem EMBALAR, que virava
+         seq 1 e puxava a média dela para o começo da linha;
+       - posição RELATIVA: as ordens "CORTAR > FURAR > USINAR" fazem USINAR
+         valer 3/3 = fim do roteiro, e ela caía depois de COLAR BORDA.
+     O que o relatório de fato afirma é PRECEDÊNCIA: em toda ordem onde os dois
+     aparecem, quem vem antes de quem. Aqui essa relação é consistente, sem um
+     único par em conflito — CORTAR antes de FURAR 88x, FURAR antes de COLAR
+     BORDA 132x, USINAR antes de COLAR BORDA 4x, COLAR BORDA antes de PINTAR
+     UV 188x.
+     Cada setor é pontuado por quantos outros ele precede. Empate vai para a
+     posição relativa, que é o que separa PINTAR UV (~0,95) de EMBALAR (1,0):
+     EMBALAR nunca divide ordem com ninguém, então não tem precedência com
+     ninguém e sem esse desempate ficaria no meio da lista. */
+  const antes={}, relS={}, relC={};
+  ordensFiltradas().forEach(o=>{
+    const d=o.operacoes.map(x=>x.descricao), t=d.length||1;
+    d.forEach((n,i)=>{ relS[n]=(relS[n]||0)+(i+1)/t; relC[n]=(relC[n]||0)+1; });
+    for(let i=0;i<d.length;i++) for(let j=i+1;j<d.length;j++){
+      if(d[i]===d[j]) continue;
+      (antes[d[i]]=antes[d[i]]||{})[d[j]]=(antes[d[i]][d[j]]||0)+1;
+    }
+  });
+  const par=(a,b)=>(antes[a]&&antes[a][b])||0;
+  const nomes=Object.keys(relC);
+  const m={};
+  nomes.map(n=>({n,
+      v:nomes.filter(o=>o!==n&&par(n,o)>par(o,n)).length,
+      r:relS[n]/relC[n]}))
+    .sort((a,b)=>b.v-a.v||a.r-b.r||a.n.localeCompare(b.n))
+    .forEach((x,i)=>m[x.n]=i);
+  return m;
+}
+// Setor fora do recorte vai para o fim da lista, não para o começo.
+function porRoteiro(m){
+  return (a,b)=>(m[a.nome]==null?99:m[a.nome])-(m[b.nome]==null?99:m[b.nome])
+    ||a.nome.localeCompare(b.nome);
+}
+function rankSetores(faltas){ return agregarPorSetor(faltas).sort(porRoteiro(ordemRoteiro())); }
+// O maior, para o "comece por". Separado da ordem de exibição, de propósito.
+function piorSetor(rank){ return rank.slice().sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas)[0]||null; }
 
 /* A frase que abre a tela e a folha: quantos, de que tipo, em quantos setores. */
 const plural=(n,sing,suf='s')=>n>1?sing+suf:sing;
@@ -2108,7 +2185,8 @@ function resumoGeral(){
    Quem abre a tela precisa saber em dois segundos se há problema, onde e
    quanto. Uma frase com o número dentro responde as três de uma vez. */
 function htmlVeredito(g){
-  const pior=g.rank[0];
+  // g.rank sai na ordem do roteiro; o "comece por" quer o maior.
+  const pior=piorSetor(g.rank);
   const detalhe=g.falt.length
     ? `${nf(g.pcFalt)} peças sem registro. ${pior?`Comece por <b>${esc(pior.nome)}</b>, com ${nf(pior.pecas)} peças`:''}${g.furos.length?' — nos esquecidos, faltou apontar, não produzir.':'.'}`
     : 'Todas as fases do roteiro têm apontamento nos filtros atuais.';
@@ -2123,7 +2201,7 @@ function htmlVeredito(g){
 function htmlRanking(g){
   const maior=Math.max(1,...g.rank.map(r=>r.pecas));
   return g.rank.length?`<div class="ranking">
-      <div class="tit">Onde falta apontamento — do pior para o menor</div>
+      <div class="tit">Onde falta apontamento — na ordem do roteiro</div>
       <div class="grade">
       ${g.rank.map(r=>`<div class="l">
         <span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span>
@@ -2137,14 +2215,17 @@ function htmlRanking(g){
 }
 
 /* ---- LISTA DE SETORES na lateral ----
-   Ordenada pelo que exige conversa primeiro. O ponto colorido tem a
-   quantidade ao lado: quem não distingue a cor lê o número. */
+   Na ORDEM DO ROTEIRO, não por gravidade: a lateral é navegação, e menu que
+   se reordena a cada arquivo obriga o líder a procurar o próprio setor toda
+   vez. Assim ela também vira o desenho da linha. A gravidade continua visível
+   no ponto colorido e na quantidade ao lado — quem não distingue a cor lê o
+   número. */
 function renderListaSetores(g){
   const porNome=new Map(g.rank.map(r=>[r.nome,r]));
   const setores=setoresDisponiveis().map(nome=>{
     const r=porNome.get(nome);
     return {nome, furos:r?r.furos:0, n:r?r.n:0, pecas:r?r.pecas:0};
-  }).sort((a,b)=>b.furos-a.furos||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
+  }).sort(porRoteiro(ordemRoteiro()));
   $('#listaSetores').innerHTML=setores.map(x=>`
     <button type="button" class="setor-item" data-setor="${esc(x.nome)}"
       ${SETOR_SEL===x.nome&&ABA==='setor'?'aria-current="page"':''} title="${esc(x.nome)}">
@@ -2494,15 +2575,12 @@ const ordensFaltantes=(x,max=6)=>x.faltam.slice(0,max).map(o=>esc(o.of)).join(',
 function frentes(){
   const cs=conjuntos().filter(c=>!c.semFase);
   const flagEmb=$('#fEmb').checked;
-  // Ordem do roteiro pela sequência média global, mesma régua dos conjuntos.
-  const soma={}, cont={};
-  ordensFiltradas().filter(o=>tipoProduto(o.produto)==='componente')
-    .forEach(o=>o.operacoes.forEach((op,i)=>{
-      if(foraDaConta(o,op,flagEmb))return;
-      soma[op.descricao]=(soma[op.descricao]||0)+(i+1);
-      cont[op.descricao]=(cont[op.descricao]||0)+1;
-    }));
-  const setores=Object.keys(soma).sort((a,b)=>soma[a]/cont[a]-soma[b]/cont[b]||a.localeCompare(b));
+  /* Mesma régua do ranking e da lateral (ordemRoteiro), para os três blocos da
+     mesma folha não saírem em ordens diferentes. Aqui só os setores que de
+     fato aparecem nas fases dos conjuntos. */
+  const ord=ordemRoteiro();
+  const setores=[...new Set(cs.flatMap(c=>c.fases.map(f=>f.nome)))]
+    .sort((a,b)=>(ord[a]==null?99:ord[a])-(ord[b]==null?99:ord[b])||a.localeCompare(b));
   let abertas=0, fechadas=0, zeradas=0;
   const linhas=setores.map(nome=>{
     const cels=cs.map(c=>{
@@ -2870,8 +2948,12 @@ function montarImpresso(soSetor){
   // A mesma agregação da tela, ordenada duas vezes: o ranking pelo critério
   // do ranking da tela; os blocos de detalhe pelo que exige conversa primeiro,
   // com o nome como desempate para a folha sair sempre na mesma ordem.
-  const rank=rankSetores(f);
-  const setores=agregarPorSetor(f).sort((a,b)=>b.furos-a.furos||b.somaPecas-a.somaPecas||a.nome.localeCompare(b.nome));
+  const rank=rankSetores(f), piorRank=piorSetor(rank);
+  /* Blocos de detalhe na MESMA ordem do ranking e da matriz: a folha inteira
+     lê como uma caminhada pela linha, do corte para a embalagem. Ordem
+     diferente em cada bloco da mesma folha faz o leitor procurar. */
+  const ordem=ordemRoteiro();
+  const setores=agregarPorSetor(f).sort(porRoteiro(ordem));
 
   const cab=`<div class="doc-topo">
       <div class="doc-marca">
@@ -2902,7 +2984,7 @@ function montarImpresso(soSetor){
           ${l.cels.map(x=>x===null?'<td class="c naotem">—</td>'
             :`<td class="c ${x.st}">${Math.round(x.pct*100)}%</td>`).join('')}
           <td class="c">${l.abertasAqui||'—'}</td></tr>`).join('')}</tbody></table>
-      <p class="leg"><b>Frente aberta</b> (célula cinza) = o setor começou aquele produto e não fechou.
+      <p class="leg"><b>Frente aberta</b> (célula destacada, com traço à esquerda) = o setor começou aquele produto e não fechou.
         Não ter começado não é pecado; o pecado é abrir muitas e fechar poucas — enquanto a linha do setor
         não tiver um 100%, o setor seguinte não recebe produto inteiro. Avanço em peças.</p>
     </div>`;
@@ -2943,14 +3025,14 @@ function montarImpresso(soSetor){
   const veredito=`<div class="doc-veredito">
       <div>
         <h2>${tituloVeredito(f,furos,rank)}</h2>
-        <p>${rank.length?`Comece por <b>${esc(rank[0].nome)}</b>, com ${nf(rank[0].pecas)} peças sem registro.`:''}
+        <p>${piorRank?`Comece por <b>${esc(piorRank.nome)}</b>, com ${nf(piorRank.pecas)} peças sem registro.`:''}
         ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}</p>
       </div>
       <div class="big">${nf(pecas)}<span>peças sem apontar</span></div>
     </div>`;
 
   const rankHtml=rank.length?`<div class="doc-rank">
-      <div class="tit">Onde falta apontamento — do pior para o menor</div>
+      <div class="tit">Onde falta apontamento — na ordem do roteiro</div>
       <div class="grade">${rank.map(r=>`<div class="l">
         <span class="nome">${esc(r.nome)}</span>
         <span class="barra"><i class="${r.furos?'esq':'pend'}" style="width:${Math.max(4,Math.round(r.pecas/maior*100))}%"></i></span>
