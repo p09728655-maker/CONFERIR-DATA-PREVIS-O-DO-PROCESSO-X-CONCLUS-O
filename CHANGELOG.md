@@ -3,6 +3,51 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.6.0] — 2026-09-03
+
+### Adicionado
+
+- **Matriz "Começou × terminou"** — o número que nomeia a dor de "começa tudo e não termina nada".
+  Uma linha por setor, uma coluna por produto, o avanço em **peça-fase** em cada cruzamento.
+
+  No LT 163 o padrão salta da tabela: **8 frentes abertas ao mesmo tempo, 4 fechadas, 1 sem
+  começar** — COLAR BORDA e PINTAR UV com os três produtos começados e nenhum fechado.
+
+  | Setor | INTENSE | SLEEP | SPACE | Abertas |
+  |---|---|---|---|---|
+  | CORTAR | 100% | 100% | 100% | — |
+  | FURAR | 75% | 86% | 100% | 2 |
+  | USINAR | 0% | — | — | — |
+  | COLAR BORDA | 65% | 41% | 32% | **3** |
+  | PINTAR UV | 14% | 18% | 5% | **3** |
+
+- **Frente** = um par setor × produto. **Aberta** quando o setor começou aquele produto e não
+  fechou (0% < avanço < 100%). A célula pintada é a aberta: o olho tem que bater no problema,
+  não no que está pronto.
+
+- **Não ter começado não é pecado** e aparece neutro — é o estado correto de quem ainda não
+  chegou a vez. O pecado é abrir muitas e fechar poucas. Marcar 0% como falha repetiria o erro
+  que a v3.3.0 já tinha corrigido no selo "junto".
+
+- Por que não é redundante com o resto da tela: "Conjunto incompleto" olha **um produto de cada
+  vez** e pergunta se ele fecha; a matriz olha a **fábrica inteira de uma vez** e mostra o
+  padrão. É a mesma verdade, mas só a matriz faz o padrão saltar.
+
+- A matriz sai também na **folha impressa dos líderes**, logo depois do veredito: antes de
+  discutir setor por setor, todos veem o padrão. Em preto e branco quem marca a frente aberta é
+  o fundo cinza e o negrito, não a cor. Fica fora da folha de **um** setor, onde teria uma
+  coluna só.
+
+- `fases[]` do conjunto ganhou `pf`, `pfTotal` e `pctPecas` — a leitura em peças, ao lado do
+  `pct` em ordens. Uma fase pode estar 96% em ordens e 60% em peças, e é o trabalho que decide
+  quanto falta.
+
+### Corrigido
+
+- A célula de um setor que não existe no roteiro daquele produto usava a classe `vazio`, que já
+  era o **estado vazio do app** (`padding: var(--xxl)`, 48px). A célula herdava e a linha inteira
+  saía com **87px em vez de 39px**. Renomeada para `naotem`. Medido antes e depois.
+
 ## [3.5.0] — 2026-09-03
 
 ### Corrigido

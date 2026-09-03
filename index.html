@@ -197,6 +197,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .setorBloco>h2 small{font-weight:400;font-size:12px;color:var(--texto-fraco)}
 .setorBloco.critico>h2{background:var(--critico-fundo)}
 .setorBloco.atencao>h2{background:var(--atencao-fundo)}
+/* MATRIZ DE FRENTES: a célula pintada é a ABERTA — começou e não fechou.
+   O olho tem que bater no problema, não no que está pronto. */
+.matriz td.c,.matriz th.c{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.matriz td.aberta{background:var(--atencao-fundo);font-weight:700;color:var(--atencao)}
+.matriz td.fechada{background:var(--ok-fundo);color:var(--ok)}
+.matriz td.zero{color:var(--texto-fraco)}
+/* `naotem`, não `vazio`: .vazio já é o estado vazio do app, com padding de
+   48px — a célula herdava e esticava a linha inteira para o dobro da altura. */
+.matriz td.naotem{color:var(--texto-fraco)}
 .setorBloco .acoes{padding:var(--md) var(--xl);display:flex;gap:var(--sm);flex-wrap:wrap;
   border-top:1px solid var(--borda);background:#FAFBFC}
 .setorBloco summary{padding:var(--md) var(--xl);cursor:pointer;font-size:15px;font-weight:700;
@@ -428,6 +437,19 @@ dialog form{margin-top:var(--lg);text-align:right}
      da página, nenhuma linha se parte ao meio, e o cabeçalho da tabela se
      repete no alto de cada página (thead como table-header-group). */
   .doc-setor{margin-bottom:5mm}
+  /* MATRIZ NA FOLHA: em preto e branco quem marca a frente aberta é o peso e
+     o fundo cinza, não a cor. Fechada fica limpa — o olho procura o cinza. */
+  .doc-matriz{margin-bottom:5mm;break-inside:avoid;page-break-inside:avoid}
+  .doc-matriz .tit{font-size:7.5pt;text-transform:uppercase;letter-spacing:.4pt;margin-bottom:1.5mm;
+    font-weight:700;border-bottom:.75pt solid #000;padding-bottom:.8mm}
+  .doc-matriz table{width:100%;border-collapse:collapse}
+  .doc-matriz th,.doc-matriz td{border:.5pt solid #000;padding:1mm 1.5mm;font-size:8.5pt}
+  .doc-matriz th{font-size:7pt;text-transform:uppercase;letter-spacing:.2pt}
+  .doc-matriz td.c,.doc-matriz th.c{text-align:right;font-variant-numeric:tabular-nums}
+  .doc-matriz td.setor{font-weight:700}
+  .doc-matriz td.aberta{background:#e0e0e0;font-weight:700}
+  .doc-matriz td.zero,.doc-matriz td.naotem{color:#666}
+  .doc-matriz .leg{font-size:7pt;margin-top:1mm}
   .doc-setor h2{font-size:11pt;margin:0 0 1.5mm;padding-bottom:1mm;border-bottom:1pt solid #000;
     break-after:avoid;page-break-after:avoid;
     display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
@@ -644,6 +666,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.6.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Começou × terminou: a matriz que mostra "começa tudo e não termina nada".</b> Uma linha por setor, uma coluna por produto, o avanço em peças em cada cruzamento. No LT 163 o padrão salta: <b>8 frentes abertas ao mesmo tempo, 4 fechadas</b> — COLAR BORDA e PINTAR UV com os três produtos começados e nenhum fechado.</li>
+    <li><b>Frente</b> = um par setor × produto. Está <b>aberta</b> quando o setor começou aquele produto e não fechou. Célula pintada é frente aberta: o olho bate no problema, não no que está pronto.</li>
+    <li><b>Não ter começado não é pecado</b> — é o estado correto de quem ainda não chegou a vez, e aparece neutro. O pecado é abrir muitas e fechar poucas, e é isso que faz o setor seguinte nunca receber produto inteiro.</li>
+    <li>A matriz também sai na <b>folha impressa dos líderes</b>, logo depois do veredito: antes de discutir setor por setor, todo mundo vê o padrão. Em preto e branco quem marca a frente aberta é o fundo cinza e o negrito, não a cor.</li>
+    <li>Correção: a célula de setor que não existe no roteiro do produto usava a classe <b>vazio</b>, que já era o estado vazio do app com 48px de padding — a linha inteira saía com o dobro da altura.</li>
+  </ul>
   <h3>3.5.0 — 03/09/2026</h3>
   <ul>
     <li><b>Ordem de reposição deixa de derrubar o conjunto.</b> No LT 163 o CORTAR estava <b>99,98% pronto</b> — faltavam 5 peças em 20.168 — e a tela dizia que INTENSE e SPACE não saíam inteiros de <b>nenhuma</b> fase. As responsáveis eram 3 ordens de reposição de 1 e 2 peças, abertas por refugo. Ninguém para a serra para cortar 1 peça, e o indicador virava mentira sobre as outras 20.163.</li>
@@ -1412,7 +1442,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.5.0';
+const VERSAO='3.6.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1931,6 +1961,9 @@ function conjuntos(){
     const repo=todas.filter(ehReposicao);
     const ofs=(repo.length&&repo.length<todas.length)?todas.filter(o=>!ehReposicao(o)):todas;
     const naConta=(o,nome)=>o.operacoes.filter(op=>op.descricao===nome&&!foraDaConta(o,op,flagEmb));
+    /* Fase com conclusão e quantidade zerada conta cheia: há setor que fecha a
+       fase sem lançar quantidade, e é a mesma regra do apontada(). */
+    const feitoPF=op=>op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
     const soma={}, cont={};
     ofs.forEach(o=>o.operacoes.forEach((op,i)=>{
       if(foraDaConta(o,op,flagEmb))return;
@@ -1943,9 +1976,16 @@ function conjuntos(){
         const tem=ofs.filter(o=>naConta(o,nome).length);
         const faltam=tem.filter(o=>!naConta(o,nome).every(apontada));
         const passou=tem.length-faltam.length;
+        /* Duas leituras da mesma fase, e a diferença entre elas é o assunto:
+           `pct` conta ORDENS fechadas; `pctPecas` conta o TRABALHO em
+           peça-fase. Uma fase pode estar 96% em ordens e 60% em peças, ou o
+           contrário — a matriz de frentes usa peças, que é a régua honesta. */
+        let pf=0, pfT=0;
+        tem.forEach(o=>naConta(o,nome).forEach(op=>{pfT+=(op.qtd||0);pf+=feitoPF(op);}));
         return {nome,tem:tem.length,passou,faltam,
                 // % de ordens do conjunto que já fecharam esta fase.
                 pct:tem.length?passou/tem.length:0,
+                pf, pfTotal:pfT, pctPecas:pfT?pf/pfT:0,
                 /* Duas quantidades, e confundi-las inverte a decisão:
                    `pecas` é o que FALTA fazer nesta fase; `liberadas` é o que
                    já passou e o setor da frente pode pegar AGORA. */
@@ -1967,7 +2007,6 @@ function conjuntos(){
        essa é a única conta possível com o que o relatório traz, e a nota da
        tela declara isso — um líder que leia "60% pronto" como "60% do tempo"
        vai errar a estimativa do que falta. */
-    const feitoPF=op=>op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
     let pf=0, pfTotal=0;
     ofs.forEach(o=>o.operacoes.forEach(op=>{
       if(foraDaConta(o,op,flagEmb))return;
@@ -2435,6 +2474,51 @@ function pctBarra(v){
 const ordensFaltantes=(x,max=6)=>x.faltam.slice(0,max).map(o=>esc(o.of)).join(', ')
   +(x.faltam.length>max?` <small>+${x.faltam.length-max}</small>`:'');
 
+/**
+ * COMEÇA TUDO E NÃO TERMINA NADA — o número que nomeia a dor.
+ *
+ * FRENTE = um par (setor, produto). Ela está ABERTA quando o setor começou
+ * aquele produto e não fechou: 0% < avanço < 100%. Fechada em 100%, e "não
+ * começou" em 0% — e não começar NÃO é pecado: é o estado correto de quem
+ * ainda não chegou a vez. O pecado é abrir muitas e fechar poucas.
+ *
+ * A conta é em PEÇA-FASE, não em ordens, pelo mesmo motivo do resto da tela:
+ * uma fase pode estar 96% em ordens e 60% em peças, e é o trabalho que decide
+ * quanto falta.
+ *
+ * Por que isto não é redundante com "Conjunto incompleto": aquela tela olha um
+ * produto de cada vez e pergunta se ele fecha. Esta olha a fábrica inteira de
+ * uma vez e mostra o padrão — todo setor com três colunas começadas e nenhuma
+ * linha inteira. É a mesma verdade, mas só a matriz faz o padrão saltar.
+ */
+function frentes(){
+  const cs=conjuntos().filter(c=>!c.semFase);
+  const flagEmb=$('#fEmb').checked;
+  // Ordem do roteiro pela sequência média global, mesma régua dos conjuntos.
+  const soma={}, cont={};
+  ordensFiltradas().filter(o=>tipoProduto(o.produto)==='componente')
+    .forEach(o=>o.operacoes.forEach((op,i)=>{
+      if(foraDaConta(o,op,flagEmb))return;
+      soma[op.descricao]=(soma[op.descricao]||0)+(i+1);
+      cont[op.descricao]=(cont[op.descricao]||0)+1;
+    }));
+  const setores=Object.keys(soma).sort((a,b)=>soma[a]/cont[a]-soma[b]/cont[b]||a.localeCompare(b));
+  let abertas=0, fechadas=0, zeradas=0;
+  const linhas=setores.map(nome=>{
+    const cels=cs.map(c=>{
+      const f=c.fases.find(x=>x.nome===nome);
+      if(!f) return null;
+      const pct=f.pctPecas;
+      // Tolerância: pf/pfTotal com inteiros dá 1 exato, mas não custa proteger.
+      const st=pct>=0.9999?'fechada':pct>0?'aberta':'zero';
+      if(st==='fechada')fechadas++; else if(st==='aberta')abertas++; else zeradas++;
+      return {pct,st,falta:Math.max(0,f.pfTotal-f.pf)};
+    });
+    return {nome,cels,abertasAqui:cels.filter(x=>x&&x.st==='aberta').length};
+  });
+  return {cs,linhas,abertas,fechadas,zeradas};
+}
+
 function desenharConjuntos(p,ref){
   const todos=conjuntos();
   const cs=todos.filter(c=>!c.semFase);
@@ -2444,6 +2528,25 @@ function desenharConjuntos(p,ref){
   const juntos=emCurso.filter(c=>!c.disperso);
   const completos=cs.filter(c=>c.completo);
   const totRepo=cs.reduce((a,c)=>a+c.repo,0);
+
+  /* A matriz vem ANTES dos cartões: primeiro o padrão da fábrica inteira,
+     depois o produto a atacar. Com um produto só ela não diz nada — some. */
+  const fr=frentes();
+  const matriz=fr.cs.length>1?`<div class="setorBloco ${fr.abertas>fr.fechadas?'atencao':''}">
+      <h2>Começou × terminou
+        <small><b>${fr.abertas} frente(s) aberta(s)</b> ao mesmo tempo · ${fr.fechadas} fechada(s) · ${fr.zeradas} ainda não começou</small></h2>
+      <div class="linha" style="padding:var(--md) var(--xl);border-bottom:1px solid var(--borda)">
+        ${fr.abertas>fr.fechadas
+          ? `Cada linha é um setor, cada coluna um produto. <b>Célula pintada de laranja é frente aberta</b> — o setor começou aquele produto e não fechou. Enquanto houver linha sem nenhum 100%, o setor seguinte não recebe produto inteiro.`
+          : `Cada linha é um setor, cada coluna um produto. Mais frentes fechadas que abertas: a fábrica está terminando o que começa.`}</div>
+      <div class="wrap"><table class="matriz"><thead><tr><th>Setor</th>
+        ${fr.cs.map(c=>`<th class="c">${esc(c.rotulo||c.cod)}</th>`).join('')}
+        <th class="c">Abertas</th></tr></thead>
+        <tbody>${fr.linhas.map(l=>`<tr><td class="forte">${esc(l.nome)}</td>
+          ${l.cels.map(x=>x===null?'<td class="c naotem" title="não passa por este setor">—</td>'
+            :`<td class="c ${x.st}" title="${x.st==='aberta'?`começou e não fechou — faltam ${nf(x.falta)} pç`:x.st==='fechada'?'fechado neste setor':'ainda não começou'}">${Math.round(x.pct*100)}%</td>`).join('')}
+          <td class="c ${l.abertasAqui>1?'c-critico':''}"><b>${l.abertasAqui||'—'}</b></td></tr>`).join('')}</tbody></table></div>
+    </div>`:'';
   const fora=ordensFiltradas().reduce((a,o)=>{const t=tipoProduto(o.produto);if(t!=='componente')a[t]=(a[t]||0)+1;return a;},{});
   const foraTxt=[fora.acabado?`${fora.acabado} de produto acabado`:'',fora.volume?`${fora.volume} de volume`:'']
     .filter(Boolean).join(' e ');
@@ -2503,6 +2606,7 @@ function desenharConjuntos(p,ref){
 
   p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Conjunto incompleto</h2>
       <span class="meta">${cs.length} produto(s) no recorte · ${completos.length} completo(s) · ${quebrados.length} quebrado(s)${foraTxt?` · ${foraTxt}: ordens fora do agrupamento`:''}${semFase.length?` · ${semFase.length} sem fase apontável`:''}${totRepo?` · ${totRepo} ordem(ns) de reposição fora da conta de integridade`:''}</span></div>
+    ${matriz}
     ${cartoes?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
       <th>Produto</th><th class="n">Ordens</th><th class="n">Peças</th><th class="n">% pronto</th>
@@ -2528,6 +2632,9 @@ function desenharConjuntos(p,ref){
       <b>Trava em</b> = a primeira fase que não fechou. Uma ordem passou a fase quando todas as operações dela estão apontadas: dois passes de COLAR BORDA são um setor, e passar só o primeiro não é passar.
       <b>Correram na frente</b> = ordens que já passaram a fase que trava enquanto outras ficaram atrás. Não é alívio: são elas que criam produto incompleto nos setores seguintes. Zero aqui é o número bom.
       <b>Quebrado</b> = parte do conjunto andou e parte não — é o estado que dói. <b>Junto</b> = o conjunto inteiro está esperando na mesma fase; está atrasado ou não, mas o setor seguinte vai pegar o produto completo, e isso é o que se quer.
+      <b>Começou × terminou</b>: uma <b>frente</b> é um par setor × produto. Está <b>aberta</b> quando o setor começou aquele produto e não fechou (0% &lt; avanço &lt; 100%).
+      <b>Não ter começado não é pecado</b> — é o estado correto de quem ainda não chegou a vez. O pecado é abrir muitas e fechar poucas: é isso que faz o setor da frente nunca receber produto inteiro.
+      A conta é em peça-fase, pelo mesmo motivo do resto da tela: uma fase pode estar 96% em ordens e 60% em peças, e é o trabalho que decide quanto falta.
       <b>Ordem de reposição não decide integridade.</b> Ela é aberta depois, por refugo, e o ERP dá a ela previsão posterior à do lote — o próprio plano diz que não é para hoje, e travar o conjunto por ela seria ignorar o plano.
       Fica fora da conta de fases e do % pronto, declarada na coluna Ordens como <b>+N rep</b>. É a mesma razão pela qual a reposição já fica fora da aderência: o prazo dela começa na criação da ordem, não no início do lote.
       Se o recorte tiver <b>só</b> reposição, ela volta a valer — senão o conjunto sumiria.
@@ -2781,6 +2888,26 @@ function montarImpresso(soSetor){
       </div>
     </div>`;
 
+  /* MATRIZ DE FRENTES NA FOLHA GERAL — a folha da reunião com os líderes.
+     É a abertura: antes de discutir setor por setor, todo mundo vê que a
+     fábrica abriu N frentes e fechou M. Só na folha geral e só com mais de um
+     produto no recorte: na folha de um setor a matriz teria uma coluna só. */
+  const matrizHtml=(!soSetor)?(()=>{
+    const fr=frentes();
+    if(fr.cs.length<2) return '';
+    return `<div class="doc-matriz">
+      <div class="tit">Começou × terminou — ${fr.abertas} frente(s) aberta(s) ao mesmo tempo, ${fr.fechadas} fechada(s)</div>
+      <table><thead><tr><th>Setor</th>${fr.cs.map(c=>`<th class="c">${esc(c.rotulo||c.cod)}</th>`).join('')}<th class="c">Abertas</th></tr></thead>
+        <tbody>${fr.linhas.map(l=>`<tr><td class="setor">${esc(l.nome)}</td>
+          ${l.cels.map(x=>x===null?'<td class="c naotem">—</td>'
+            :`<td class="c ${x.st}">${Math.round(x.pct*100)}%</td>`).join('')}
+          <td class="c">${l.abertasAqui||'—'}</td></tr>`).join('')}</tbody></table>
+      <p class="leg"><b>Frente aberta</b> (célula cinza) = o setor começou aquele produto e não fechou.
+        Não ter começado não é pecado; o pecado é abrir muitas e fechar poucas — enquanto a linha do setor
+        não tiver um 100%, o setor seguinte não recebe produto inteiro. Avanço em peças.</p>
+    </div>`;
+  })():'';
+
   /* AVANÇO POR LOTE NA FOLHA DO SETOR. É esta folha que chega no chão, e é
      nela que a regra tem que estar escrita: feche o lote mais adiantado antes
      de começar outro. Reusa a grade do ranking, que já é testada em preto e
@@ -2805,7 +2932,7 @@ function montarImpresso(soSetor){
   })():'';
 
   if(!f.length){
-    $('#impresso').innerHTML=cab+loteHtml+
+    $('#impresso').innerHTML=cab+matrizHtml+loteHtml+
       `<div class="doc-vazio">Nenhuma operação sem apontamento nos filtros selecionados.</div>`+rodape(ref);
     return;
   }
@@ -2863,7 +2990,7 @@ function montarImpresso(soSetor){
      reforça — faz o leitor procurar qual das quatro é a certa, que é
      exatamente o oposto de entender em dois segundos. Ficam o veredito (a
      conclusão), o ranking (a comparação) e o detalhe por setor (a ação). */
-  $('#impresso').innerHTML=cab+veredito+loteHtml+rankHtml+blocos+rodape(ref);
+  $('#impresso').innerHTML=cab+veredito+matrizHtml+loteHtml+rankHtml+blocos+rodape(ref);
 }
 
 function rodape(ref){
