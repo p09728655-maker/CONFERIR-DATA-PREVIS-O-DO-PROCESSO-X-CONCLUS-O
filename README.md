@@ -125,6 +125,15 @@ O campo pode ser alterado manualmente na tela.
 Todas as regras podem ser ligadas e desligadas na tela, em **Filtros e parâmetros → Regras de conferência ativas**.
 A escolha vale só para a sessão; para mudar o padrão, edite `CFG.regras` no `index.html`.
 
+### Setores que ainda não apontam no ERP
+
+Alguns setores ainda não registram no ERP (hoje: PINTAR PU). Neles a ausência de apontamento não
+é cobrança nem prova de que a peça está parada. Marcados em **Mais filtros** (guardado no
+aparelho; padrão em `CFG.setoresSemApontamento`), saem das duas contas: falta de apontamento e
+posição da ordem, que pula para a próxima fase que aponta. A tela declara o que ficou de fora —
+aviso nas duas telas, "não aponta" na lateral, recorte na folha impressa. Quando o setor começar a
+apontar, desmarque.
+
 ### Convenção tratada como exceção
 
 Nos produtos acabados de prefixo `103.`, a operação `EMBALAR` aparece sistematicamente sem apontamento —

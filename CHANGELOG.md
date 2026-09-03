@@ -52,6 +52,28 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [3.1.0] — 2026-09-03
+
+### Setores que ainda não apontam no ERP
+
+No LT 162/26, PINTAR PU tinha 198 operações e nenhum apontamento: o setor ainda não aponta no
+ERP. Com isso "Onde travou" dizia que a PU segurava 60 ordens e "Sem apontamento" cobrava 198
+registros de quem não tem como registrar. Os dois números eram lixo, e lixo com cara de gargalo.
+
+- `CFG.setoresSemApontamento` (padrão `['PINTAR PU']`) e a lista em **Mais filtros**, guardada em
+  `localStorage`. `foraDaConta(of, op, flagEmb)` = isenção da EMBALAR **ou** setor marcado; é ela
+  que `faltasApontamento`, `posicaoOrdem` e as regras de ordem concluída consultam.
+- Efeito: as operações do setor saem das faltas de apontamento e da posição da ordem, que pula
+  para a **próxima fase que aponta**. No LT 162/26 a abertura passa a ser "PINTAR UV segura 63
+  ordens, a mais antiga há 2 dias úteis" — a leitura honesta: a peça saiu da usinagem e ainda não
+  chegou ao registro do UV; onde ela está entre os dois, o relatório não sabe.
+- **Declarado, não escondido:** aviso "Fora da conta" nas duas telas com a quantidade de operações
+  retiradas; "não aponta" na lateral; tela do setor explica o estado; o recorte impresso na folha
+  dos líderes cita o setor; "Mais filtros" conta o setor como filtro ativo.
+
+Verificação: lotes de teste sem PINTAR PU ficam idênticos ao snapshot da 3.0.0; suíte completa
+passando.
+
 ## [3.0.0] — 2026-09-03
 
 ### Duas telas, duas perguntas
