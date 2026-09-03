@@ -3,6 +3,43 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.8.0] — 2026-09-03
+
+### Adicionado
+
+- **Prazo por lote na tela do setor, e o vencido vem primeiro.** A tabela de avanço por lote da
+  v3.4.0 não mostrava data nenhuma: ordenava só pelo mais adiantado. Ficava cega para a inversão
+  de prioridade — o setor fechando o lote que vence depois e deixando aberto o que já venceu.
+
+  Nova coluna **Prazo aqui** = a previsão mais antiga **ainda não apontada** daquele lote naquele
+  setor, com selo `vencido` e o atraso em dias úteis. A ordem passou a ser: vencido primeiro, do
+  prazo mais antigo para o mais novo; dentro do mesmo prazo, o mais adiantado.
+
+- **Alerta de prioridade invertida**, com as duas datas do próprio ERP. Na furadeira, com LT 163 e
+  LT 164 abertos juntos:
+
+  > Este setor concluiu **20.050 peças** com prazo até **01/09/2026** (lote 025144, 025145) e
+  > deixou abertas **2.800 peças** que venciam **31/08/2026** (lote 025139, 025141).
+
+  Não é acusação automática: um resto pode ficar por setup, falta de material ou refugo. A tela põe
+  as duas datas lado a lado e diz o tamanho — a explicação é do setor, e o texto diz isso.
+
+  **A conta é por operação, não por lote**, e essa foi a correção de uma primeira versão errada:
+  comparar lote com lote não pegava o caso real, porque um lote com uma única ordem aberta de prazo
+  distante não conta como "fechado" e saía da comparação. Era exatamente a situação do 025144 — 55
+  ordens, 54 fechadas, a última com prazo 09/09.
+
+### Notas
+
+- A tela do FURAR passou a abrir assim, com os dois lotes do LT 163 no topo:
+
+  ```
+  025141 LT 163/26  31/08/2026 venceu 3 d   86%    800 pç   vencido
+  025139 LT 163/26  31/08/2026 venceu 3 d   75%  2.016 pç   vencido
+  025144 LT 164/26  09/09/2026             100%     20 pç   aberto
+  025140 LT 163/26  10/09/2026             100%      3 pç   aberto
+  ```
+
 ## [3.7.0] — 2026-09-03
 
 ### Corrigido

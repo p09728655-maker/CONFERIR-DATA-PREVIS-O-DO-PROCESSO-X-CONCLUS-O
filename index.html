@@ -673,6 +673,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.8.0 — 03/09/2026</h3>
+  <ul>
+    <li><b>Prazo por lote na tela do setor, e o vencido vem primeiro.</b> A tabela de avanço por lote não mostrava data nenhuma: ordenava só pelo mais adiantado. Com isso deixava passar a inversão de prioridade — o setor fechando o lote que vence depois e deixando aberto o que já venceu.</li>
+    <li><b>Alerta de prioridade invertida</b>, com as duas datas do próprio ERP. Na furadeira do LT 163 × LT 164: <b>20.050 peças concluídas com prazo até 01/09</b> e <b>2.800 peças abertas que venciam 31/08</b>. Não é acusação — o motivo (setup, material, refugo) só o setor responde; a tela põe os números lado a lado.</li>
+    <li>A conta é por <b>operação</b>, não por lote. Comparar lote com lote não pegava o caso real: um lote com uma única ordem aberta de prazo distante não conta como fechado e saía da comparação.</li>
+    <li>Nova coluna <b>Prazo aqui</b> = a previsão mais antiga ainda não apontada daquele lote naquele setor — é ela que diz há quanto tempo o lote está devendo. Selo <b>vencido</b> com o atraso em dias úteis.</li>
+    <li>Ordem de fazer: <b>vencido primeiro</b>, do prazo mais antigo para o mais novo; dentro do mesmo prazo, o mais adiantado, que fecha com menos esforço.</li>
+  </ul>
   <h3>3.7.0 — 03/09/2026</h3>
   <ul>
     <li><b>Conjunto passa a ser por lote + produto, não só por produto.</b> Com LT 163 e LT 164 abertos juntos, o SLEEP 778 aparecia fundido: 74 ordens, 27.600 pç, "trava FURAR 66/68". Separado, são dois produtos com histórias opostas — lote 025141 com 58% travando em FURAR 12/14, e lote 025144 com 43% já além da furação e parado na coladeira em 1/58. O fundido escondia isso e ainda misturava prazos (03/09 e 04/09).</li>
@@ -1464,7 +1472,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.7.0';
+const VERSAO='3.8.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1822,18 +1830,89 @@ function avancoPorLote(nome){
     if(!ops.length) return;
     const k=of.lote||'—';
     let r=m.get(k);
-    if(!r){ r={lote:k,lt:of.lt||null,ordens:0,feitas:0,pf:0,pfTotal:0,faltam:[]}; m.set(k,r); }
+    if(!r){ r={lote:k,lt:of.lt||null,ordens:0,feitas:0,pf:0,pfTotal:0,faltam:[],prev:null,prevAberta:null}; m.set(k,r); }
     r.ordens++;
     ops.forEach(op=>{
       r.pfTotal+=(op.qtd||0);
       r.pf+=op.conclusao?(op.qtd||0):Math.min(op.pronto||0,op.qtd||0);
+      /* PRAZO DA FASE NESTE LOTE. Duas datas, e a que manda é a segunda:
+         `prev` é a previsão mais antiga do lote aqui, para exibir quando tudo
+         fechou; `prevAberta` é a mais antiga entre as operações que AINDA NÃO
+         fecharam — é ela que diz há quanto tempo este lote está devendo. */
+      if(op.previsao){
+        if(!r.prev||op.previsao<r.prev) r.prev=op.previsao;
+        if(!apontada(op)&&(!r.prevAberta||op.previsao<r.prevAberta)) r.prevAberta=op.previsao;
+      }
     });
     if(ops.every(apontada)) r.feitas++; else r.faltam.push(of);
   });
+  const ref=$('#fRef').value;
   return [...m.values()]
-    .map(r=>({...r,pct:r.pfTotal?r.pf/r.pfTotal:0,pecasFaltam:Math.max(0,r.pfTotal-r.pf),
-              completo:r.ordens>0&&r.feitas===r.ordens}))
-    .sort((a,b)=>(a.completo?1:0)-(b.completo?1:0)||b.pct-a.pct||String(a.lote).localeCompare(String(b.lote)));
+    .map(r=>{
+      const completo=r.ordens>0&&r.feitas===r.ordens;
+      const prazo=r.prevAberta||r.prev;
+      const vencido=!completo&&!!r.prevAberta&&r.prevAberta<ref;
+      return {...r,completo,prazo,vencido,
+        atraso:vencido?dias(r.prevAberta,ref):null,
+        pct:r.pfTotal?r.pf/r.pfTotal:0,pecasFaltam:Math.max(0,r.pfTotal-r.pf)};
+    })
+    /* ORDEM DE FAZER, E O PRAZO VEM ANTES DO AVANÇO.
+       Antes era só "o mais adiantado que não fechou primeiro", e isso ignorava
+       QUANDO cada lote vence — foi assim que a tela deixou passar a inversão do
+       LT 163 x LT 164: a furadeira fechou 100% do que vencia 01/09 e deixou 17%
+       do que vencia 31/08, e a tela não tinha como apontar, porque não olhava
+       data nenhuma.
+       Agora: vencido primeiro, do prazo mais antigo para o mais novo; dentro do
+       mesmo prazo, o mais adiantado, que é o que fecha com menos esforço.
+       Lote fechado vai para o fim, como conferência. */
+    .sort((a,b)=>
+      (a.completo?1:0)-(b.completo?1:0)
+      ||(b.vencido?1:0)-(a.vencido?1:0)
+      ||String(a.prazo||'9999').localeCompare(String(b.prazo||'9999'))
+      ||b.pct-a.pct
+      ||String(a.lote).localeCompare(String(b.lote)));
+}
+
+/**
+ * INVERSÃO DE PRIORIDADE NUM SETOR — duas datas do ERP, não opinião.
+ *
+ * A pergunta: o setor concluiu trabalho que vencia DEPOIS, deixando aberto
+ * trabalho que vencia ANTES?
+ *
+ * A conta é por OPERAÇÃO, não por lote, e essa é a correção de uma primeira
+ * versão errada: comparar lote com lote não pegava o caso real, porque um lote
+ * com uma única ordem aberta de prazo distante não conta como "fechado" e saía
+ * da comparação. Na furadeira do LT 163 × LT 164 foi exatamente isso —
+ * 20.050 peças com prazo 01/09 concluídas enquanto 2.800 peças com prazo
+ * 31/08 seguem abertas, num lote que ainda tinha uma ordem de 09/09 pendente.
+ *
+ * Não é acusação automática: um resto pode ficar por setup, por falta de
+ * material ou por refugo. O que a tela faz é pôr as duas datas lado a lado e
+ * dizer o tamanho — a explicação é do setor.
+ */
+function inversaoPrioridade(nome){
+  const f=filtros(), flagEmb=$('#fEmb').checked;
+  const ops=[];
+  let aberturaMaisAntiga=null;
+  DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f)).forEach(of=>of.operacoes.forEach(op=>{
+    if(op.descricao!==nome||foraDaConta(of,op,flagEmb)||!op.previsao)return;
+    const feito=apontada(op);
+    ops.push({of,op,feito});
+    if(!feito&&(!aberturaMaisAntiga||op.previsao<aberturaMaisAntiga)) aberturaMaisAntiga=op.previsao;
+  }));
+  if(!aberturaMaisAntiga) return null;
+  const depois=ops.filter(x=>x.feito&&x.op.previsao>aberturaMaisAntiga);
+  if(!depois.length) return null;
+  const antes=ops.filter(x=>!x.feito&&x.op.previsao<=aberturaMaisAntiga);
+  const saldo=op=>Math.max(0,(op.qtd||0)-Math.min(op.pronto||0,op.qtd||0));
+  return {
+    prazoAtrasado:aberturaMaisAntiga,
+    pecasAtrasadas:antes.reduce((s,x)=>s+saldo(x.op),0),
+    lotesAtrasados:[...new Set(antes.map(x=>x.of.lote))],
+    pecasFeitasDepois:depois.reduce((s,x)=>s+(x.op.qtd||0),0),
+    lotesFeitosDepois:[...new Set(depois.map(x=>x.of.lote))],
+    prazoMaisNovoFeito:depois.map(x=>x.op.previsao).sort().pop(),
+  };
 }
 
 const setoresDisponiveis=()=>{
@@ -2396,24 +2475,33 @@ function desenharSetor(p,ref){
   const lotes=avancoPorLote(d.nome);
   const abertos=lotes.filter(l=>!l.completo);
   const alvo=abertos[0];
+  const vencidos=abertos.filter(l=>l.vencido);
+  const inv=inversaoPrioridade(d.nome);
   const blocoLotes=lotes.length?`<div class="setorBloco ${abertos.length>1?'atencao':''}">
       <h2>Avanço por lote
-        <small>${abertos.length>1
-          ? `<b>${abertos.length} lotes abertos aqui ao mesmo tempo</b> — feche o mais adiantado antes de começar outro`
+        <small>${vencidos.length
+          ? `<b>${vencidos.length} lote(s) vencido(s) aqui</b>${abertos.length>vencidos.length?` e ${abertos.length-vencidos.length} no prazo`:''} — o vencido vem primeiro`
+          : abertos.length>1 ? `<b>${abertos.length} lotes abertos aqui ao mesmo tempo</b> — feche o mais adiantado antes de começar outro`
           : abertos.length===1 ? 'um lote aberto neste setor' : 'todos os lotes deste setor estão fechados'}</small></h2>
       ${alvo?`<div class="linha" style="padding:var(--md) var(--xl);border-bottom:1px solid var(--borda)">
-        Feche primeiro o <b>lote ${esc(alvo.lote)}</b>: está <b>${Math.round(alvo.pct*100)}%</b> pronto aqui,
-        faltam <b>${alvo.faltam.length}</b> ordem(ns) e <b>${nf(alvo.pecasFaltam)}</b> peça(s).</div>`:''}
-      <div class="wrap"><table><thead><tr><th>Lote</th><th class="n">Ordens aqui</th><th class="n">Fechadas</th>
+        Feche primeiro o <b>lote ${esc(alvo.lote)}</b>${alvo.vencido?` — <b class="c-critico">vencido aqui em ${br(alvo.prevAberta)}, ${alvo.atraso} d.ú. atrás</b>`:''}:
+        está <b>${Math.round(alvo.pct*100)}%</b> pronto aqui, faltam <b>${alvo.faltam.length}</b> ordem(ns) e <b>${nf(alvo.pecasFaltam)}</b> peça(s).</div>`:''}
+      ${inv?`<div class="linha" style="padding:var(--md) var(--xl);border-bottom:1px solid var(--borda);background:var(--critico-fundo)">
+        <b>Prioridade invertida.</b> Este setor concluiu <b>${nf(inv.pecasFeitasDepois)}</b> peça(s) com prazo
+        <b>até ${br(inv.prazoMaisNovoFeito)}</b> (lote ${esc(inv.lotesFeitosDepois.join(', '))}) e deixou abertas
+        <b>${nf(inv.pecasAtrasadas)}</b> peça(s) que venciam <b>${br(inv.prazoAtrasado)}</b> (lote ${esc(inv.lotesAtrasados.join(', '))}).
+        O prazo mais antigo ficou por último — são as duas datas do próprio ERP. O motivo (setup, material, refugo) só o setor responde.</div>`:''}
+      <div class="wrap"><table><thead><tr><th>Lote</th><th>Prazo aqui</th><th class="n">Ordens aqui</th><th class="n">Fechadas</th>
         <th class="n">% pronto (peças)</th><th class="n">Peças a fazer</th><th>Ordens que faltam</th><th>Estado</th></tr></thead>
         <tbody>${lotes.map(l=>`<tr>
           <td class="forte">${esc(l.lote)}${l.lt?` <small class="cod">LT ${esc(l.lt)}</small>`:''}</td>
+          <td class="cod">${l.prazo?br(l.prazo):'—'}${l.vencido?` <span class="selo critico">venceu ${l.atraso} d</span>`:''}</td>
           <td class="n">${l.ordens}</td>
           <td class="n">${l.feitas}/${l.ordens}</td>
           <td class="n">${pctBarra(l.pct)}</td>
           <td class="n ${l.pecasFaltam?'c-critico':''}">${l.pecasFaltam?nf(l.pecasFaltam):'—'}</td>
           <td class="cod">${l.faltam.slice(0,5).map(o=>esc(o.of)).join(', ')}${l.faltam.length>5?` <small>+${l.faltam.length-5}</small>`:''}</td>
-          <td><span class="selo ${l.completo?'ok':'critico'}">${l.completo?'fechado':'aberto'}</span></td></tr>`).join('')}</tbody></table></div>
+          <td><span class="selo ${l.completo?'ok':l.vencido?'critico':'neutro'}">${l.completo?'fechado':l.vencido?'vencido':'aberto'}</span></td></tr>`).join('')}</tbody></table></div>
     </div>`:'';
 
   const linhaSeg=x=>`<tr>
@@ -2475,7 +2563,9 @@ function desenharSetor(p,ref){
         <b>A confirmar</b> = nada apontado e a previsão venceu, sem prova de que a peça passou — só o setor responde.
         <b>Avanço por lote</b> = quanto deste setor cada lote já tem apontado, em <b>peças</b> (peça-fase): duas passagens do mesmo setor no roteiro somam as duas.
         Conta em peças, não em ordens, porque 2 ordens de 44 podem ser 20% das peças — contar ordens faz o resto parecer pequeno, e é por isso que ele fica para trás.
-        Ordenado pela <b>ordem de fazer</b>: o lote mais adiantado que ainda não fechou vem primeiro, porque é o que fecha com menos esforço e libera o setor da frente.</div>`;
+        Ordenado pela <b>ordem de fazer</b>: <b>vencido primeiro</b>, do prazo mais antigo para o mais novo; dentro do mesmo prazo, o mais adiantado, que é o que fecha com menos esforço. Lote fechado vai para o fim, como conferência.
+        <b>Prazo aqui</b> = a previsão mais antiga <b>ainda não apontada</b> deste lote neste setor — é ela que diz há quanto tempo o lote está devendo.
+        <b>Prioridade invertida</b> = o setor fechou um lote cujo prazo aqui é posterior ao de outro que segue aberto e vencido. Não é opinião: são duas datas do próprio ERP.</div>`;
 
   const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
   const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
