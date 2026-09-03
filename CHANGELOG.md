@@ -3,6 +3,53 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.7.0] — 2026-09-03
+
+### Corrigido
+
+- **Conjunto era agrupado só por produto e fundia lotes diferentes.** Com LT 163 e LT 164 abertos
+  juntos, o SLEEP `778` saía assim:
+
+  | | Ordens | Peças | % | Trava em |
+  |---|---|---|---|---|
+  | fundido | 74 | 27.600 | 47% | FURAR 66/68 |
+  | lote 025141 | 16 | 6.400 | 58% | FURAR 12/14 |
+  | lote 025144 | 58 | 21.200 | 43% | **COLAR BORDA 1/58** |
+
+  O número fundido escondia que o 025144 já tinha passado a furação inteira e estava parado na
+  coladeira com 1 de 58, e ainda misturava prazos (03/09 e 04/09) e escalas (400 e 2.650 peças de
+  produto).
+
+  **O código da peça não separa:** `778.001.116 SLEEP BASE 380X330X15 MDP 1 CINAMOMO` é
+  exatamente a mesma peça nos dois lotes — produto comercial diferente (kit de 2 × mesa avulsa),
+  componente idêntico. Só o lote distingue, e o lote é a unidade de entrega: fechar o SLEEP do 163
+  não depende do SLEEP do 164.
+
+  O conjunto passou a ser **lote + prefixo**. O lote aparece na tabela, nos cartões, no cabeçalho
+  da matriz, no roteiro por conjunto e no CSV (nova coluna `Lote`).
+
+- **Abrir o mesmo lote duas vezes somava as ordens.** A defesa existente era pelo **nome do
+  arquivo**, e ela não cobre o caso real: reler o lote mais tarde e salvar como
+  `LT 163 manhã.pdf` e `LT 163 tarde.pdf`.
+
+  Medido: 113 ordens viravam **226**, INTENSE de 10.000 para **20.000 peças**. Os percentuais
+  continuavam certos, porque são razão — e é isso que tornava o erro perigoso: a tela não parecia
+  quebrada, só mentia nos absolutos.
+
+  Duas leituras do mesmo lote são duas **fotos do mesmo objeto** em momentos diferentes; a união
+  delas não existe. A leitura **nova substitui** a antiga, lote a lote, e o aviso declara o que
+  saiu e de onde veio. Nas duas leituras do LT 163 desta sessão a USINAR sai de 0% para 40% e a
+  COLAR BORDA de 49% para 57%: ficar com a primeira faria a tela parecer congelada.
+
+  Só o lote repetido é trocado, não o arquivo inteiro — um PDF traz vários lotes, e descartar os
+  outros perderia dado bom.
+
+### Notas
+
+- Validado com LT 163 e LT 164 reais abertos juntos: 2 arquivos, 6 lotes, 260 ordens, M³ confere
+  nos seis, zero linha não reconhecida, 6 conjuntos separados por lote.
+- `avancoPorLote` (tela do setor) já era por lote e não muda.
+
 ## [3.6.1] — 2026-09-03
 
 ### Alterado
