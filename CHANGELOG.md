@@ -52,6 +52,51 @@ exercitadas, exportação CSV conferida e nenhum erro de console.
 
 Falta ainda o teste contra um lote real da fábrica antes de divulgar o link.
 
+## [2.3.0] — 2026-09-03
+
+Primeiro lote real (LT 162/26, 45 páginas, 137 ordens, 832 operações). O que ele ensinou:
+
+### Corrigido — um PDF pode trazer vários lotes
+
+O ERP emite a Situação do Lote **por LT**, e um LT tem um lote por produto: o arquivo veio com o
+lote 025136 (mesa cabeceira) nas páginas 1–12 e o 025137 (penteadeira) nas 13–45, cada um com
+cabeçalho, previsão e rodapé próprios. O leitor assumia um lote por arquivo: rotulava toda ordem
+com o último lote lido, usava a previsão dele para detectar reposição e comparava a soma dos
+dois lotes com o rodapé de um — daí os avisos "M³ diverge" e "71 linhas não reconhecidas".
+
+Agora `parseDoc` mantém `doc.lotes[]`; o cabeçalho se repete em toda página e só um **número de
+lote diferente** abre um lote novo. Ordem carrega `lote`, `lt` e `previsaoLote` do lote em que
+foi lida. Conferência de leitura por lote. Filtro de lote, contexto, folha e Leitura dos arquivos
+passaram a ler de `doc.lotes`.
+
+### Adicionado — "Qtd. Concluída na Fase"
+
+As 71 linhas "não reconhecidas" eram esta linha, que o ERP imprime por ordem: a última **fase**
+(grupo de operações: CORTE, FURACAO, USINAGEM, COLAGEM BORDA) que a peça completou e quantas
+peças. É a posição da ordem segundo o próprio ERP. Lida em `of.faseConcluida` e mostrada em
+"Onde travou" como **Fase concluída (ERP)**, contraprova do "Está em" calculado pelo roteiro. No
+lote real as duas concordaram em todas as ordens conferidas.
+
+### Alterado — "Onde travou" conta setores, não linhas
+
+Um roteiro real tem três passes de PINTAR PU seguidos de PINTAR UV. Contar linhas dizia "4 fases
+atrás" para o que o líder chama de um setor atrás. A distância passa a ser em **setores distintos**
+entre onde está e onde deveria estar. Coluna e CSV renomeados (`SetoresAtras`).
+
+### Alterado — "Inconsistente" exige falta de produção, não só a data
+
+A regra "concluída antes da primeira previsão de processo" pegou uma ordem cortada e fechada um
+dia antes do programado, com as 975 peças apontadas no mesmo dia. Isso é adiantamento. Agora só é
+inconsistente quando **não há apontamento que sustente o fechamento** (nenhuma operação apontada)
+ou quando uma operação foi concluída **depois** de a ordem já estar fechada. `OF_CONCL_ANTES_PREV`
+segue a mesma definição, para achado e aderência nunca discordarem.
+
+### Alterado — M³ sai da tela
+
+O PPCP não decide nada por M³. Ele continua sendo lido só para a conferência silenciosa de que o
+arquivo foi lido inteiro (soma das ordens × rodapé do lote), que aparece como "leitura conferida"
+ou "leitura incompleta". A coluna `M3` do CSV de ordens fica, para não quebrar consulta existente.
+
 ## [2.2.0] — 2026-09-03
 
 ### Onde travou — por que a ordem ficou para trás

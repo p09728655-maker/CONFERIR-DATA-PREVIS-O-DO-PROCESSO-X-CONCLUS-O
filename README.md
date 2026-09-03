@@ -175,8 +175,16 @@ Consequências práticas do desenho:
 - `Faltam` só é impresso pelo ERP quando não há data de conclusão; a ferramenta sempre recalcula o saldo.
 - Operações repetidas no roteiro (duas fases `PINTAR UV`, por exemplo) são preservadas, não deduplicadas.
 
-**Auto-verificação:** a soma de M³ das ordens lidas é comparada com o `Total M3` do rodapé do próprio
-relatório. Se divergir, ou se alguma linha não for reconhecida, a aba **Leitura dos arquivos** exibe alerta.
+- **Um PDF pode trazer vários lotes.** O ERP emite a Situação do Lote por LT, e um LT tem um lote por
+  produto, cada um com cabeçalho, previsão e rodapé próprios. Cada lote é lido e conferido separadamente;
+  o cabeçalho se repete em toda página e só um número de lote diferente abre um lote novo.
+- A linha `Qtd. Concluída na Fase: <FASE> <qtd>` é lida em `of.faseConcluida`: a última fase que o ERP dá
+  como completa. É mostrada em "Onde travou" como contraprova.
+
+**Auto-verificação ("leitura conferida"):** a soma de M³ das ordens lidas é comparada com o `Total M3` do
+rodapé de cada lote no próprio relatório. O M³ não é usado para mais nada — o PPCP não decide por ele; é só
+a prova de que nenhuma ordem ou página ficou de fora. Se divergir, ou se alguma linha não for reconhecida,
+a aba **Leitura dos arquivos** exibe alerta.
 
 > Se aparecer aviso nessa aba, **não use os números da tela** antes de revisar o PDF. O layout do relatório
 > pode ter mudado.
@@ -227,7 +235,8 @@ Para cada ordem **em aberto**:
 |---|---|
 | Deveria estar em | A última fase do roteiro com previsão do processo até a data de referência: o que o PPCP programou a ordem alcançar até hoje |
 | Está em | A fase seguinte à última com apontamento. Se a última apontada ainda tem saldo e não foi fechada, é ela mesma (`parcial`). Nenhuma fase apontada: `não começou` |
-| Fases atrás | Quantas fases separam onde está de onde deveria estar. `—` com dias parada = atrasada dentro da própria fase |
+| Setores atrás | Quantos setores distintos separam onde está de onde deveria estar (três passes de pintura no mesmo setor contam um). `—` com dias parada = atrasada dentro da própria fase |
+| Fase concluída (ERP) | A linha "Qtd. Concluída na Fase" do próprio relatório: a última fase que o ERP dá como completa. Contraprova do "Está em" |
 | Parada há | Dias úteis desde a previsão da fase onde está |
 | Peças na fase | Saldo ainda não apontado na fase onde está |
 
@@ -410,7 +419,7 @@ Ao alterar qualquer regra de conferência ou o parser:
 
 1. Rode um lote **já encerrado e conhecido** e confira se os achados batem com o que se sabe do chão de fábrica.
 2. Rode um lote **em andamento** e verifique se não há falso positivo.
-3. Confirme na aba **Leitura dos arquivos** que o M³ confere e que não há linha ignorada.
+3. Confirme na aba **Leitura dos arquivos** que cada lote está "leitura conferida" e que não há linha ignorada.
 4. Atualize a constante `VERSAO` no `index.html`, acrescente a entrada no diálogo de histórico
    (`#dlgVersao`, no próprio `index.html`) e registre a mudança no `CHANGELOG.md`.
 
@@ -418,5 +427,5 @@ Ao alterar qualquer regra de conferência ou o parser:
 
 Não há suíte automatizada no repositório. O teste da v1.1.0 foi feito no navegador com um PDF
 sintético que reproduz o layout do relatório e dispara cada uma das 13 regras. Ao mexer no parser,
-o mínimo é: abrir um lote conhecido, conferir o M³ contra o rodapé, e verificar que nenhuma coluna
+o mínimo é: abrir um lote conhecido, ver "leitura conferida" em cada lote, e verificar que nenhuma coluna
 escorregou (data onde deveria haver data, número onde deveria haver número).
