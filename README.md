@@ -353,6 +353,28 @@ curso. Cobrar o líder que está fazendo a coisa certa seria pior que não medir
 > No lote 025139, o conjunto INTENSE aparece como **junto** — as 3 ordens passaram CORTAR e FURAR e
 > pararam juntas na COLAR BORDA. SPACE e SLEEP aparecem como **quebrados**.
 
+### Avanço por lote, na tela de cada setor
+
+O líder do CORTAR abre a tela dele e lê:
+
+| Lote | Ordens aqui | Fechadas | % pronto (peças) | Peças a fazer | Estado |
+|---|---|---|---|---|---|
+| 025140 | 3 | 2/3 | **80%** | 200 | aberto |
+| 025141 | 1 | 0/1 | 0% | 600 | aberto |
+| 025139 | 2 | 2/2 | **100%** | — | fechado |
+
+A regra de despacho fica escrita no cabeçalho — **feche o lote mais adiantado antes de começar
+outro** — e uma frase nomeia qual lote e quanto falta. Quando há mais de um lote aberto no mesmo
+setor, o cabeçalho vai para atenção: é o estado que dói.
+
+- **A conta é em peças (peça-fase), não em ordens.** Duas ordens de 44 podem ser 20% das peças;
+  contar ordens faz o resto parecer pequeno, e é por isso que ele fica para trás. As duas
+  aparecem lado a lado, porque a diferença entre elas é a informação.
+- **Ordenado pela ordem de fazer**, não pelo número do lote: o mais adiantado que ainda não
+  fechou vem primeiro, porque fecha com menos esforço e libera o setor da frente.
+- Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
+- O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
+
 ### O que fica de fora
 
 **Só componente entra.** Produto acabado (`1…`) e volume (`5…`) são o **resultado** do conjunto, não
