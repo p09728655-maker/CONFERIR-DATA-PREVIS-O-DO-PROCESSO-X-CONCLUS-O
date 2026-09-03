@@ -3,6 +3,25 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.9.1] — 2026-09-03
+
+### Corrigido
+
+- **"Imprimir a lista da tela" levava só a `<table>`.** O veredito (a conclusão), os cartões (a
+  leitura rápida) e a nota (as definições dos termos) ficavam de fora: o líder recebia o dado sem
+  a resposta.
+
+  Apareceu na seção **Operação fechada**, que no papel saía sem o percentual e sem a faixa do
+  roteiro por lote — mas o defeito era geral, valia para todas as seções desde sempre.
+
+  A folha passa a reproduzir **o que está na tela**: conclusão, cartões, lista e nota. Vale para
+  Onde travou, Sem apontamento, Conjunto incompleto e Operação fechada; seções sem veredito
+  (Ordens, Operações, Achados) seguem como antes, agora com a nota.
+
+- Acabamento de preto e branco: novo `.doc-cartoes` com borda e selos em contorno; as barrinhas de
+  avanço (`.pct .b`) somem na folha, porque viram cinza indistinto e o número ao lado já diz o
+  mesmo; o texto dos cartões sai em preto em vez do cinza da tela.
+
 ## [3.9.0] — 2026-09-03
 
 ### Adicionado
