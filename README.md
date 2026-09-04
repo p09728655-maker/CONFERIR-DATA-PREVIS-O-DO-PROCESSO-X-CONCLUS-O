@@ -50,6 +50,10 @@ primeira cobrança errada.
 > nas tabelas de lote, ordem e operação do ERP. Uma consulta direta ao banco (ou uma view publicada para o
 > Power BI) elimina a dependência de layout de relatório e permite histórico. Esta ferramenta deve ser
 > tratada como ponte até essa integração existir.
+>
+> O plano de execução dessa integração — pedido para a TI, descoberta do schema, tabela de snapshot
+> diário, job e teste de aceite — está em **[`docs/integracao-erp/`](docs/integracao-erp/README.md)**.
+> Nada dali foi executado ainda contra o banco da Lógica.
 
 ---
 
@@ -697,8 +701,11 @@ localmente pelo usuário e nunca trafegam. Ainda assim, se a política interna e
 
 1. **Depende do layout do relatório.** Mudança de layout no ERP quebra a leitura. A auto-verificação avisa,
    mas a correção exige ajuste no parser.
-2. **Não há histórico.** Cada sessão parte do zero. Para tendência de aderência ao longo do tempo, exporte
-   os CSVs e acumule no Power BI, ou resolva na origem com consulta ao ERP.
+2. **Não há histórico.** Cada sessão parte do zero, e abrir o mesmo lote duas vezes substitui a leitura
+   anterior em vez de somar — a tela mostra sempre uma foto só. Comparar "como estava ontem × como está
+   hoje" exige guardar os dois PDFs e cruzar os CSVs por `Lote + Ordem + Seq` fora da ferramenta. Para
+   resolver de verdade, veja o plano de snapshot diário em
+   [`docs/integracao-erp/`](docs/integracao-erp/README.md).
 3. **A regra `SEQ_FORA_ORDEM` compara pela ordem de impressão do roteiro**, que assume ser a sequência
    cadastrada. Se o relatório imprimir fora de sequência, gera falso positivo.
 4. **Sem verificação de estrutura de produto.** A ferramenta confere roteiro e apontamento, não a árvore
