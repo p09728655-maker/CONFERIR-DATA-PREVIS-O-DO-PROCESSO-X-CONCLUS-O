@@ -3,6 +3,56 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.11.0] — 2026-09-08
+
+### Adicionado
+
+- **Especificação da integração por views, publicada em `/integracao`.** A recomendação de sair do PDF
+  estava registrada em uma nota de três linhas no README desde a v1.0.0 e nunca virou documento
+  entregável. Agora é `integracao.html`, servido pela própria aplicação, escrito para ser lido pela TI
+  e pela Lógica — e impresso, se a reunião pedir papel.
+
+  O que ele fixa é o **contrato de saída** de quatro views (`ppcp.vw_ritmo_lote`, `_ordem`,
+  `_operacao`, `_referencia`): nome, tipo, obrigatoriedade e, em cada campo, **o que quebra na
+  ferramenta se ele vier errado**. De onde a TI busca o valor é decisão dela; trocar a origem é livre,
+  trocar a saída quebra a conferência.
+
+- **Regra dura: a view não é exposta.** Nenhuma porta de banco publicada, nenhuma API pública sobre a
+  view, nenhuma credencial de ERP em aplicação hospedada fora, nenhum caminho de fora para dentro.
+  Quem consulta a view é um processo interno; o que sai da rede é um recorte empurrado por ele. O
+  documento tem o diagrama e as consequências de projeto que decorrem disso — a principal sendo que a
+  aplicação no Vercel **não fala com o ERP**, ela lê um espelho.
+
+  A restrição veio antes do desenho, e não depois. Foi ela que descartou o caminho óbvio (API sobre a
+  view) e produziu a recomendação de faseamento: provar o contrato com arquivo exportado, que não exige
+  infraestrutura nem decisão de segurança pendente, antes de construir espelho.
+
+- **Critério de aceite mensurável, no lugar de "a view retorna dado".** Uma view pode retornar dado
+  perfeitamente plausível e ainda assim mudar um achado — um `JOIN` a mais, uma data sentinela
+  `1900-01-01` lida como apontamento existente, uma sequência de roteiro diferente. O que precisa bater
+  não é o dado: é **o achado**, porque é o achado que vira cobrança com o líder de setor. A validação
+  são três lotes (um encerrado, um em andamento, um com furo conhecido) com listas idênticas linha a
+  linha nas duas fontes.
+
+- **Três campos declarados inegociáveis no contrato**, porque saem do código e não da preferência de
+  quem escreve a view: `seq` da operação (a prova de apontamento esquecido é posicional), o **nome** da
+  operação (as isenções de `PINTAR PU` e `EMBAL…` casam por texto, não por código) e o formato
+  `999.999.999` do produto (o 1º bloco separa acabado, volume e componente).
+
+### Corrigido
+
+- **Cada página passa a guardar a própria cópia de reserva no service worker.** O tratamento de
+  navegação gravava **toda** resposta na chave `./index.html`. Com uma única página no site isso era
+  inofensivo; com a documentação em `/integracao`, abrir o documento sobrescreveria a cópia local do
+  app — e a ferramenta, sem rede, abriria o documento no lugar dela. O defeito não existia antes
+  porque não havia segunda página; ele entraria junto com ela.
+
+### Nota
+
+A ferramenta **não mudou**. Continua lendo PDF, com as mesmas regras, as mesmas telas e os mesmos CSVs.
+A integração é proposta, não implementação. E mesmo depois de implementada, o leitor de PDF permanece:
+é a única fonte que funciona sem rede e sem o ERP de pé.
+
 ## [3.10.0] — 2026-09-03
 
 ### Alterado
