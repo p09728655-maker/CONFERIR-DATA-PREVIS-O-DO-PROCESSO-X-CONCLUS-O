@@ -22,7 +22,7 @@
  * activate apaga todos os caches de nome diferente — não sobra resto de
  * versão antiga ocupando espaço nem sendo servido por engano.
  */
-const VERSAO = '3.1.1';
+const VERSAO = '3.11.0';
 const CACHE = 'ritmopatrimar-datas-v' + VERSAO;
 
 const ESTATICOS = [
@@ -35,6 +35,10 @@ const ESTATICOS = [
   './icone-512.png',
   './icone-maskable.png',
   './manifest.webmanifest',
+  // Servida em /integracao (cleanUrls do Vercel). Se o host não fizer
+  // cleanUrls, este item dá 404 e o install segue sem ele — a página
+  // continua funcionando online, só não fica disponível offline.
+  './integracao',
 ];
 
 self.addEventListener('install', (e) => {
@@ -76,16 +80,22 @@ self.addEventListener('fetch', (e) => {
     url.pathname === '/' || url.pathname === '';
 
   if (ehPagina) {
+    // CADA PÁGINA NA CHAVE DELA. Enquanto toda navegação era guardada como
+    // './index.html', qualquer outra página do site (a documentação em
+    // /integracao) sobrescrevia a cópia de reserva do app: abrir a
+    // ferramenta sem rede mostraria o documento no lugar dela.
+    const ehApp = url.pathname === '/' || url.pathname === '' ||
+                  url.pathname.endsWith('/index.html');
     e.respondWith((async () => {
       try {
         const resp = await fetch(req);
         // Guarda a versão nova para a próxima vez que estiver sem rede.
-        if (resp && resp.ok) (await caches.open(CACHE)).put('./index.html', resp.clone());
+        if (resp && resp.ok) (await caches.open(CACHE)).put(ehApp ? './index.html' : req, resp.clone());
         return resp;
       } catch {
-        return (await caches.match('./index.html')) ||
-               (await caches.match('./')) ||
-               new Response('Sem conexão e sem cópia local do aplicativo.',
+        return (await caches.match(req)) ||
+               (ehApp ? (await caches.match('./index.html')) || (await caches.match('./')) : null) ||
+               new Response('Sem conexão e sem cópia local desta página.',
                  { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       }
     })());

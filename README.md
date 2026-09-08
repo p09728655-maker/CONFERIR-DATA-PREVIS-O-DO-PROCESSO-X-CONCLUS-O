@@ -47,9 +47,11 @@ primeira cobrança errada.
 - Não corrige o roteiro. Aponta onde ele está inconsistente para correção na Engenharia/PPCP.
 
 > **Recomendação técnica registrada:** ler PDF é um contorno, não a solução definitiva. O mesmo dado existe
-> nas tabelas de lote, ordem e operação do ERP. Uma consulta direta ao banco (ou uma view publicada para o
-> Power BI) elimina a dependência de layout de relatório e permite histórico. Esta ferramenta deve ser
-> tratada como ponte até essa integração existir.
+> nas tabelas de lote, ordem e operação do ERP. Uma consulta direta ao banco elimina a dependência de layout
+> de relatório e permite histórico. Esta ferramenta deve ser tratada como ponte até essa integração existir.
+>
+> A especificação está escrita: **[Integração por views](integracao.html)**, publicada em `/integracao` —
+> contrato das quatro views, regras de integridade, critério de aceite e riscos (ver seção 12).
 
 ---
 
@@ -596,6 +598,7 @@ Arquivo único, sem etapa de build, sem framework, sem backend.
 ```
 .
 ├── index.html                 # aplicação inteira (HTML + CSS + JS)
+├── integracao.html            # especificação da integração por views, servida em /integracao
 ├── sw.js                      # service worker: uso offline
 ├── manifest.webmanifest       # instalação no aparelho
 ├── icone-192.png              # ícones do app instalado
@@ -698,7 +701,7 @@ localmente pelo usuário e nunca trafegam. Ainda assim, se a política interna e
 1. **Depende do layout do relatório.** Mudança de layout no ERP quebra a leitura. A auto-verificação avisa,
    mas a correção exige ajuste no parser.
 2. **Não há histórico.** Cada sessão parte do zero. Para tendência de aderência ao longo do tempo, exporte
-   os CSVs e acumule no Power BI, ou resolva na origem com consulta ao ERP.
+   os CSVs e acumule no Power BI, ou resolva na origem com a integração por views (seção 12).
 3. **A regra `SEQ_FORA_ORDEM` compara pela ordem de impressão do roteiro**, que assume ser a sequência
    cadastrada. Se o relatório imprimir fora de sequência, gera falso positivo.
 4. **Sem verificação de estrutura de produto.** A ferramenta confere roteiro e apontamento, não a árvore
@@ -732,3 +735,33 @@ Não há suíte automatizada no repositório. O teste da v1.1.0 foi feito no nav
 sintético que reproduz o layout do relatório e dispara cada uma das 13 regras. Ao mexer no parser,
 o mínimo é: abrir um lote conhecido, ver "leitura conferida" em cada lote, e verificar que nenhuma coluna
 escorregou (data onde deveria haver data, número onde deveria haver número).
+
+---
+
+## 12. Integração por views (proposta, não implementada)
+
+A especificação técnica completa está publicada em **`/integracao`** — servida por esta mesma aplicação,
+a partir do `integracao.html` na raiz do repositório. É o documento a entregar para a TI e para a Lógica.
+
+O que ela define:
+
+- **Contrato de quatro views** somente-leitura (`ppcp.vw_ritmo_lote`, `_ordem`, `_operacao`, `_referencia`),
+  campo a campo, com tipo, obrigatoriedade e o que quebra na ferramenta se cada um vier errado.
+- **Regra dura de segurança:** a view **não é exposta**. Nenhuma porta de banco publicada, nenhuma API
+  pública sobre a view, nenhuma credencial de ERP em aplicação hospedada fora. A conexão é sempre de
+  dentro para fora — quem consulta a view é um processo interno, e o que sai da rede é um recorte.
+- **Três arquiteturas comparadas** (arquivo exportado, espelho com push, app interno), com recomendação.
+- **Critério de aceite mensurável:** a view só é aceita quando reproduz, linha a linha, os mesmos achados
+  que o PDF produz hoje, em três lotes — um encerrado, um em andamento e um com furo conhecido.
+- **Riscos** e o **questionário que a TI precisa responder** antes de o SQL sair do esqueleto.
+
+Três pontos que decorrem do código e não são negociáveis no contrato:
+
+| Campo | Por quê |
+|---|---|
+| `seq` da operação | A prova de "apontamento esquecido" é posicional: fase sem registro com fase **posterior** apontada. Sequência instável faz o mesmo lote gerar achados diferentes em dias diferentes |
+| `operacao` (nome) | As isenções casam por nome — `PINTAR PU` e `EMBAL…`. Entregar código no lugar da descrição desliga as duas e cria falso apontamento esquecido |
+| `produto` no formato `999.999.999` | O 1º bloco separa acabado (`1…`), volume (`5…`) e componente (`7xx`), e é o que decide a isenção de `EMBALAR` e o agrupamento de conjunto |
+
+**Enquanto a integração não existir, nada muda:** a ferramenta lê PDF. E mesmo depois de existir, o leitor
+de PDF permanece — é a única fonte que funciona sem rede e sem o ERP de pé.

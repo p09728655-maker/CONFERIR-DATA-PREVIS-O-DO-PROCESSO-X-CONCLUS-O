@@ -154,6 +154,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .lat-link{display:block;padding:0;margin-bottom:var(--xs);background:none;border:0;color:var(--esc-texto-medio);
   font:inherit;font-size:11px;text-align:left;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .lat-link:hover{color:var(--esc-texto)}
+/* O link da documentação vem DEPOIS do texto do rodapé: separa dele em cima,
+   não embaixo, onde já não há mais nada. */
+.rodape .lat-link{margin-top:var(--sm);margin-bottom:0}
 
 /* ---------------------------------------------------------------- Estados */
 .estado{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 120px);padding:var(--xl)}
@@ -677,6 +680,8 @@ dialog form{margin-top:var(--lg);text-align:right}
     <div class="rodape">
       <span class="hide" id="blocoInstalar"><button type="button" class="lat-link" id="btnInstalar"
         title="Abre pelo ícone e funciona sem internet">Instalar no aparelho</button></span><span id="estadoApp"></span>Leitura local do PDF. Nenhum dado sai deste computador.
+      <a class="lat-link" href="/integracao" target="_blank" rel="noopener"
+        title="Especificação técnica para ler apontamento direto do ERP, sem expor o banco">Integração por views</a>
     </div>
 
   </div>
@@ -762,6 +767,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.11.0 — 08/09/2026</h3>
+  <ul>
+    <li><b>A integração por views saiu do rodapé do README e virou documento.</b> A especificação de como buscar apontamento direto do ERP — contrato das quatro views, regras de integridade, critério de aceite e riscos — está publicada em <b>Integração por views</b>, no rodapé da lateral. Nada muda na ferramenta: continua lendo PDF, e o PDF continua sendo a contingência que funciona sem rede.</li>
+    <li><b>Regra dura registrada:</b> a view não é exposta. Nenhuma consulta vinda de fora toca o banco do ERP — o que sai da rede é um recorte empurrado de dentro para fora.</li>
+    <li><b>Correção no uso offline:</b> cada página passa a guardar a própria cópia de reserva. Abrir a documentação sem esta correção sobrescreveria a cópia local do app, e a ferramenta sem rede abriria o documento no lugar dela.</li>
+  </ul>
   <h3>3.10.0 — 03/09/2026</h3>
   <ul>
     <li><b>A lateral parou de rolar.</b> Com um lote aberto ela somava <b>1.540px de menu numa tela de 900px</b> — uma tela e meia de rolagem — e rolar custava a navegação: alcançar o CSV empurrava "Onde travou" para fora. Agora são <b>755px</b>, e em monitor comum não rola nada.</li>
@@ -1588,7 +1599,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.10.0';
+const VERSAO='3.11.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE

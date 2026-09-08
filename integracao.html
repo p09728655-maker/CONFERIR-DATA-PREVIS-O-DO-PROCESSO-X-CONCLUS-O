@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14171A">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Especificação técnica da integração por views para leitura de apontamento de produção direto do ERP — RitmoPatrimar, PPCP Patrimar Móveis.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Integração por views — apontamento direto do ERP · RitmoPatrimar</title>
+<style>
+/* ============================================================================
+   TOKENS — os mesmos do index.html. O vermelho #DB2126 é IDENTIDADE, nunca
+   status; alerta é laranja queimado e vem sempre com texto junto.
+   Documento para ler na tela e IMPRIMIR: o @media print no fim devolve o
+   papel branco, tira a navegação e abre as tabelas.
+   ========================================================================== */
+:root{
+  --vermelho:#DB2126; --bordeaux:#A8140F; --areia:#F7ECC0; --grafite:#1F2328;
+  --fundo:#F4F5F7; --papel:#FFFFFF; --borda:#D8DCE2; --borda-forte:#B4BBC4;
+  --texto:#14171A; --texto-medio:#4A525C; --texto-fraco:#6B7480; --papel-cabecalho:#F8F9FB;
+  --ok:#15803D; --ok-fundo:rgba(21,128,61,.12);
+  --atencao:#B45309; --atencao-fundo:rgba(180,83,9,.12);
+  --critico:#C2410C; --critico-fundo:rgba(194,65,12,.14);
+  --neutro:#64748B; --neutro-fundo:rgba(100,116,139,.12);
+  --esc-fundo:#14171A; --esc-superficie:#1F2328; --esc-borda:#3A424C;
+  --esc-texto:#F5F7FA; --esc-texto-medio:#C3CBD4; --esc-fraco:#9AA5B1;
+  --fonte:'Calibri','Carlito','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Roboto Mono','Consolas','DejaVu Sans Mono',monospace;
+  --xs:4px; --sm:8px; --md:12px; --lg:16px; --xl:24px; --xxl:32px; --xxxl:48px;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+  --elev-baixa:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font-family:var(--fonte);font-size:15px;line-height:1.65}
+a{color:var(--bordeaux)}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--areia);outline-offset:2px}
+.num,code,pre{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ------------------------------------------------------------------ Cabeçalho */
+.topo{background:var(--esc-fundo);color:var(--esc-texto);border-bottom:3px solid var(--vermelho)}
+.topo .caixa{max-width:1180px;margin:0 auto;padding:var(--xl) var(--xl)}
+.topo .volta{display:inline-block;margin-bottom:var(--lg);color:var(--esc-fraco);font-size:13px;text-decoration:none}
+.topo .volta:hover{color:var(--esc-texto)}
+.topo .rotulo{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--esc-fraco)}
+.topo h1{margin:var(--xs) 0 var(--sm);font-size:30px;line-height:1.2;letter-spacing:-.02em}
+.topo p{margin:0;max-width:70ch;color:var(--esc-texto-medio)}
+.selos{display:flex;flex-wrap:wrap;gap:var(--sm);margin-top:var(--lg)}
+.selo{padding:3px 10px;border:1px solid var(--esc-borda);border-radius:var(--r-pill);
+  font-size:12px;font-weight:600;color:var(--esc-texto-medio)}
+.selo.proposta{border-color:var(--atencao);color:#F0C48A}
+
+/* ------------------------------------------------------------------ Esqueleto */
+.corpo{max-width:1180px;margin:0 auto;padding:var(--xl);display:flex;gap:var(--xxl);align-items:flex-start}
+.sumario{flex:0 0 232px;position:sticky;top:var(--xl)}
+.sumario .grupo{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--texto-fraco);margin-bottom:var(--sm)}
+.sumario ol{margin:0;padding:0;list-style:none;counter-reset:s}
+.sumario a{display:block;padding:5px 0 5px var(--xl);position:relative;color:var(--texto-medio);
+  font-size:13.5px;text-decoration:none;border-left:2px solid var(--borda)}
+.sumario a::before{counter-increment:s;content:counter(s);position:absolute;left:var(--sm);
+  font-family:var(--mono);font-size:11px;color:var(--texto-fraco)}
+.sumario a:hover{color:var(--texto);border-left-color:var(--vermelho);background:rgba(0,0,0,.02)}
+main{flex:1;min-width:0}
+section{background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-lg);
+  padding:var(--xl);margin-bottom:var(--lg);box-shadow:var(--elev-baixa)}
+section>h2{margin:0 0 var(--md);font-size:21px;line-height:1.25;letter-spacing:-.01em;
+  padding-bottom:var(--sm);border-bottom:1px solid var(--borda)}
+section>h2 .n{font-family:var(--mono);font-size:14px;color:var(--vermelho);margin-right:var(--sm)}
+h3{margin:var(--xl) 0 var(--sm);font-size:16.5px;line-height:1.3}
+h3:first-of-type{margin-top:var(--lg)}
+p{margin:0 0 var(--md);max-width:78ch}
+ul,ol{margin:0 0 var(--md);padding-left:22px;max-width:78ch}
+li{margin-bottom:var(--xs)}
+strong{font-weight:700}
+
+/* ------------------------------------------------------------------ Blocos */
+.regra{border-left:4px solid var(--critico);background:var(--critico-fundo);
+  padding:var(--md) var(--lg);border-radius:0 var(--r-md) var(--r-md) 0;margin:0 0 var(--lg)}
+.regra .t{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--critico);margin-bottom:var(--xs)}
+.regra p:last-child{margin-bottom:0}
+.nota{border-left:4px solid var(--neutro);background:var(--neutro-fundo);
+  padding:var(--md) var(--lg);border-radius:0 var(--r-md) var(--r-md) 0;margin:0 0 var(--lg);font-size:14px}
+.nota p:last-child{margin-bottom:0}
+.aceite{border-left:4px solid var(--ok);background:var(--ok-fundo);
+  padding:var(--md) var(--lg);border-radius:0 var(--r-md) var(--r-md) 0;margin:0 0 var(--lg)}
+.aceite .t{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ok);margin-bottom:var(--xs)}
+.aceite p:last-child{margin-bottom:0}
+
+/* ------------------------------------------------------------------ Tabelas */
+.rolar{overflow-x:auto;margin:0 0 var(--lg);border:1px solid var(--borda);border-radius:var(--r-md)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:7px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--borda)}
+th{background:var(--papel-cabecalho);font-size:11px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--texto-medio);white-space:nowrap;position:sticky;top:0}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even){background:#FCFCFD}
+td.campo{font-family:var(--mono);font-size:12.5px;white-space:nowrap;font-weight:600}
+td.tipo{font-family:var(--mono);font-size:12px;color:var(--texto-medio);white-space:nowrap}
+.sim{color:var(--critico);font-weight:700}
+.nao{color:var(--texto-fraco)}
+code{background:rgba(100,116,139,.12);padding:1px 5px;border-radius:var(--r-sm);font-size:12.5px}
+pre{background:var(--esc-fundo);color:var(--esc-texto);padding:var(--lg);border-radius:var(--r-md);
+  overflow-x:auto;font-size:12.5px;line-height:1.6;margin:0 0 var(--lg)}
+pre .c{color:var(--esc-fraco)}
+pre .ph{color:#F0C48A}
+
+/* ------------------------------------------------------------------ Diagrama */
+.fluxo{display:flex;flex-wrap:wrap;align-items:stretch;gap:var(--sm);margin:0 0 var(--md)}
+.fluxo .cx{flex:1 1 120px;min-width:116px;border:1px solid var(--borda-forte);border-radius:var(--r-md);
+  padding:var(--md);background:var(--papel-cabecalho)}
+.fluxo .cx.dentro{border-color:var(--critico);background:var(--critico-fundo)}
+.fluxo .cx.fora{border-color:var(--ok);background:var(--ok-fundo)}
+.fluxo .cx b{display:block;font-size:13px;margin-bottom:2px}
+.fluxo .cx span{font-size:12px;color:var(--texto-medio);line-height:1.45;display:block}
+.fluxo .seta{align-self:center;font-family:var(--mono);color:var(--texto-fraco);font-size:18px;flex:0 0 auto}
+.legenda{font-size:12.5px;color:var(--texto-fraco);margin:0 0 var(--lg)}
+
+.rodape{max-width:1180px;margin:0 auto;padding:0 var(--xl) var(--xxxl);
+  font-size:12.5px;color:var(--texto-fraco)}
+.rodape p{max-width:78ch}
+
+@media (max-width:900px){
+  /* align-items:stretch é obrigatório aqui: com o flex-start herdado (que no
+     desktop é o que dá altura à barra sticky), em coluna o <main> passa a se
+     dimensionar pelo conteúdo mais largo — as tabelas — e a PÁGINA INTEIRA
+     ganha rolagem horizontal em vez de a tabela rolar dentro do .rolar. */
+  .corpo{flex-direction:column;gap:var(--lg);padding:var(--lg);align-items:stretch}
+  main{width:100%}
+  .sumario{position:static;flex:0 0 auto;width:100%}
+  .topo .caixa{padding:var(--lg)}
+  .topo h1{font-size:24px}
+  /* Empilhado, a seta gira. Deixar o fluxo quebrar sozinho produzia seta
+     apontando para a direita no fim da linha, com a caixa seguinte embaixo. */
+  .fluxo{flex-direction:column}
+  .fluxo .cx{flex:1 1 auto;width:100%}
+  .fluxo .seta{align-self:flex-start;margin-left:var(--xl);transform:rotate(90deg)}
+}
+@media print{
+  body{background:#fff;font-size:10.5pt}
+  .topo{background:#fff;color:#000;border-bottom:2px solid #000}
+  .topo .volta,.sumario,.selo{display:none}
+  .topo .rotulo,.topo p{color:#000}
+  .corpo{display:block;max-width:none;padding:0}
+  section{border:0;border-radius:0;box-shadow:none;padding:0;margin:0 0 14pt;break-inside:auto}
+  section>h2{break-after:avoid}
+  h3{break-after:avoid}
+  .rolar{overflow:visible;border:1px solid #000}
+  table{font-size:8.5pt}
+  th{background:#EEE;color:#000;position:static}
+  pre{background:#fff;color:#000;border:1px solid #999;font-size:8pt}
+  pre .c,pre .ph{color:#000}
+  .regra,.nota,.aceite{border:1px solid #000;background:#fff}
+  .fluxo{flex-direction:column}
+  .fluxo .cx{flex:1 1 auto;width:100%;background:#fff;border:1px solid #000}
+  .fluxo .cx.dentro{border-left:5px solid #000}
+  .fluxo .cx.fora{border-left:5px double #000}
+  .fluxo .seta{align-self:flex-start;margin-left:18pt;transform:rotate(90deg)}
+  tr,li{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="caixa">
+    <a class="volta" href="/">&larr; Voltar para a ferramenta</a>
+    <div class="rotulo">RitmoPatrimar &middot; PPCP &middot; Especificação técnica</div>
+    <h1>Integração por views: apontamento direto do ERP</h1>
+    <p>Contrato de dados para substituir a leitura do PDF <em>Situação do Lote de Produção</em> por
+       consulta às tabelas do ERP Industrial (Lógica), sem expor o banco e sem mudar nenhuma regra
+       de conferência.</p>
+    <div class="selos">
+      <span class="selo proposta">Proposta &middot; não implementado</span>
+      <span class="selo">Documento v1.0</span>
+      <span class="selo">Banco: SQL Server</span>
+      <span class="selo">Área: PPCP</span>
+      <span class="selo">Ferramenta: RitmoPatrimar 3.11.0</span>
+    </div>
+  </div>
+</header>
+
+<div class="corpo">
+
+<nav class="sumario" aria-label="Sumário">
+  <div class="grupo">Sumário</div>
+  <ol>
+    <li><a href="#s1">Decisão em um minuto</a></li>
+    <li><a href="#s2">Por que sair do PDF</a></li>
+    <li><a href="#s3">Regra dura: a view não é exposta</a></li>
+    <li><a href="#s4">Contrato de dados</a></li>
+    <li><a href="#s5">Regras de integridade</a></li>
+    <li><a href="#s6">O que a view não resolve</a></li>
+    <li><a href="#s7">Arquitetura: três caminhos</a></li>
+    <li><a href="#s8">Implantação em fases</a></li>
+    <li><a href="#s9">Critério de aceite</a></li>
+    <li><a href="#s10">Segurança e LGPD</a></li>
+    <li><a href="#s11">Riscos</a></li>
+    <li><a href="#s12">A TI precisa responder</a></li>
+    <li><a href="#s13">Esqueleto do SQL</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ====================================================================== 1 -->
+<section id="s1">
+  <h2><span class="n">1</span>Decisão em um minuto</h2>
+  <p>A ferramenta hoje lê um PDF que alguém emite à mão no ERP. O mesmo dado já existe em tabela.
+     Esta proposta troca a fonte — <strong>e só a fonte</strong>: as regras de conferência, as telas,
+     os CSVs e o significado de cada achado ficam exatamente como estão.</p>
+  <ul>
+    <li><strong>O que a TI entrega:</strong> quatro views somente-leitura, em schema próprio, dentro do
+        banco do ERP. Nada de API, nada de porta aberta.</li>
+    <li><strong>O que muda no app:</strong> passa a ler um recorte empurrado de dentro para fora. O
+        PDF continua funcionando como contingência — não é substituído, é aposentado aos poucos.</li>
+    <li><strong>O que isso compra:</strong> fim da dependência de layout de relatório, fim da emissão
+        manual, e histórico — que hoje não existe (a ferramenta parte do zero a cada sessão).</li>
+    <li><strong>O que isso custa:</strong> um dado operacional passa a existir fora do ERP. Isso exige
+        decisão formal, não só decisão técnica (seção&nbsp;10).</li>
+  </ul>
+  <div class="nota">
+    <p><strong>Recomendação:</strong> começar pela <strong>Fase&nbsp;0 e 1</strong> — criar as views e
+       provar que elas reproduzem, linha a linha, o que o PDF produz hoje. Custa pouco, não exige
+       infraestrutura nenhuma e é o único jeito de descobrir cedo se o dado da tabela bate com o dado
+       do relatório. Construir espelho antes de provar o contrato é construir sobre suposição.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== 2 -->
+<section id="s2">
+  <h2><span class="n">2</span>Por que sair do PDF</h2>
+  <p>Ler PDF sempre foi contorno declarado, não solução. Três fragilidades são estruturais e nenhuma
+     se resolve melhorando o leitor:</p>
+  <ol>
+    <li><strong>O parser depende da posição das colunas.</strong> Ele agrupa itens por coordenada Y,
+        ordena por X e só aceita um valor na coluna cujo tipo ele tem. Isso protege contra ler errado
+        <em>em silêncio</em> — não protege contra mudança de layout, que continua exigindo alteração
+        de código a cada atualização do ERP.</li>
+    <li><strong>Não há histórico.</strong> Cada sessão começa do zero. Tendência de aderência ao longo
+        do tempo hoje só existe se alguém acumular CSV à mão.</li>
+    <li><strong>A emissão é manual.</strong> Alguém precisa lembrar de emitir o relatório com
+        <em>Status das Ordens: Todas</em>. Esquecer ou emitir com o filtro errado produz uma conferência
+        incompleta que parece completa.</li>
+  </ol>
+  <p>Existe ainda um efeito lateral: como o relatório é um retrato, a data de referência da conferência
+     é a data de emissão lida do cabeçalho. Com a view, a referência passa a ser o instante da extração —
+     conhecido e registrado, não digitado.</p>
+</section>
+
+<!-- ====================================================================== 3 -->
+<section id="s3">
+  <h2><span class="n">3</span>Regra dura: a view não é exposta</h2>
+  <div class="regra">
+    <span class="t">Restrição de projeto — não negociável</span>
+    <p>A view existe <strong>dentro</strong> da rede, no banco do ERP, e nunca é alcançável de fora.
+       Nada de porta 1433 publicada, nada de API pública sobre a view, nada de <em>linked server</em>
+       para terceiro, nada de credencial de banco em aplicação hospedada na internet.</p>
+    <p><strong>A conexão é sempre de dentro para fora.</strong> Quem consulta a view é um processo
+       interno; o que sai da rede é um recorte já pronto, empurrado por esse processo. Nenhuma consulta
+       vinda de fora toca o banco.</p>
+  </div>
+
+  <div class="fluxo">
+    <div class="cx dentro"><b>ERP &mdash; SQL Server</b><span>Tabelas de lote, ordem e roteiro. Nunca acessível de fora.</span></div>
+    <span class="seta" aria-hidden="true">&rarr;</span>
+    <div class="cx dentro"><b>Views <code>ppcp.*</code></b><span>Somente leitura, schema próprio, usuário sem acesso às tabelas base.</span></div>
+    <span class="seta" aria-hidden="true">&rarr;</span>
+    <div class="cx dentro"><b>Job interno</b><span>Roda dentro da rede, no horário definido. Único que enxerga a view.</span></div>
+    <span class="seta" aria-hidden="true">&rarr;</span>
+    <div class="cx fora"><b>Recorte publicado</b><span>Só os campos da seção 4. Saída HTTPS, iniciada de dentro.</span></div>
+    <span class="seta" aria-hidden="true">&rarr;</span>
+    <div class="cx fora"><b>RitmoPatrimar</b><span>Lê o recorte. Nunca fala com o ERP.</span></div>
+  </div>
+  <p class="legenda">Em vermelho, o que fica dentro da rede da fábrica. Em verde, o que pode existir fora.
+     A seta nunca aponta para trás: não há caminho de fora para dentro.</p>
+
+  <h3>Consequências que decorrem disso</h3>
+  <ul>
+    <li>O app hospedado no Vercel <strong>não</strong> tem, e não pode ter, string de conexão do ERP.</li>
+    <li>Usuário de banco dedicado, somente-leitura, com <code>GRANT SELECT</code> apenas no schema das
+        views e <strong>negação explícita</strong> nas tabelas base. Se a view for alterada amanhã para
+        expor mais coisa, o usuário continua limitado ao que a view entrega.</li>
+    <li>A senha desse usuário não aparece neste documento, não vai para o repositório e não é enviada
+        por e-mail ou mensagem. Ela é definida e guardada pela TI.</li>
+    <li>Este documento não contém nome de servidor, instância, IP, base ou usuário — e não deve passar
+        a conter. Ele descreve o contrato, não o ambiente.</li>
+  </ul>
+</section>
+
+<!-- ====================================================================== 4 -->
+<section id="s4">
+  <h2><span class="n">4</span>Contrato de dados</h2>
+  <p>Quatro views. O que este documento fixa é a <strong>saída</strong>: nome, tipo e significado de cada
+     coluna. De onde a TI busca cada valor é decisão da TI — trocar a origem é livre, trocar a saída
+     quebra a ferramenta.</p>
+
+  <h3>4.1 — <code>ppcp.vw_ritmo_lote</code> &middot; uma linha por lote</h3>
+  <div class="rolar"><table>
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Origem no relatório</th><th>Para que a ferramenta usa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">lote</td><td class="tipo">varchar(10)</td><td class="sim">sim</td><td>Lote Nr.</td><td>Chave. Agrupa as ordens e é o filtro principal de todas as telas</td></tr>
+      <tr><td class="campo">lt</td><td class="tipo">varchar(10)</td><td class="nao">não</td><td>LT no cabeçalho</td><td>Rótulo do LT na tela e nos CSVs. Um LT tem um lote por produto</td></tr>
+      <tr><td class="campo">descricao</td><td class="tipo">varchar(120)</td><td class="nao">não</td><td>texto após o LT</td><td>Identificação do lote no cabeçalho das telas e da folha impressa</td></tr>
+      <tr><td class="campo">data_inicio</td><td class="tipo">date</td><td class="nao">não</td><td>Data Inicio</td><td>Informativo</td></tr>
+      <tr><td class="campo">data_previsao</td><td class="tipo">date</td><td class="sim">sim</td><td>Data Previsão</td><td>Prazo do lote. Base de &ldquo;lote vencido&rdquo; e do prazo por setor na tela de cada setor</td></tr>
+      <tr><td class="campo">total_m3</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>Total M3</td><td>Conferência de leitura: soma o M³ das ordens e compara com o rodapé</td></tr>
+      <tr><td class="campo">peso_bruto</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>Peso Bruto</td><td>Informativo</td></tr>
+    </tbody>
+  </table></div>
+  <div class="nota">
+    <p>A conferência por M³ existe porque um PDF pode ser lido pela metade sem avisar. Vindo da view
+       ela deixa de ser necessária — mas <strong>entregue o campo assim mesmo</strong>: é ele que permite
+       rodar PDF e view em paralelo na Fase&nbsp;1 e provar que as duas fontes fecham no mesmo número.</p>
+  </div>
+
+  <h3>4.2 — <code>ppcp.vw_ritmo_ordem</code> &middot; uma linha por ordem de fabricação</h3>
+  <div class="rolar"><table>
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Formato / origem</th><th>Para que a ferramenta usa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">lote</td><td class="tipo">varchar(10)</td><td class="sim">sim</td><td>igual ao da view 4.1</td><td>Ligação com o lote</td></tr>
+      <tr><td class="campo">ordem</td><td class="tipo">varchar(10)</td><td class="sim">sim</td><td>5 a 7 dígitos, sem separador</td><td>Chave da ordem. Aparece em toda tela, CSV e folha impressa</td></tr>
+      <tr><td class="campo">produto</td><td class="tipo">varchar(15)</td><td class="sim">sim</td><td><code>999.999.999</code> — três blocos de três dígitos</td><td><strong>Crítico.</strong> O 1º bloco separa acabado (<code>1…</code>), volume (<code>5…</code>) e componente (<code>7xx</code>), e é o que decide a isenção de EMBALAR. O 1º bloco também agrupa o conjunto na tela &ldquo;Conjunto incompleto&rdquo;</td></tr>
+      <tr><td class="campo">descricao_produto</td><td class="tipo">varchar(120)</td><td class="sim">sim</td><td>descrição da peça</td><td>Identificação em tela, CSV e folha da reunião</td></tr>
+      <tr><td class="campo">m3</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>M3 da ordem</td><td>Conferência de leitura contra o rodapé do lote</td></tr>
+      <tr><td class="campo">previsao</td><td class="tipo">date</td><td class="sim">sim</td><td>Previsão da ordem</td><td>Base da regra <code>OF_ABERTA_VENCIDA</code></td></tr>
+      <tr><td class="campo">conclusao</td><td class="tipo">date</td><td class="nao">NULL = em aberto</td><td>Conclusão da ordem</td><td>Ordem concluída é prova lógica de que a peça passou por todas as fases — sustenta o achado <code>APONT_FURADO</code></td></tr>
+      <tr><td class="campo">qtd_total</td><td class="tipo">decimal(18,3)</td><td class="sim">sim</td><td>Qtd. Total</td><td>Peças da ordem</td></tr>
+      <tr><td class="campo">ja_pronto</td><td class="tipo">decimal(18,3)</td><td class="sim">sim</td><td>Já Pronto</td><td>Saldo e regra <code>APONTADO_MAIOR</code></td></tr>
+      <tr><td class="campo">faltam</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>Faltam</td><td>Conferência cruzada com o saldo calculado</td></tr>
+      <tr><td class="campo">fase_concluida</td><td class="tipo">varchar(60)</td><td class="nao">não</td><td>Qtd. Concluída na Fase &mdash; nome da fase</td><td>Posição da ordem <strong>segundo o próprio ERP</strong>. É a contraprova da tela &ldquo;Onde travou&rdquo;</td></tr>
+      <tr><td class="campo">qtd_fase_concluida</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>Qtd. Concluída na Fase &mdash; quantidade</td><td>Peças que completaram aquela fase</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.3 — <code>ppcp.vw_ritmo_operacao</code> &middot; uma linha por ordem × operação do roteiro</h3>
+  <p>Esta é a view que sustenta a ferramenta. É nela que mora a resposta para <em>onde a produção não foi
+     apontada</em>.</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Formato / origem</th><th>Para que a ferramenta usa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">ordem</td><td class="tipo">varchar(10)</td><td class="sim">sim</td><td>igual ao da view 4.2</td><td>Ligação com a ordem</td></tr>
+      <tr><td class="campo">seq</td><td class="tipo">int</td><td class="sim">sim</td><td>1, 2, 3… sem buraco</td><td><strong>Crítico.</strong> É a ordem do roteiro. A prova de &ldquo;a peça não pula fase&rdquo; depende dela: fase sem apontamento com fase <em>posterior</em> apontada é apontamento esquecido</td></tr>
+      <tr><td class="campo">operacao</td><td class="tipo">varchar(60)</td><td class="sim">sim</td><td>nome exato, como sai hoje no relatório</td><td><strong>Crítico.</strong> As isenções casam por nome: <code>PINTAR PU</code> (setor que ainda não aponta) e <code>EMBAL…</code> (convenção em acabado e volume). Entregar código no lugar do nome quebra as duas</td></tr>
+      <tr><td class="campo">previsao_processo</td><td class="tipo">date</td><td class="nao">NULL dispara achado</td><td>Previsão do Processo</td><td>Define o que está vencido. Ausência gera <code>OP_SEM_PREVISAO</code></td></tr>
+      <tr><td class="campo">conclusao</td><td class="tipo">date</td><td class="nao">NULL = sem apontamento</td><td>Conclusão da operação</td><td><strong>O campo central.</strong> Vazio aqui é a ausência de registro que a ferramenta inteira investiga</td></tr>
+      <tr><td class="campo">qtd_total</td><td class="tipo">decimal(18,3)</td><td class="sim">sim</td><td>Qtd. Total</td><td>Peças da fase. Divergência com a ordem gera <code>QTD_OP_DIVERGENTE</code></td></tr>
+      <tr><td class="campo">ja_pronto</td><td class="tipo">decimal(18,3)</td><td class="sim">sim</td><td>Já Pronto</td><td>Fase com conclusão e <code>ja_pronto</code> zerado gera <code>APONT_SEM_QTD</code></td></tr>
+      <tr><td class="campo">faltam</td><td class="tipo">decimal(18,3)</td><td class="nao">não</td><td>Faltam</td><td>Conferência cruzada</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.4 — <code>ppcp.vw_ritmo_referencia</code> &middot; uma única linha</h3>
+  <div class="rolar"><table>
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Obrig.</th><th>Para que a ferramenta usa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">data_referencia</td><td class="tipo">date</td><td class="sim">sim</td><td>O que conta como &ldquo;vencido&rdquo; é medido contra esta data — hoje lida do cabeçalho do PDF. Sem ela, auditar um lote antigo faz tudo aparecer atrasado</td></tr>
+      <tr><td class="campo">gerado_em</td><td class="tipo">datetime2(0)</td><td class="sim">sim</td><td>Instante da extração. A tela declara a idade do dado; recorte velho não pode passar por atual</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ====================================================================== 5 -->
+<section id="s5">
+  <h2><span class="n">5</span>Regras de integridade</h2>
+  <p>São exigências do contrato, não preferências. Cada uma corresponde a uma garantia que o leitor de
+     PDF hoje oferece e que a view precisa continuar oferecendo.</p>
+  <ol>
+    <li><strong>Respeite o grão.</strong> Uma linha por ordem em 4.2, uma linha por ordem × operação em
+        4.3. Um <code>JOIN</code> que duplique linha infla contagem de peças e produz cobrança errada
+        com o setor. Valide com <code>COUNT(*)</code> contra <code>COUNT(DISTINCT …)</code> antes de entregar.</li>
+    <li><strong>Data vazia é <code>NULL</code>.</strong> Nunca <code>1900-01-01</code>, nunca
+        <code>'01/01/1900'</code>, nunca string vazia. Data sentinela vira apontamento existente e
+        <em>apaga</em> o achado — a ferramenta passa a dizer que está tudo certo.</li>
+    <li><strong>Data sem hora.</strong> Tipo <code>date</code>. Todo prazo é contado em dias úteis
+        (seg&ndash;sex, descontando feriado nacional e de São Paulo); componente de hora faz a mesma
+        ordem oscilar entre 2 e 3 dias de atraso conforme o horário do apontamento.</li>
+    <li><strong>Quantidade é número, não texto.</strong> <code>decimal(18,3)</code>. Sem separador de
+        milhar, sem símbolo, sem espaço. A formatação é responsabilidade do app.</li>
+    <li><strong>Sequência do roteiro estável.</strong> <code>seq</code> começa em 1, não tem buraco e
+        não muda entre duas extrações da mesma ordem. Sequência instável faz o mesmo lote produzir
+        achados diferentes em dias diferentes, sem nada ter mudado na fábrica.</li>
+    <li><strong>Nome de operação idêntico ao de hoje.</strong> Se a tabela guardar código e o relatório
+        imprimir descrição, a view entrega a <strong>descrição</strong>. Mudança silenciosa de
+        nomenclatura desliga as isenções e transforma setor isento em falso apontamento esquecido no
+        dia seguinte ao prazo.</li>
+    <li><strong>Traga o dado cru.</strong> Sem arredondar, sem truncar descrição, sem trocar acento por
+        equivalente. O tratamento (acento no CSV, corte de texto na tela) já existe no app e é o mesmo
+        para as duas fontes — duplicá-lo na view cria duas verdades.</li>
+    <li><strong>Todas as ordens, todos os status.</strong> O relatório é emitido com <em>Status das
+        Ordens: Todas</em>. A view não filtra ordem cancelada, encerrada ou suspensa por conta própria:
+        se houver status, entregue como coluna adicional e o PPCP decide o que fazer com ele.</li>
+  </ol>
+</section>
+
+<!-- ====================================================================== 6 -->
+<section id="s6">
+  <h2><span class="n">6</span>O que a view não resolve</h2>
+  <p>Trocar a fonte não muda a natureza da ferramenta. Vale registrar por escrito para que ninguém
+     espere da integração algo que ela não entrega:</p>
+  <ul>
+    <li><strong>A ferramenta continua lendo registro, não realidade.</strong> Se o apontamento não foi
+        feito no ERP, o achado é falta de apontamento — não necessariamente falta de produção. Quem
+        responde continua sendo o chão de fábrica.</li>
+    <li><strong>Apontamento errado continua errado.</strong> Dado ruim na tabela vira dado ruim na view,
+        e mais rápido do que antes. A integração aumenta a velocidade, não a qualidade da origem.</li>
+    <li><strong>Não há estrutura de produto.</strong> A tela &ldquo;Conjunto incompleto&rdquo; agrupa pelo
+        1º bloco do código da peça, não por BOM. Fechar conjunto por combinação de cor exigiria uma
+        quinta view, de estrutura — escopo separado, a decidir depois.</li>
+    <li><strong>Não vira indicador oficial sozinha.</strong> Enquanto a Fase&nbsp;1 não estiver concluída,
+        a ferramenta continua sendo instrumento de auditoria pontual do PPCP. Promover a fonte a
+        indicador de diretoria antes da validação é o caminho mais curto para um número errado em
+        reunião.</li>
+  </ul>
+</section>
+
+<!-- ====================================================================== 7 -->
+<section id="s7">
+  <h2><span class="n">7</span>Arquitetura: três caminhos</h2>
+  <p>Todos respeitam a regra da seção 3. Mudam o esforço, o que se ganha e o que se perde.</p>
+  <div class="rolar"><table>
+    <thead><tr><th>Caminho</th><th>Como funciona</th><th>Esforço</th><th>Histórico</th><th>Perde</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="campo">A &mdash; Arquivo</td>
+        <td>Job interno roda a view e grava um JSON em pasta de rede ou SharePoint. O usuário abre esse arquivo no app, como abre o PDF hoje.</td>
+        <td>Baixo &mdash; nenhuma infraestrutura nova</td>
+        <td>Não (manual)</td>
+        <td>Continua dependendo de alguém abrir o arquivo</td>
+      </tr>
+      <tr>
+        <td class="campo">B &mdash; Espelho</td>
+        <td>Job interno roda a view e <strong>empurra</strong> o recorte por HTTPS para um banco fora (Supabase), com chave de escrita guardada só dentro da rede. O app lê o espelho com chave de leitura restrita.</td>
+        <td>Médio &mdash; um job e um banco</td>
+        <td>Sim, automático</td>
+        <td>Dado operacional passa a existir fora do ERP</td>
+      </tr>
+      <tr>
+        <td class="campo">C &mdash; App interno</td>
+        <td>A ferramenta é hospedada na rede da fábrica e consome a view por um serviço interno. Nada sai.</td>
+        <td>Alto &mdash; servidor e manutenção</td>
+        <td>Sim</td>
+        <td>Acesso fora da fábrica, instalação como app e uso offline</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="nota">
+    <p><strong>Recomendação: A primeiro, B depois.</strong> O caminho A prova o contrato de dados com
+       custo quase zero e sem decisão de segurança pendente — se a view estiver errada, descobre-se ali,
+       barato. Só depois de a Fase&nbsp;1 fechar é que vale construir o job e o espelho do caminho B, que
+       é o que entrega histórico e tira a intervenção humana. O caminho C só se compensa se a política
+       interna vetar qualquer dado operacional fora do ERP; ele custa um servidor para manter e devolve
+       menos ferramenta ao usuário.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== 8 -->
+<section id="s8">
+  <h2><span class="n">8</span>Implantação em fases</h2>
+  <div class="rolar"><table>
+    <thead><tr><th>Fase</th><th>O que acontece</th><th>Quem</th><th>Encerra quando</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">0</td><td>Criar as quatro views e o usuário somente-leitura. Responder o questionário da seção 12.</td><td>TI / Lógica</td><td><code>SELECT</code> nas quatro views retorna dado para um lote conhecido</td></tr>
+      <tr><td class="campo">1</td><td><strong>Validação cega.</strong> Mesmo lote, duas fontes. Comparar achado por achado (seção 9).</td><td>PPCP + TI</td><td>As duas fontes produzem listas idênticas em três lotes</td></tr>
+      <tr><td class="campo">2</td><td>O app passa a aceitar o recorte da view como fonte, declarando na tela qual fonte está em uso. O PDF continua disponível.</td><td>PPCP</td><td>Um ciclo de conferência inteiro feito pela view, sem recorrer ao PDF</td></tr>
+      <tr><td class="campo">3</td><td>Snapshot periódico e histórico. Aderência ao longo do tempo no Power BI.</td><td>PPCP + TI</td><td>Série histórica cobrindo um trimestre fechado</td></tr>
+    </tbody>
+  </table></div>
+  <p>As fases são sequenciais de propósito. Pular a Fase&nbsp;1 significa trocar uma fonte auditada por
+     uma fonte não auditada e descobrir a diferença numa reunião com os líderes de setor.</p>
+</section>
+
+<!-- ====================================================================== 9 -->
+<section id="s9">
+  <h2><span class="n">9</span>Critério de aceite</h2>
+  <div class="aceite">
+    <span class="t">A view é aceita quando</span>
+    <p>Para <strong>três lotes</strong> — um encerrado, um em andamento e um com furo de apontamento já
+       conhecido — as telas <strong>Sem apontamento</strong> e <strong>Onde travou</strong>, geradas a
+       partir da view, forem <strong>idênticas linha a linha</strong> às geradas a partir do PDF do
+       mesmo momento.</p>
+    <p>Qualquer divergência é defeito da view até prova em contrário, e precisa ser explicada antes de
+       seguir. Divergência explicada e aceita entra como observação neste documento.</p>
+  </div>
+  <p>O critério é esse, e não &ldquo;a view retorna dado&rdquo;, porque uma view pode retornar dado
+     perfeitamente plausível e mesmo assim mudar um achado — um <code>JOIN</code> a mais, uma data
+     sentinela, uma sequência de roteiro diferente. O que interessa não é o dado bater: é <strong>o
+     achado bater</strong>. É o achado que vira cobrança com o setor.</p>
+  <p>Comparação prática: exportar <code>operacoes.csv</code> e <code>sem-apontamento.csv</code> das duas
+     fontes e comparar os arquivos. Os CSVs já saem com o mesmo formato (separador <code>;</code>,
+     decimal com vírgula, datas <code>dd/mm/aaaa</code>, UTF-8 com BOM), então a diferença aparece
+     direto.</p>
+</section>
+
+<!-- ===================================================================== 10 -->
+<section id="s10">
+  <h2><span class="n">10</span>Segurança e LGPD</h2>
+  <p>Hoje a ferramenta tem uma posição simples de defender: processamento inteiro no navegador, nenhum
+     upload, nenhum armazenamento, nenhum log de conteúdo. Os caminhos A e B <strong>mudam</strong> essa
+     posição, e isso precisa ser decidido de forma explícita — não herdado por descuido.</p>
+  <ul>
+    <li><strong>Recorte mínimo.</strong> Só os campos da seção 4. Campo que não está na seção 4 não entra
+        &ldquo;porque já estava na tabela&rdquo;.</li>
+    <li><strong>Sem identificação de operador.</strong> O relatório de hoje não traz quem apontou, e a
+        view não deve trazer. Trazer matrícula ou nome transforma o recorte em dado pessoal, muda a base
+        legal e o tratamento inteiro. Se um dia houver necessidade real de responsabilização individual,
+        isso é um projeto próprio, com sua própria decisão.</li>
+    <li><strong>Classificação.</strong> O recorte contém dado operacional da Patrimar: volume de produção,
+        prazos e desempenho por setor. Trate com o cuidado de qualquer relatório interno — não subir em
+        repositório, não anexar em ferramenta externa.</li>
+    <li><strong>Retenção.</strong> Definir por quanto tempo o histórico fica no espelho e o que acontece
+        depois. Histórico sem prazo de descarte cresce para sempre e ninguém decide mais nada sobre ele.</li>
+    <li><strong>Este documento é público no endereço em que está.</strong> Ele não contém servidor,
+        instância, usuário nem senha, e está marcado como <code>noindex</code>. Ainda assim, se a política
+        interna exigir, ative <em>Deployment Protection</em> no Vercel — vale para a ferramenta e para
+        esta página.</li>
+  </ul>
+</section>
+
+<!-- ===================================================================== 11 -->
+<section id="s11">
+  <h2><span class="n">11</span>Riscos</h2>
+  <div class="rolar"><table>
+    <thead><tr><th>Risco</th><th>Impacto</th><th>Mitigação</th></tr></thead>
+    <tbody>
+      <tr><td>Atualização do ERP muda o schema das tabelas de origem</td><td>A integração para — e pode parar em silêncio, entregando dado incompleto</td><td>Registrar no contrato de suporte que atualização exige revalidação. A comparação da Fase 1 vira teste de regressão, rodado a cada atualização</td></tr>
+      <tr><td>Consulta pesada na base de produção</td><td>Lentidão no ERP em horário de fábrica</td><td>Job fora do pico. Sem <code>NOLOCK</code>: leitura suja produz número errado, que é pior que consulta lenta. Se houver réplica de leitura, usar a réplica</td></tr>
+      <tr><td>&ldquo;Qtd. Concluída na Fase&rdquo; pode ser calculado no relatório, não existir em tabela</td><td>&ldquo;Onde travou&rdquo; perde a contraprova do próprio ERP</td><td>Confirmar com a Lógica (seção 12). Se for calculado, replicar a regra na view; se não for possível, seguir sem o campo e registrar a perda</td></tr>
+      <tr><td>Divergência silenciosa entre view e relatório</td><td>Cobrança errada com um setor — queima a confiança na ferramenta, e ela não volta</td><td>Fase 1 obrigatória. A tela declara qual fonte está em uso e a idade do recorte</td></tr>
+      <tr><td>Dado operacional passa a existir fora do ERP</td><td>Exposição além do que existe hoje</td><td>Decisão formal antes da Fase 2, recorte mínimo, sem dado pessoal, acesso restrito, retenção definida</td></tr>
+      <tr><td>A fonte vira indicador oficial sem validação</td><td>Número errado apresentado à diretoria</td><td>Manter a ferramenta declarada como auditoria pontual até a Fase 3 fechar um trimestre</td></tr>
+      <tr><td>O PDF é desligado cedo demais</td><td>Sem fonte de contingência quando a integração falhar</td><td>O leitor de PDF permanece no app. Ele é a única fonte que funciona sem rede e sem o ERP de pé</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ===================================================================== 12 -->
+<section id="s12">
+  <h2><span class="n">12</span>A TI precisa responder</h2>
+  <p>Sem estas respostas o SQL da seção 13 não sai do esqueleto. Nenhuma delas exige decisão do PPCP.</p>
+  <ol>
+    <li>Quais tabelas guardam <strong>lote</strong>, <strong>ordem de fabricação</strong> e
+        <strong>operação do roteiro</strong>, e como se ligam?</li>
+    <li>Data em aberto é gravada como <code>NULL</code> ou como data sentinela? Se sentinela, qual valor?</li>
+    <li>A tabela de operação guarda a <strong>sequência do roteiro</strong> em coluna própria, ou a ordem
+        é a de inserção? (Se for a de inserção, é um problema: veja a regra 5 da seção 5.)</li>
+    <li>O nome da operação está na tabela de operação ou em cadastro separado? Qual coluna corresponde
+        ao texto impresso hoje no relatório?</li>
+    <li><strong>&ldquo;Qtd. Concluída na Fase&rdquo; existe em tabela ou é calculado na emissão do
+        relatório?</strong></li>
+    <li>O código de produto na tabela tem o mesmo formato do relatório (<code>999.999.999</code>) ou é
+        armazenado sem os pontos?</li>
+    <li>Existe ambiente de homologação para criar e testar as views antes de produção?</li>
+    <li>Qual a janela aceitável para o job — horário e frequência?</li>
+    <li>Há coluna de <strong>status da ordem</strong> (cancelada, suspensa, encerrada)? Qual o domínio
+        de valores?</li>
+    <li>Edição do SQL Server e política interna para criação de schema e usuário somente-leitura.</li>
+  </ol>
+</section>
+
+<!-- ===================================================================== 13 -->
+<section id="s13">
+  <h2><span class="n">13</span>Esqueleto do SQL</h2>
+  <div class="regra">
+    <span class="t">Leia antes de copiar</span>
+    <p>Tudo que aparece em <code>&lt;colchetes angulares&gt;</code> é <strong>placeholder</strong>: nome
+       de tabela e de coluna de origem que só a TI conhece. O que este bloco fixa é a <strong>saída</strong>
+       — o <code>AS</code> de cada coluna, o tipo e o significado. Trocar a origem é livre; trocar a saída
+       quebra a ferramenta.</p>
+  </div>
+
+<pre><span class="c">/* Schema dedicado: a view do PPCP não mora junto das tabelas do ERP.
+   Separar o schema é o que permite dar SELECT no que é do PPCP e negar
+   o resto sem depender de acertar permissão tabela por tabela. */</span>
+CREATE SCHEMA ppcp;
+GO
+
+<span class="c">-- ------------------------------------------------------------------ 4.3
+-- A view central. Uma linha por ORDEM x OPERAÇÃO. Grão errado aqui
+-- infla peça e produz cobrança indevida com o setor.</span>
+CREATE OR ALTER VIEW ppcp.vw_ritmo_operacao AS
+SELECT
+    CAST(op.<span class="ph">&lt;ordem&gt;</span>          AS varchar(10))   AS ordem,
+    CAST(op.<span class="ph">&lt;sequencia&gt;</span>      AS int)           AS seq,
+    CAST(op.<span class="ph">&lt;descricao&gt;</span>      AS varchar(60))   AS operacao,
+    <span class="c">-- Data sentinela vira NULL AQUI, não no app: se passar adiante, a
+    -- ferramenta lê apontamento que não existe e apaga o achado.</span>
+    CAST(NULLIF(op.<span class="ph">&lt;dt_previsao&gt;</span>,   '19000101') AS date) AS previsao_processo,
+    CAST(NULLIF(op.<span class="ph">&lt;dt_conclusao&gt;</span>,  '19000101') AS date) AS conclusao,
+    CAST(op.<span class="ph">&lt;qtd_total&gt;</span>      AS decimal(18,3)) AS qtd_total,
+    CAST(op.<span class="ph">&lt;qtd_pronto&gt;</span>     AS decimal(18,3)) AS ja_pronto,
+    CAST(op.<span class="ph">&lt;qtd_faltam&gt;</span>     AS decimal(18,3)) AS faltam
+FROM <span class="ph">&lt;tabela_operacao_roteiro&gt;</span> op;
+GO
+
+<span class="c">-- ------------------------------------------------------------------ 4.2</span>
+CREATE OR ALTER VIEW ppcp.vw_ritmo_ordem AS
+SELECT
+    CAST(o.<span class="ph">&lt;lote&gt;</span>            AS varchar(10))   AS lote,
+    CAST(o.<span class="ph">&lt;ordem&gt;</span>           AS varchar(10))   AS ordem,
+    <span class="c">-- Se o código vier sem pontos, formate AQUI para 999.999.999: é o
+    -- 1º bloco que separa acabado (1…), volume (5…) e componente (7xx),
+    -- e é disso que dependem as isenções de EMBALAR.</span>
+    CAST(o.<span class="ph">&lt;produto&gt;</span>         AS varchar(15))   AS produto,
+    CAST(o.<span class="ph">&lt;descricao&gt;</span>       AS varchar(120))  AS descricao_produto,
+    CAST(o.<span class="ph">&lt;m3&gt;</span>              AS decimal(18,3)) AS m3,
+    CAST(NULLIF(o.<span class="ph">&lt;dt_previsao&gt;</span>,  '19000101') AS date) AS previsao,
+    CAST(NULLIF(o.<span class="ph">&lt;dt_conclusao&gt;</span>, '19000101') AS date) AS conclusao,
+    CAST(o.<span class="ph">&lt;qtd_total&gt;</span>       AS decimal(18,3)) AS qtd_total,
+    CAST(o.<span class="ph">&lt;qtd_pronto&gt;</span>      AS decimal(18,3)) AS ja_pronto,
+    CAST(o.<span class="ph">&lt;qtd_faltam&gt;</span>      AS decimal(18,3)) AS faltam,
+    CAST(o.<span class="ph">&lt;fase_concluida&gt;</span>  AS varchar(60))   AS fase_concluida,
+    CAST(o.<span class="ph">&lt;qtd_fase&gt;</span>        AS decimal(18,3)) AS qtd_fase_concluida
+FROM <span class="ph">&lt;tabela_ordem_fabricacao&gt;</span> o;
+GO
+
+<span class="c">-- ------------------------------------------------------------------ 4.1</span>
+CREATE OR ALTER VIEW ppcp.vw_ritmo_lote AS
+SELECT
+    CAST(l.<span class="ph">&lt;lote&gt;</span>       AS varchar(10))   AS lote,
+    CAST(l.<span class="ph">&lt;lt&gt;</span>         AS varchar(10))   AS lt,
+    CAST(l.<span class="ph">&lt;descricao&gt;</span>  AS varchar(120))  AS descricao,
+    CAST(NULLIF(l.<span class="ph">&lt;dt_inicio&gt;</span>,   '19000101') AS date) AS data_inicio,
+    CAST(NULLIF(l.<span class="ph">&lt;dt_previsao&gt;</span>, '19000101') AS date) AS data_previsao,
+    CAST(l.<span class="ph">&lt;total_m3&gt;</span>   AS decimal(18,3)) AS total_m3,
+    CAST(l.<span class="ph">&lt;peso_bruto&gt;</span> AS decimal(18,3)) AS peso_bruto
+FROM <span class="ph">&lt;tabela_lote&gt;</span> l;
+GO
+
+<span class="c">-- ------------------------------------------------------------------ 4.4
+-- Uma linha. Diz contra qual data a ferramenta mede "vencido" e qual a
+-- idade do recorte. Sem isso, recorte velho passa por atual.</span>
+CREATE OR ALTER VIEW ppcp.vw_ritmo_referencia AS
+SELECT
+    CAST(GETDATE() AS date)          AS data_referencia,
+    CAST(GETDATE() AS datetime2(0))  AS gerado_em;
+GO
+
+<span class="c">/* -------------------------------------------------------------------
+   PERMISSÃO — o usuário enxerga as views e NADA das tabelas base.
+   A senha é definida pela TI, não aparece neste documento, não vai
+   para repositório e não trafega por e-mail ou mensagem.
+   ------------------------------------------------------------------- */</span>
+CREATE LOGIN ritmo_leitura WITH PASSWORD = N'<span class="ph">&lt;definida pela TI&gt;</span>';
+CREATE USER  ritmo_leitura FOR LOGIN ritmo_leitura;
+
+GRANT SELECT ON SCHEMA::ppcp TO ritmo_leitura;
+DENY  SELECT ON SCHEMA::dbo  TO ritmo_leitura;   <span class="c">-- nada das tabelas base</span>
+GO
+
+<span class="c">/* -------------------------------------------------------------------
+   CONFERÊNCIA DE GRÃO — rode antes de entregar. As duas contagens
+   TÊM que bater. Se não baterem, há JOIN duplicando linha.
+   ------------------------------------------------------------------- */</span>
+SELECT COUNT(*) AS linhas,
+       COUNT(DISTINCT CONCAT(ordem, '|', seq)) AS chaves
+FROM   ppcp.vw_ritmo_operacao;
+</pre>
+
+  <div class="nota">
+    <p>O <code>GETDATE()</code> em <code>vw_ritmo_referencia</code> vale enquanto a leitura for ao vivo.
+       No caminho A ou B, quem grava <code>gerado_em</code> é o job, no instante em que extraiu — não no
+       instante em que alguém abriu o arquivo.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="rodape">
+  <p><strong>Documento v1.0</strong> &middot; Especificação técnica, não implementada &middot; Área
+     responsável: PPCP &middot; Ferramenta: RitmoPatrimar 3.11.0.</p>
+  <p>Este documento descreve um contrato de dados. Ele não contém nome de servidor, instância, base,
+     usuário ou senha, e não deve passar a conter. Alterações no contrato exigem revalidação pelo
+     critério de aceite da seção 9.</p>
+</footer>
+
+</body>
+</html>
