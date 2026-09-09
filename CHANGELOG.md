@@ -3,6 +3,34 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.0.0] — 2026-09-09
+
+### Removido
+
+A ferramenta cresceu uma tela por versão e a mesma pergunta passou a ser respondida em três ou
+quatro lugares. Esta versão tira o que repetia, sem tirar resposta.
+
+- **Tela antiga de cada setor e a lista "Setores" da lateral.** A tela de setor é "Atraso por
+  setor", com o setor escolhido na própria tela (chip). O menu deixa de crescer com o roteiro.
+  "Avanço por lote" e "Prioridade invertida", que só existiam na tela antiga, entram em "Atraso por
+  setor" como bloco fechado abaixo da lista. O botão "Folha deste setor" imprime a folha de
+  cobrança do setor de lá. O CSV "sem apontamento deste setor" saiu: o CSV da nova tela e o
+  `sem-apontamento.csv` com filtro de setor cobrem.
+- **Matriz "Começou × terminou"**, em Conjunto incompleto e na folha da reunião. Era a faixa de
+  fases transposta: mesma verdade, segundo lugar.
+- **Tela "Operação fechada".** Indicador de histórico ("% de operações fechadas por lote") vive no
+  Power BI, não na ferramenta de ação. O CSV `operacao-fechada.csv` continua em "Exportar tudo".
+- **"Regras de conferência ativas"** (16 caixas na barra de filtros). Ninguém desliga regra no dia
+  a dia; a configuração fica em `CFG.regras`, no código.
+- **"Todos os CSVs"** (sete itens no rodapé) virou **"Exportar tudo"**: um clique baixa os sete.
+  O botão "Exportar CSV" de cada tela continua.
+
+### O que fica
+
+Onde travou (PPCP, fábrica inteira), Atraso por setor (líder, um setor por vez), Sem apontamento
+(a única que cobra ordem fechada sem registro), Conjunto incompleto (o produto fecha?), o Detalhe
+(Ordens, Operações, Achados, Leitura) e a folha da reunião.
+
 ## [3.16.0] — 2026-09-09
 
 ### Alterado
