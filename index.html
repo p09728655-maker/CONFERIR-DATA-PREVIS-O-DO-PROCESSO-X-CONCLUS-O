@@ -253,6 +253,36 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .btnPri:hover{background:var(--bordeaux)}
 
+/* ---- Atraso por setor: escolha do setor por chip e pesquisa na própria tela.
+   Chip, e não <select>: o líder usa a tela de pé, no tablet, e um toque num
+   nome grande é mais seguro que abrir uma lista suspensa. O número no chip
+   diz onde há atraso antes de abrir o setor. ---- */
+.chips{display:flex;flex-wrap:wrap;gap:var(--sm);padding:var(--md) var(--xl);border-bottom:1px solid var(--borda)}
+.chip{display:inline-flex;align-items:center;gap:var(--sm);min-height:36px;padding:0 var(--md);border:1px solid var(--borda);
+  border-radius:var(--r-pill);background:var(--papel);color:var(--texto);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.chip:hover{border-color:var(--borda-forte)}
+.chip[aria-pressed="true"]{background:var(--grafite);border-color:var(--grafite);color:#fff}
+.chip .qt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;padding:1px 7px;
+  border-radius:var(--r-pill);background:var(--neutro-fundo);color:var(--texto-medio)}
+.chip .qt.c{background:var(--critico-fundo);color:var(--critico)}
+.chip .qt.a{background:var(--atencao-fundo);color:var(--atencao)}
+.chip[aria-pressed="true"] .qt{background:rgba(255,255,255,.18);color:#fff}
+.chip:disabled{cursor:not-allowed}
+.chips.sit .chip{min-height:30px;font-size:13px}
+.buscaLinha{display:flex;gap:var(--lg);flex-wrap:wrap;align-items:center;padding:var(--md) var(--xl);
+  border-bottom:1px solid var(--borda);background:var(--papel-cabecalho)}
+.buscaLinha .f{max-width:440px;flex:1 1 260px}
+.buscaLinha .chips{padding:0;border:0}
+/* TABLET: a tela é usada de pé, com o dedo. Alvo de 44px, campo com 16px
+   (abaixo disso o iOS dá zoom ao focar) e a lista rola com a página — rolagem
+   dentro de rolagem, no toque, prende o dedo na tabela. */
+@media (pointer:coarse){
+  .chip{min-height:44px;padding:0 var(--lg)} .chips.sit .chip{min-height:40px}
+  #atrBusca{min-height:44px;font-size:16px}
+  #atrLista .wrap{max-height:none}
+  #atrLista td{padding:var(--md) var(--lg)}
+}
+
 /* ================================================== VEREDITO E RANKING
    A tela dizia quatro números de peso igual e deixava a conclusão por conta
    do leitor. Aqui a conclusão vem escrita, em uma frase, e logo abaixo o
@@ -651,6 +681,7 @@ dialog form{margin-top:var(--lg);text-align:right}
   <div class="bloco hide" id="navSecoes" role="group" aria-label="Conferência">
     <div class="grupo">Conferência</div>
     <button type="button" class="item" data-t="trav" aria-current="page"><span class="t">Onde travou</span><span class="contagem" id="nTrav">0</span></button>
+    <button type="button" class="item" data-t="atr" title="A fila vencida de um setor, para o líder pesquisar"><span class="t">Atraso por setor</span><span class="contagem" id="nAtr">0</span></button>
     <button type="button" class="item" data-t="apont"><span class="t">Sem apontamento</span><span class="contagem" id="nApont">0</span></button>
     <button type="button" class="item" data-t="conj"><span class="t">Conjunto incompleto</span><span class="contagem" id="nConj">0</span></button>
     <button type="button" class="item" data-t="fech"><span class="t">Operação fechada</span><span class="contagem" id="nFech">0</span></button>
@@ -784,6 +815,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.15.0 — 09/09/2026</h3>
+  <ul>
+    <li><b>Tela "Atraso por setor", para o líder no tablet.</b> Um setor por vez, escolhido num chip, com pesquisa por ordem, código, peça ou lote. Lista tudo que está vencido no setor em ordem em aberto e diz o que fazer com cada linha: <b>parada aqui</b> (a próxima fase a apontar é esta — pode agir agora), <b>não chegou</b> (venceu aqui, mas a ordem está presa num setor anterior, nomeado) ou <b>esquecido</b> (fase posterior já apontada — falta o registro). "Parada aqui" é a mesma conta de "Onde travou" e da tela do setor.</li>
+    <li><b>Começa pela embalagem.</b> A embalagem espera peça, e o componente quase nunca tem EMBALAR no próprio roteiro. Por isso, na embalagem entra cada peça que ainda não terminou o roteiro com a última previsão vencida, presa no setor onde está — e os cartões dizem <b>quem segura</b> quantas peças, com os produtos, e por onde começar. Sem setor guardado no aparelho, a tela abre na embalagem.</li>
+    <li>Feita para o dedo: alvo de 44px, campo de pesquisa sem zoom no iOS, lista que rola com a página. O atalho <code>/?tela=atraso</code> abre direto nela depois de ler o PDF; o setor escolhido fica guardado no aparelho. CSV e "Imprimir a lista" seguem a pesquisa e a situação escolhida, declaradas no cabeçalho.</li>
+  </ul>
   <h3>3.14.0 — 09/09/2026</h3>
   <ul>
     <li><b>A folha da reunião ganhou teto: 15 linhas por tabela, as mais antigas primeiro.</b> Com o lote real, uma linha por ordem virava vinte páginas, e listagem ninguém cobra. O que passa do teto vira uma linha de total — quantas ordens, quantas peças e onde está a lista completa (tela do setor, CSV). Veredito e ranking não mudam: tela, papel e CSV continuam com o mesmo número.</li>
@@ -1650,7 +1687,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.14.0';
+const VERSAO='3.15.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -1720,6 +1757,9 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   });
 }
 let DOCS=[], ACH=[], ABA='trav';
+// Atalho para o tablet do líder: /?tela=atraso abre em "Atraso por setor" assim
+// que o PDF é lido, sem passar pelo menu. O setor escolhido já fica no aparelho.
+try{ if(new URLSearchParams(location.search).get('tela')==='atraso') ABA='atr'; }catch{}
 const $=s=>document.querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 $('#ver').textContent=VERSAO;
@@ -1827,6 +1867,9 @@ async function carregar(files){
   }
   $('#status').textContent='';
   montarFiltros(); renderArquivos(); recalc();
+  // Em tela estreita a lateral vira uma faixa em cima e a resposta fica uma
+  // tela abaixo. Quem acabou de abrir o PDF quer ver a resposta, não o menu.
+  if(window.innerWidth<=900) document.querySelector('.conteudo').scrollIntoView({block:'start',behavior:'smooth'});
 }
 
 /**
@@ -2475,6 +2518,7 @@ function achFiltrados(){
 function recalc(){
   const tem=DOCS.length>0;
   $('#app').classList.toggle('hide',!tem);
+  if(tem&&!SETOR_SEL) $('#navSecoes').querySelectorAll('.item').forEach(x=>{ if(x.dataset.t===ABA) x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current'); });
   $('#vazio').classList.toggle('hide',tem);
   ['#navSecoes','#navArquivos','#navExportar','#navSetores'].forEach(s=>$(s).classList.toggle('hide',!tem));
   // Quantos filtros escondidos estão ativos: sem isto, um recorte esquecido em
@@ -2581,6 +2625,11 @@ function renderListaSetores(g){
 function renderContadores(g){
   $('#nTrav').textContent=g.travadas;
   $('#nTrav').classList.toggle('alerta',g.travadas>0);
+  const A=atrasoTodos();
+  $('#nAtr').textContent=A.total;
+  $('#nAtr').classList.toggle('alerta',A.total>0);
+  $('#nAtr').title=A.total?`${A.total} operação(ões) em atraso em ${A.setores.filter(x=>x.n).length} setor(es), em ordens em aberto`
+    :'Nenhuma operação em atraso em ordem em aberto';
   $('#nApont').textContent=g.falt.length;
   $('#nApont').classList.toggle('alerta',g.furos.length>0);
   $('#nApont').title=g.furos.length?`${g.furos.length} com apontamento comprovadamente esquecido`:'Nenhum apontamento esquecido comprovado';
@@ -2621,9 +2670,10 @@ $('#navSecoes').onclick=e=>{const b=e.target.closest('.item');if(!b)return;
   });
   // renderResposta também: é ela que decide se o veredito geral aparece, e sem
   // esta chamada ele ficava escondido ao voltar da tela de um setor.
-  renderResposta(); render();};
+  renderResposta(); render();
+  document.querySelector('.conteudo').scrollIntoView({block:'start',behavior:'smooth'});};
 
-const SECOES={setor:'Setor',trav:'Onde travou',apont:'Sem apontamento',conj:'Conjunto incompleto',
+const SECOES={setor:'Setor',trav:'Onde travou',atr:'Atraso por setor',apont:'Sem apontamento',conj:'Conjunto incompleto',
   fech:'Operação fechada por lote',ach:'Achados',ord:'Ordens',op:'Operações',leit:'Leitura dos arquivos'};
 // Setor aberto na tela dedicada. Independente do filtro de operação da barra:
 // o filtro muda TODAS as telas, e abrir o setor do líder não pode reescrever o
@@ -2671,7 +2721,9 @@ const CSV_DA_TELA={
   op   :['btnCsvOp'   ,'uma linha por operação, roteiro inteiro, com a coluna ForaDaConta']};
 function atualizarAcoesTela(){
   const nome=SECOES[ABA]||'', c=$('#btnCsvTela'), p=$('#btnImprimirLista');
-  const alvo=ABA==='setor'?(SETOR_SEL?['','o apontamento a cobrar neste setor']:null):CSV_DA_TELA[ABA];
+  const alvo=ABA==='setor'?(SETOR_SEL?['','o apontamento a cobrar neste setor']:null)
+    :ABA==='atr'?(atrasoDoSetor(ATR_SETOR||nomeEmbalagem())?['','uma linha por operação em atraso listada — segue a pesquisa e a situação escolhida']:null)
+    :CSV_DA_TELA[ABA];
   c.disabled=!alvo;
   c.title=alvo?`CSV de "${nome}" — ${alvo[1]}. Respeita os filtros da barra. Separador ; para Excel e Power BI.`
     :'Esta tela não tem lista para exportar. Os sete CSVs continuam em "Todos os CSVs", no rodapé do menu.';
@@ -2689,6 +2741,7 @@ function atualizarAcoesTela(){
 }
 $('#btnCsvTela').onclick=()=>{
   if(ABA==='setor'){ if(SETOR_SEL) csvDoSetor(SETOR_SEL); return; }
+  if(ABA==='atr'){ csvAtrasoSetor(); return; }
   const alvo=CSV_DA_TELA[ABA]; if(alvo) $('#'+alvo[0]).click();
 };
 
@@ -2817,6 +2870,245 @@ function desenharSetor(p,ref){
 
   const bf=$('#btnFolhaSetor'); if(bf) bf.onclick=()=>imprimirFolhaSetor(d.nome);
   const bc=$('#btnCsvSetor');   if(bc) bc.onclick=()=>csvDoSetor(d.nome);
+}
+
+/* ============================================================================
+   ATRASO POR SETOR — a fila vencida de UM setor, para o líder pesquisar
+   ==========================================================================
+   A pergunta do líder é mais simples que a do PPCP: "o que está vencido no
+   MEU setor, e o que eu faço com isso". A tela do setor responde com quatro
+   blocos (avanço por lote, prioridade invertida, parado aqui, cobrar
+   apontamento); esta responde com UMA lista pesquisável, um setor por vez.
+
+   Universo: operação deste setor, em ordem EM ABERTO, sem conclusão, com a
+   previsão do processo vencida contra a referência — o que o ERP mostraria
+   como "vencida" — mais a ordem parada aqui atrás do programado, mesmo com a
+   previsão desta fase ainda no prazo. Cada linha recebe UMA de três situações,
+   porque "vencida no ERP" mistura três fatos que pedem ações diferentes:
+
+     parada aqui — a próxima fase a apontar é esta: o setor pode agir agora.
+                   MESMA CONTA de "Onde travou" e da tela do setor
+                   (posicaoOrdem); os números batem por construção.
+     não chegou  — venceu aqui, mas a ordem está presa num setor anterior.
+                   Não é cobrança deste setor; é aviso de que vai chegar
+                   atrasada e de quem a segura.
+     esquecido   — fase posterior já apontada: a peça passou, faltou o
+                   registro. Cobrança de apontamento, não de produção
+                   (a mesma prova de faltasApontamento).
+
+   Ordem já concluída no ERP fica fora: fase em branco em ordem fechada é
+   apontamento a cobrar ("Sem apontamento"), não atraso de produção. Uma
+   passagem só sobre as ordens, com a posição calculada uma vez por ordem,
+   alimenta a tela, os chips de todos os setores e o contador do menu. */
+const CHAVE_ATR_SETOR='ritmopatrimar.atrasoSetor';
+// O setor escolhido fica no aparelho: o líder do CORTAR abre o app e vê o
+// CORTAR, sem procurar de novo a cada lote.
+let ATR_SETOR=(()=>{try{return localStorage.getItem(CHAVE_ATR_SETOR)||null;}catch{} return null;})();
+let BUSCA_ATR='', ATR_SIT='';
+function guardarAtrSetor(){ try{ if(ATR_SETOR) localStorage.setItem(CHAVE_ATR_SETOR,ATR_SETOR); else localStorage.removeItem(CHAVE_ATR_SETOR); }catch{} }
+const nomeEmbalagem=()=>setoresDisponiveis().find(n=>CFG.operacaoEmbalagem.test(n))||'EMBALAR';
+const SIT_ATR={
+  parada   :{rotulo:'parada aqui',cls:'critico',peso:0},
+  chegou   :{rotulo:'não chegou', cls:'atencao',peso:1},
+  esquecido:{rotulo:'esquecido',  cls:'critico',peso:2}};
+
+function atrasoTodos(){
+  const ref=$('#fRef').value, flagEmb=$('#fEmb').checked, f=filtros();
+  const por=new Map(), emb=nomeEmbalagem();
+  DOCS.flatMap(d=>d.ofs).filter(o=>casaOf(o,f)&&!o.conclusao).forEach(of=>{
+    const pos=posicaoOrdem(of,ref,flagEmb); if(!pos) return;
+    of.operacoes.forEach((op,i)=>{
+      if(op.conclusao||foraDaConta(of,op,flagEmb)) return;
+      const seq=i+1, aqui=!!(pos.esta&&pos.esta.seq===seq);
+      // Registrada e já ultrapassada (quantidade cheia, sem conclusão): o resto
+      // da ferramenta a trata como apontada; listá-la aqui seria fila falsa.
+      if(!aqui&&apontada(op)) return;
+      const vencida=!!(op.previsao&&op.previsao<ref);
+      let sit=null, onde=null, prova=null;
+      if(aqui){ if(!pos.atrasada) return; sit='parada'; }
+      else if(!vencida) return;
+      else if(pos.esta&&pos.esta.seq<seq){ sit='chegou'; onde=pos.esta; }
+      else { sit='esquecido'; const seg=of.operacoes.slice(i+1).find(apontada); prova=seg?`${seg.descricao} já apontada`:'fase posterior já apontada'; }
+      const saldo=Math.max(0,(op.qtd||0)-(op.pronto||0));
+      const l=por.get(op.descricao)||[]; por.set(op.descricao,l);
+      l.push({of,op,seq,pos,sit,onde,prova,vencida,dias:vencida?dias(op.previsao,ref):null,saldo,previsao:op.previsao});
+    });
+    /* EMBALAGEM ESPERA PEÇA, NÃO OPERAÇÃO. O componente quase nunca tem EMBALAR
+       no próprio roteiro — a embalagem é apontada na ordem do acabado ou do
+       volume, que é isenta. Só com as operações, a fila da embalagem sairia
+       vazia justamente no setor que mais espera peça. Então cada componente em
+       aberto que ainda NÃO terminou o roteiro, com a última previsão do roteiro
+       vencida (a data em que deveria estar pronto), entra na embalagem como
+       "não chegou", preso no setor onde está. É a resposta a "quais peças estão
+       travando a embalagem". Componente que tem EMBALAR no roteiro já entrou
+       pela operação e não repete. */
+    if(tipoProduto(of.produto)==='componente'&&pos.esta&&!of.operacoes.some(o=>CFG.operacaoEmbalagem.test(o.descricao))){
+      const prevPronta=prazoOrdem(of).ref;
+      if(prevPronta&&prevPronta<ref){
+        const ult=[...of.operacoes].reverse().find(o=>!foraDaConta(of,o,flagEmb))||of.operacoes[of.operacoes.length-1];
+        const l=por.get(emb)||[]; por.set(emb,l);
+        l.push({of,op:ult,seq:ult.seq||of.operacoes.length,pos,sit:'chegou',onde:pos.esta,prova:null,vencida:true,
+          dias:dias(prevPronta,ref),saldo:Math.max(0,(ult.qtd||0)-(ult.pronto||0)),previsao:prevPronta,paraEmbalar:true});
+      }
+    }
+  });
+  const peso=x=>SIT_ATR[x.sit].peso;
+  const nomes=setoresDisponiveis(); if(por.has(emb)&&!nomes.includes(emb)) nomes.push(emb);
+  const setores=nomes.map(nome=>{
+    // Ação primeiro (parada aqui), depois a previsão mais antiga; sem previsão vai para o fim.
+    const prev=x=>x.previsao||'9';
+    const linhas=(por.get(nome)||[]).sort((a,b)=>peso(a)-peso(b)
+      ||(prev(a)<prev(b)?-1:prev(a)>prev(b)?1:0)
+      ||b.saldo-a.saldo||a.of.of.localeCompare(b.of.of));
+    const n=k=>linhas.filter(x=>x.sit===k).length, pc=k=>linhas.filter(x=>x.sit===k).reduce((s,x)=>s+x.saldo,0);
+    const venc=linhas.filter(x=>x.vencida);
+    return {nome, linhas, n:linhas.length,
+      ordens:new Set(linhas.map(x=>x.of.of)).size,
+      parada:n('parada'), chegou:n('chegou'), esquecido:n('esquecido'),
+      pcParada:pc('parada'), pcChegou:pc('chegou'), pcEsquecido:pc('esquecido'),
+      maisAntiga:venc.length?venc.reduce((m,x)=>!m||x.previsao<m.previsao?x:m,null):null,
+      seguram:[...new Set(linhas.filter(x=>x.sit==='chegou').map(x=>x.onde.op.descricao))]};
+  }).sort(porRoteiro(ordemRoteiro()));
+  return {setores, total:setores.reduce((s,x)=>s+x.n,0)};
+}
+const atrasoDoSetor=nome=>atrasoTodos().setores.find(x=>x.nome===nome)||null;
+
+/* A pesquisa é da tela, não da barra: o líder digita a ordem que tem na mão e
+   quer a linha dela, sem mexer no recorte que o PPCP montou. */
+const casaBuscaAtr=(x,q)=>!q||[x.of.of,x.of.produto,x.of.descricao,x.of.lote].join(' ').toUpperCase().includes(q);
+function linhasAtrasoListadas(d){
+  const q=BUSCA_ATR.trim().toUpperCase();
+  return d?d.linhas.filter(x=>(!ATR_SIT||x.sit===ATR_SIT)&&casaBuscaAtr(x,q)):[];
+}
+const situacaoAtr=x=>{
+  const s=SIT_ATR[x.sit];
+  const det=x.sit==='parada'
+      ?(x.pos.naoComecou?'nada apontado ainda':x.pos.parcial?`parcial — ${nf(x.op.pronto||0)} de ${nf(x.op.qtd)} apontadas`:'aguardando esta fase')
+        +(!x.vencida&&x.pos.deveria?` · no prazo aqui, mas deveria estar em ${esc(x.pos.deveria.op.descricao)}`:'')
+    :x.sit==='chegou'
+      ?`${x.paraEmbalar?'roteiro da peça não terminou — ':''}presa em <b>${esc(x.onde.op.descricao)}</b>${x.pos.diasParada!=null?` — lá venceu há ${x.pos.diasParada} d.ú.`:' — lá ainda no prazo'}`
+    :`${esc(x.prova)} — a peça passou, falta o registro`;
+  return `<span class="selo ${s.cls}">${s.rotulo}</span> <small>${det}</small>`;
+};
+
+function desenharAtraso(p,ref){
+  const A=atrasoTodos();
+  // Sem escolha guardada, abre na embalagem: é o fim da linha, onde toda peça
+  // atrasada acaba faltando — e foi por ela que a implantação começou.
+  const escolhido=ATR_SETOR||nomeEmbalagem();
+  const disponivel=A.setores.some(x=>x.nome===escolhido);
+  const d=disponivel?A.setores.find(x=>x.nome===escolhido):null;
+  const ehEmb=!!d&&CFG.operacaoEmbalagem.test(d.nome);
+
+  const chips=`<div class="chips" role="group" aria-label="Setor">${A.setores.map(x=>setorCego(x.nome)
+    ?`<button type="button" class="chip" disabled title="Setor que ainda não aponta no ERP — fora da conta">${esc(x.nome)} <span class="qt">não aponta</span></button>`
+    :`<button type="button" class="chip" data-atr="${esc(x.nome)}" aria-pressed="${x.nome===escolhido}"
+        title="${x.n?`${x.parada} parada(s) aqui · ${x.chegou} não chegou(aram) · ${x.esquecido} esquecido(s)`:'nada em atraso'}">${esc(x.nome)} <span class="qt ${x.parada?'c':x.n?'a':''}">${x.n||'—'}</span></button>`).join('')}</div>`;
+
+  let veredito='', corpo='';
+  if(!d){
+    corpo=`<div class="vazio">${!disponivel?`<b>${esc(escolhido)}</b> não aparece neste recorte. `:''}Escolha o setor para ver a fila em atraso dele.</div>`;
+  } else {
+    const estado=d.parada?'critico':d.n?'atencao':'ok';
+    /* QUEM SEGURA O QUE NÃO CHEGOU: um cartão por setor que está com a peça,
+       na ordem do roteiro, com os produtos envolvidos. Na embalagem é a
+       resposta inteira: quais peças faltam e onde ir buscá-las. */
+    const seg=new Map();
+    d.linhas.filter(x=>x.sit==='chegou').forEach(x=>{
+      const k=x.onde.op.descricao, r=seg.get(k)||{nome:k,n:0,pecas:0,pior:null,prod:{}};
+      r.n++; r.pecas+=x.saldo;
+      if(x.dias!=null&&(!r.pior||x.dias>r.pior.dias)) r.pior=x;
+      const rot=rotuloConjunto([x.of])||x.of.produto; r.prod[rot]=(r.prod[rot]||0)+1;
+      seg.set(k,r);
+    });
+    const seguradores=[...seg.values()].sort(porRoteiro(ordemRoteiro()));
+    const maior=seguradores.slice().sort((a,b)=>b.n-a.n||b.pecas-a.pecas)[0];
+    const partes=[];
+    if(d.parada) partes.push(`<b>${d.parada} ${d.parada>1?'paradas':'parada'} aqui</b> (${nf(d.pcParada)} pç) — é o que este setor pode fazer agora`);
+    if(d.chegou) partes.push(`<b>${d.chegou} ainda não ${d.chegou>1?'chegaram':'chegou'}</b> (${nf(d.pcChegou)} pç) — ${d.chegou>1?'presas em':'presa em'} ${seguradores.slice().sort((a,b)=>b.n-a.n).map(r=>`${esc(r.nome)} (${r.n})`).join(', ')}`);
+    if(d.esquecido) partes.push(`<b>${d.esquecido} sem registro</b> — a peça já passou, falta apontar`);
+    veredito=`<div class="veredito ${estado}">
+      <span class="ico" aria-hidden="true">${d.n?'!':'✓'}</span>
+      <div class="txt"><h2>${!d.n?`${esc(d.nome)}: nada em atraso`
+        :ehEmb?`${esc(d.nome)}: ${d.ordens} ${d.ordens>1?'ordens':'ordem'} em atraso`
+        :`${esc(d.nome)}: ${d.n} ${d.n>1?'operações':'operação'} em atraso em ${d.ordens} ${d.ordens>1?'ordens':'ordem'}`}</h2>
+        <p>${d.n?partes.join(' · ')+'.'+(d.maisAntiga?` A mais antiga venceu em <b>${br(d.maisAntiga.op.previsao)}</b>, há <b>${d.maisAntiga.dias}</b> dia(s) útil(eis).`:'')
+                :`Nenhuma operação vencida e nenhuma ordem parada em ${esc(d.nome)} com os filtros atuais.`}</p></div>
+      <div class="big">${d.n}<span>em atraso</span></div></div>`;
+    const cartoes=seguradores.length?`<div class="setores">${seguradores.map(r=>`<div class="setor ${r===maior?'critico':'atencao'}">
+        <div class="topo"><span class="nome" title="${esc(r.nome)}">${esc(r.nome)}</span><span class="selo ${r===maior?'critico':'atencao'}">${r===maior?'comece por aqui':'segura'}</span></div>
+        <div class="numeros">
+          <span class="n1"><span class="v ${r===maior?'c-critico':''}">${r.n}</span><span class="r">${r.n>1?'Ordens':'Ordem'} a chegar</span></span>
+          <span class="n1"><span class="v">${nf(r.pecas)}</span><span class="r">Peças</span></span>
+          <span class="n1"><span class="v ${r.pior?'c-critico':''}">${r.pior?r.pior.dias:'—'}</span><span class="r">D.ú. a mais antiga</span></span>
+        </div>
+        <div class="linha">${Object.entries(r.prod).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${esc(p)} <b>${n}</b>`).join(' · ')}</div>
+      </div>`).join('')}</div>`:'';
+    const chipSit=(k,rot,n)=>`<button type="button" class="chip" data-sit="${k}" aria-pressed="${ATR_SIT===k}">${rot} <span class="qt">${n}</span></button>`;
+    corpo=`<div class="buscaLinha">
+        <div class="f"><label for="atrBusca">Pesquisar</label>
+          <input type="search" id="atrBusca" value="${esc(BUSCA_ATR)}" placeholder="ordem, código, peça ou lote — ex.: 41230, 778.002, SLEEP" autocomplete="off"></div>
+        <div class="chips sit" role="group" aria-label="Situação">
+          ${chipSit('','todas',d.n)}${chipSit('parada','parada aqui',d.parada)}${chipSit('chegou','não chegou',d.chegou)}${chipSit('esquecido','esquecido',d.esquecido)}
+        </div></div>
+      <div id="atrLista"></div>`;
+    corpo=cartoes+corpo;
+  }
+
+  p.innerHTML=`${veredito}${avisoForaDaConta()}
+    <div class="cabecalhoSecao"><h2>Atraso por setor</h2>
+      <span class="meta">${A.total} ${A.total===1?'operação':'operações'} em atraso em ${A.setores.filter(x=>x.n).length} setor(es) · ordens em aberto · referência ${br(ref)}</span></div>
+    ${chips}${corpo}
+    ${notaLeitura(`
+      <p><b>Em atraso</b> = operação deste setor, em ordem em aberto, sem conclusão e com a previsão do processo vencida contra ${br(ref)} — o que o ERP mostraria como vencida. Entra também a ordem <b>parada aqui</b> atrás do programado, mesmo com a previsão desta fase ainda no prazo. Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) tem uma linha por passe.</p>
+      <p><b>Parada aqui</b> = a próxima fase a apontar é esta: o setor pode agir agora. É a mesma conta de "Onde travou" e do "Parado aqui" da tela do setor.</p>
+      <p><b>Não chegou</b> = venceu aqui, mas a ordem ainda está presa num setor anterior, nomeado na linha. Não é cobrança deste setor; é aviso de que vai chegar atrasada e de quem a segura.</p>
+      <p><b>Esquecido</b> = uma fase posterior já tem apontamento: a peça passou por aqui, faltou o registro. Cobrança de apontamento, não de produção.</p>
+      <p><b>Vencida há</b> = dias úteis desde a previsão desta fase. <b>Peças a fazer</b> = saldo ainda não apontado nesta fase.</p>
+      <p><b>Na embalagem</b> entra também cada peça (componente) que ainda não terminou o roteiro: a embalagem espera peça, e o componente quase nunca tem EMBALAR no próprio roteiro — ela é apontada na ordem do acabado ou do volume, que não conta. A previsão dessa linha é a <b>última previsão do roteiro da peça</b> (quando deveria estar pronta); a situação é sempre "não chegou", presa no setor onde está. Os cartões dizem <b>quem segura</b> quantas peças, e por onde começar. Produto acabado e volume não entram.</p>
+      <p>Ordem já concluída no ERP fica fora: fase em branco em ordem fechada é apontamento a cobrar (tela "Sem apontamento"), não atraso. A pesquisa procura em ordem, código, descrição e lote. O setor escolhido fica guardado neste aparelho.</p>`,
+      'em atraso, parada aqui, não chegou, esquecido, vencida há, peças a fazer')}`;
+
+  p.querySelectorAll('.chip[data-atr]').forEach(b=>b.onclick=()=>{
+    ATR_SETOR=b.dataset.atr; ATR_SIT=''; guardarAtrSetor(); render();
+    const i=$('#atrBusca'); if(i) i.focus();
+  });
+  if(!d) return;
+  const lista=()=>{
+    const linhas=linhasAtrasoListadas(d);
+    $('#atrLista').innerHTML=linhas.length?`<div class="wrap"><table><thead><tr>
+        <th>Ordem</th><th>Peça</th><th>Lote</th><th>Previsão aqui</th><th class="n">Vencida há (d.ú.)</th><th>Situação</th><th class="n">Peças a fazer</th>
+        </tr></thead><tbody>${linhas.map(x=>`<tr>
+        <td class="cod forte">${esc(x.of.of)}${ehReposicao(x.of)?' <span class="selo neutro">reposição</span>':''}</td>
+        <td>${esc(x.of.descricao)} <small class="cod">${esc(x.of.produto)}</small></td>
+        <td class="cod">${esc(x.of.lote)}</td>
+        <td class="cod">${br(x.previsao)||'—'}</td>
+        <td class="n">${x.dias!=null?`<b class="c-critico">${x.dias} d</b>`:'—'}</td>
+        <td>${situacaoAtr(x)}</td>
+        <td class="n"><b>${nf(x.saldo)}</b> <small class="cod">de ${nf(x.op.qtd)}</small></td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="vazio">${d.n?`Nenhuma linha de ${esc(d.nome)} ${BUSCA_ATR.trim()?`contém "${esc(BUSCA_ATR.trim())}"`:'nesta situação'}.`:`Nada em atraso em ${esc(d.nome)} com os filtros atuais.`}</div>`;
+    p.querySelectorAll('.chip[data-sit]').forEach(b=>b.setAttribute('aria-pressed',String(ATR_SIT===b.dataset.sit)));
+    atualizarAcoesTela();
+  };
+  // Só a lista redesenha ao digitar: redesenhar a tela inteira tiraria o foco
+  // do campo a cada tecla.
+  $('#atrBusca').oninput=e=>{ BUSCA_ATR=e.target.value; lista(); };
+  p.querySelectorAll('.chip[data-sit]').forEach(b=>b.onclick=()=>{ ATR_SIT=b.dataset.sit; lista(); });
+  lista();
+}
+
+/* Uma linha por operação LISTADA — segue a pesquisa e a situação escolhida,
+   porque é o que está na frente do líder. O título do botão diz isso. */
+function csvAtrasoSetor(){
+  const d=atrasoDoSetor(ATR_SETOR||nomeEmbalagem()); if(!d) return;
+  csv(`atraso-${d.nome.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,
+    ['Setor','Situacao','OndeEsta','Origem','Arquivo','Lote','Ordem','Produto','Descricao','Reposicao','Seq','PrevisaoAqui','Vencida','VencidaHaDiasUteis','PecasAFazer','QtdOperacao','JaPronto','Detalhe'],
+    linhasAtrasoListadas(d).map(x=>[d.nome,semAcento(SIT_ATR[x.sit].rotulo),x.sit==='chegou'?x.onde.op.descricao:x.sit==='parada'?d.nome:'',
+      x.paraEmbalar?'Peca a chegar na embalagem':'Operacao do setor',
+      x.of.arquivo,x.of.lote,x.of.of,x.of.produto,x.of.descricao,ehReposicao(x.of)?'Sim':'Nao',x.seq,br(x.previsao),
+      x.vencida?'Sim':'Nao',x.dias==null?'':x.dias,dec(x.saldo),dec(x.op.qtd),dec(x.op.pronto||0),
+      x.sit==='parada'?(x.pos.naoComecou?'Nada apontado':x.pos.parcial?'Parcial':'Aguardando esta fase')
+        :x.sit==='chegou'?`Presa em ${x.onde.op.descricao}`:semAcento(x.prova||'')]));
 }
 
 /* ---- SEM APONTAMENTO: a lista completa, todos os setores ---- */
@@ -3395,7 +3687,7 @@ function desenharLeitura(p){
 /* Uma função por seção. Cada uma recebe o painel e a data de referência e
    escreve o próprio HTML; `render` embrulha a chamada num try para que uma
    seção quebrada mostre o erro no lugar dela, sem levar a tela junto. */
-const DESENHO={setor:desenharSetor,trav:desenharTravadas,apont:desenharApont,conj:desenharConjuntos,fech:desenharFechamento,ach:desenharAchados,
+const DESENHO={setor:desenharSetor,trav:desenharTravadas,atr:desenharAtraso,apont:desenharApont,conj:desenharConjuntos,fech:desenharFechamento,ach:desenharAchados,
   ord:desenharOrdens,op:desenharOperacoes,leit:desenharLeitura};
 function desenhar(){
   const fn=DESENHO[ABA]; if(!fn) return;
@@ -3434,6 +3726,11 @@ function filtrosNoPapel(secao){
   if(f.tipo) t.push(f.tipo==='acabado'?'somente produto acabado (código 1…)'
     :f.tipo==='volume'?'somente volume (código 5…)':'somente componentes');
   if(f.repo) t.push(f.repo==='so'?'somente ordens de reposição':'sem as ordens de reposição');
+  if(secao==='atr'){
+    t.push(`setor ${ATR_SETOR||nomeEmbalagem()}`);
+    if(BUSCA_ATR.trim()) t.push(`pesquisa "${BUSCA_ATR.trim()}"`);
+    if(ATR_SIT&&SIT_ATR[ATR_SIT]) t.push(`somente "${SIT_ATR[ATR_SIT].rotulo}"`);
+  }
   // Severidade só filtra a lista de Achados. Declará-la numa folha de Ordens
   // ou Operações faria o leitor descontar linhas que nunca foram descartadas —
   // um filtro anunciado e não aplicado engana tanto quanto um filtro omitido.
@@ -3488,7 +3785,7 @@ function montarImpressoLista(){
     <div class="doc-topo">
       <div class="doc-marca">
         <img src="${LOGO}" alt="Patrimar Móveis">
-        <h1 class="doc-titulo">${esc(SECOES[ABA]||'Conferência')}</h1>
+        <h1 class="doc-titulo">${esc(ABA==='atr'?`Atraso por setor — ${ATR_SETOR||nomeEmbalagem()}`:SECOES[ABA]||'Conferência')}</h1>
         <p class="doc-sub">
           Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br($('#fRef').value)}</b><br>
           Recorte impresso: <b>${esc(filtrosNoPapel(ABA))}</b> · ${linhas} linha(s)

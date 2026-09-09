@@ -3,6 +3,61 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.15.0] — 2026-09-09
+
+### Adicionado
+
+- **Tela "Atraso por setor" — a fila vencida de um setor, para o líder pesquisar no tablet.**
+  A tela do setor responde ao PPCP com quatro blocos; o líder pergunta uma coisa mais simples:
+  *o que está vencido no meu setor, e o que eu faço com isso.* Um setor por vez, escolhido num
+  chip (a lista sai na ordem do roteiro, com o número de linhas de cada um), e uma pesquisa por
+  ordem, código, descrição ou lote — a ordem que o líder tem na mão.
+
+  O universo é o que o ERP mostraria como vencido: operação do setor, em ordem **em aberto**, sem
+  conclusão e com a previsão do processo vencida contra a data de referência — mais a ordem parada
+  aqui atrás do programado, mesmo com a previsão desta fase ainda no prazo. Cada linha recebe
+  **uma** de três situações, porque "vencida" mistura três fatos que pedem ações diferentes:
+
+  | Situação | Significa | Ação |
+  |---|---|---|
+  | `parada aqui` | a próxima fase a apontar é esta | o setor pode agir agora |
+  | `não chegou` | venceu aqui, mas a ordem está presa num setor anterior, nomeado na linha | não é cobrança deste setor; é aviso de que vai chegar atrasada e de quem a segura |
+  | `esquecido` | uma fase posterior já tem apontamento | a peça passou, faltou o registro — cobrança de apontamento, não de produção |
+
+  **"Parada aqui" é a mesma conta de "Onde travou" e do "Parado aqui" da tela do setor**
+  (`posicaoOrdem`), de propósito: os números batem por construção, e foi conferido setor a setor.
+  Ordem já concluída no ERP fica fora — fase em branco em ordem fechada é apontamento a cobrar
+  ("Sem apontamento"), não atraso.
+
+- **A embalagem espera peça, não operação.** A implantação começa pela embalagem, e a pergunta lá é
+  "quais peças estão travando". Só com as operações a fila da embalagem sairia vazia: o componente
+  quase nunca tem EMBALAR no próprio roteiro — ela é apontada na ordem do acabado ou do volume, que
+  é isenta. Então, na embalagem, entra cada componente em aberto que **ainda não terminou o
+  roteiro**, com a última previsão do roteiro vencida (a data em que deveria estar pronto), como
+  `não chegou`, preso no setor onde está. Componente que tem EMBALAR no roteiro entra pela
+  operação e não repete. Produto acabado e volume não entram.
+
+  Acima da lista, um cartão por setor que **segura** peças a chegar: quantas ordens, quantas
+  peças, há quantos dias úteis a mais antiga, quais produtos — e o maior recebe "comece por aqui".
+  Os cartões valem em todo setor; na embalagem são a resposta inteira.
+
+- **Feita para o tablet.** Chip em vez de lista suspensa; alvo de toque de 44px; campo de
+  pesquisa com 16px (abaixo disso o iOS dá zoom ao focar); a lista rola com a página, não dentro
+  de uma caixa. Ao digitar só a lista redesenha, para o campo não perder o foco. O setor escolhido
+  fica guardado no aparelho; sem escolha, abre na embalagem. O atalho `/?tela=atraso` abre direto
+  na tela depois de ler o PDF, e em tela estreita o conteúdo é levado à vista ao terminar a
+  leitura — antes ficava uma tela abaixo do menu.
+
+- **CSV e impressão seguem o que está na frente do líder.** "Exportar CSV" desta tela leva uma
+  linha por operação **listada** — segue a pesquisa e a situação escolhida, com a coluna `Origem`
+  (operação do setor / peça a chegar na embalagem) e `OndeEsta`. "Imprimir a lista" declara setor,
+  pesquisa e situação no cabeçalho.
+
+### Alterado
+
+- Trocar de tela pelo menu leva o conteúdo à vista, como já acontecia ao abrir um setor. Em tela
+  estreita o menu fica em cima e a tela nova ficava fora da vista.
+
 ## [3.14.0] — 2026-09-09
 
 ### Alterado
