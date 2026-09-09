@@ -3,6 +3,32 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.1.0] — 2026-09-09
+
+### Adicionado
+
+- **Tela "Dashboard PPCP"**, no alto do menu: a camada gerencial sobre o que as outras telas já
+  calculam. Responde as cinco perguntas da manhã do PPCP, nesta ordem: quantas ordens tenho,
+  quantas estão atrasadas, quanto já produzi, onde a produção está concentrada, onde preciso
+  agir agora.
+
+  | Bloco | O que mostra | De onde vem |
+  |---|---|---|
+  | Cartões | ordens, vencidas, concluídas, % conclusão, peças planejadas, prontas, saldo, operações | regra de situação da tela Ordens (`prazoOrdem`), somas do recorte |
+  | Status das ordens | uma barra segmentada: concluídas, vencidas, em aberto no prazo, reposição, inconsistentes | mesma regra da coluna Situação de Ordens |
+  | Prazo | dentro do prazo, vencidas, atraso médio e maior atraso, em dias úteis, só ordens em aberto | `prazoOrdem` × data de referência |
+  | Peças por setor | saldo ainda não apontado por setor, na ordem do roteiro; o maior recebe "maior concentração" | operações do recorte, fora da conta excluídas |
+  | Alertas do PPCP | Onde travou, Atraso por setor, Sem apontamento, Conjunto incompleto | os mesmos contadores do menu |
+
+  Nenhum número nasce aqui, e nenhuma lógica nova foi criada. Cada cartão é um botão que abre a
+  tela que explica o número; clicar num setor abre "Atraso por setor" naquele setor. Respeita os
+  filtros da barra. Atalho `/?tela=dashboard`. Não tem lista, então "Imprimir a lista" e
+  "Exportar CSV" ficam desabilitados nela.
+
+  Dois pedidos da especificação não existem no sistema e foram adaptados: não há botão
+  "Atualizar" (o dado vem do PDF), e a tela Ordens não filtra por situação, então "Vencidas" abre
+  "Onde travou", que é a análise de atraso do próprio sistema.
+
 ## [4.0.0] — 2026-09-09
 
 ### Removido

@@ -60,15 +60,18 @@ primeira cobrança errada.
 1. No ERP, emita o relatório **Situação do Lote de Produção** com *Status das Ordens: Todas*.
 2. Salve em PDF.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
-4. **Onde travou** abre por padrão: *por que* cada ordem ficou para trás — onde deveria estar
+4. **Dashboard PPCP** é a visão gerencial: ordens, vencidas, peças prontas e saldo, status numa
+   barra, prazo em dias úteis, peças a fazer por setor e os alertas do menu. Nenhum número nasce
+   ali; cada cartão abre a tela que o explica. Atalho `/?tela=dashboard`.
+5. **Onde travou** abre por padrão: *por que* cada ordem ficou para trás — onde deveria estar
    hoje, onde está, e qual setor a está segurando (ver seção 5.2).
-5. **Sem apontamento** é a segunda pergunta: fases sem registro, com peças e setor. O que estiver
+6. **Sem apontamento** é a segunda pergunta: fases sem registro, com peças e setor. O que estiver
    marcado como `esquecido` é cobrança direta; `a confirmar` é dúvida a esclarecer no setor.
-6. **Atraso por setor** é a tela do líder, no tablet: um setor por vez, pesquisa por ordem, código,
+7. **Atraso por setor** é a tela do líder, no tablet: um setor por vez, pesquisa por ordem, código,
    peça ou lote, e cada linha vencida com o que fazer — `parada aqui`, `não chegou` (e quem segura)
    ou `esquecido`. Começa pela embalagem (ver seção 5.2.1).
-7. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
-8. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
+8. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
+9. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 > **4.0.0:** a tela antiga de cada setor, a lista "Setores" da lateral, a matriz "Começou ×
 > terminou", a tela "Operação fechada" e as caixas de regras foram removidas por redundância.
