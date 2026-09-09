@@ -3,6 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.16.0] — 2026-09-09
+
+### Alterado
+
+- **A lista de "Atraso por setor" sai agrupada pelo setor que segura a peça.** Dentro de "não
+  chegou", as linhas ficavam na ordem da previsão e alternavam COLAR BORDA, PINTAR UV, COLAR
+  BORDA; o líder da embalagem tinha de garimpar o que cobrar de cada setor. Agora a ordem é:
+  "parada aqui" primeiro, depois "não chegou" por setor que segura, na ordem do roteiro, e
+  "esquecido" no fim. Dentro do grupo, a previsão mais antiga primeiro. Uma linha de grupo diz
+  quantas ordens e quantas peças, na tela e no papel. O CSV sai na mesma ordem.
+
 ## [3.15.3] — 2026-09-09
 
 ### Corrigido
