@@ -3,6 +3,35 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.12.0] — 2026-09-09
+
+### Alterado
+
+- **As definições saíram do caminho.** Em Onde travou, Sem apontamento, Conjunto incompleto,
+  Operação fechada e na tela de cada setor, a nota com o significado de cada coluna ficava aberta
+  abaixo da lista e tomava **metade da tela** — em Conjunto incompleto, 20 definições num bloco só,
+  a 12px. A informação era boa; o lugar era ruim: quem já sabe o que é "trava em" pagava a rolagem
+  toda vez, e quem não sabe não achava o termo no meio do bloco.
+
+  Agora é uma linha fechada, **"Como ler esta tela"**, com a lista dos termos que cobre. Abre com um
+  clique (`<details>`, o mesmo padrão de "Mais filtros" e "Roteiro de cada conjunto"). O texto
+  não mudou.
+
+- **Um parágrafo por definição.** Aberta, a nota deixou de ser um bloco corrido: cada termo em
+  negrito começa um parágrafo, para achar o que se procura sem ler o resto.
+
+- **O estado é um só e fica guardado.** Quem abre uma vez quer continuar lendo ao trocar filtro ou
+  tela — cada troca redesenha o painel, e sem isso a nota fecharia sozinha. O aberto/fechado vale
+  para todas as telas e fica em `localStorage`, como os setores marcados "ainda não apontam".
+  Sem `localStorage`, nasce fechada.
+
+### Corrigido
+
+- **Imprimir a lista levava o aviso errado.** A folha pegava a primeira `.nota` do painel. Em
+  Conjunto incompleto, com um setor marcado como "ainda não aponta", a primeira é o aviso
+  "Fora da conta" — a folha saía com ele no lugar das definições. Agora a folha leva as definições,
+  estejam abertas ou fechadas na tela.
+
 ## [3.11.0] — 2026-09-08
 
 ### Adicionado
