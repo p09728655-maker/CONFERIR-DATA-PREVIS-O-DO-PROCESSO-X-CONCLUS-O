@@ -558,6 +558,12 @@ setor e a data.
 A mesma ordem pode aparecer nas duas tabelas (A CONFIRMAR e PARADO AQUI): é o mesmo fato visto de
 dois lados — ou passou e falta o registro, ou não passou e falta produzir. A reunião decide qual.
 
+Cada tabela tem **teto de 15 linhas**, as mais antigas primeiro. O que passa do teto vira uma linha
+de total com o caminho para a lista completa (tela do setor, CSV). Dois casos não são listados e
+entram só no total: A CONFIRMAR de ordem que já está em "Parado aqui" do mesmo setor (mesma ordem,
+mesmo fato, tratativa lá) e operação ainda dentro do prazo (não é cobrança hoje). Os números do veredito e do ranking
+somam tudo: tela, papel e CSV nunca discordam.
+
 No topo vem o veredito com os dois números (peças sem apontar, peças paradas) e dois rankings na
 ordem do roteiro: **quem segura o atraso** e **onde falta apontamento**. É a resposta consolidada
 antes do detalhe.

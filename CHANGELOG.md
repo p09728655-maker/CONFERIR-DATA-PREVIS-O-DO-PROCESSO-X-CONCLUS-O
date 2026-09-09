@@ -3,6 +3,33 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.14.0] — 2026-09-09
+
+### Alterado
+
+- **A folha da reunião ganhou teto: 15 linhas por tabela, as mais antigas primeiro.** Com o lote
+  real, a 3.13.0 produzia uma linha por ordem parada e uma por operação sem apontar — mais de vinte
+  páginas. Listagem ninguém cobra. O que passa do teto vira **uma linha de total**: quantas ordens,
+  quantas peças, e onde está a lista completa (tela do setor, CSV). Veredito, ranking e cabeçalho
+  de cada setor continuam somando tudo: tela, papel e CSV seguem com o mesmo número.
+
+  O teto vale para a folha geral e para a folha de um setor — é a mesma montagem. Em "Parado
+  aqui", a ordem é dias parada, depois setores atrás, depois peças. Em "Sem apontamento",
+  ESQUECIDO primeiro (é certeza), depois A CONFIRMAR do prazo mais antigo para o mais novo.
+
+- **A CONFIRMAR repetido saiu da lista.** Quando a ordem já está em "Parado aqui" do mesmo setor,
+  o A CONFIRMAR dela é a mesma ordem e o mesmo fato — e ela já tem nome e linha de tratativa logo
+  acima. Repetir as mesmas 15 linhas nas duas tabelas foi o que engordou a folha. Entra só no
+  total ("N a confirmar · X pç — as mesmas ordens de Parado aqui"). ESQUECIDO nunca sai: é
+  certeza e não aparece em "Parado aqui".
+
+- **Operação ainda dentro do prazo saiu da lista.** Sem registro e sem vencimento não é cobrança
+  hoje. Continua na tela; na folha entra só no total, declarada ("N operações · X pç ainda dentro
+  do prazo").
+
+- **Coluna Lote nas duas tabelas.** Com mais de um lote na folha, é o lote que o líder procura.
+  O código do produto passou a acompanhar o nome da peça na mesma célula, em vez de coluna própria.
+
 ## [3.13.0] — 2026-09-09
 
 ### Adicionado
