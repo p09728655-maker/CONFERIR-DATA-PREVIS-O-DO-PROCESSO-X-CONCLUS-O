@@ -67,6 +67,9 @@ primeira cobrança errada.
 6. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
 7. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
+Cada tela termina em **"Como ler esta tela"**, fechada por padrão: o significado de cada coluna, um
+parágrafo por termo. Abrir uma vez vale para todas as telas e a escolha fica guardada no aparelho.
+
 Os arquivos são processados **dentro do navegador**. Nenhum dado é enviado para servidor.
 Não há backend, não há banco, não há log de uso.
 
