@@ -539,6 +539,9 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-setor .sub{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.3pt;margin:2mm 0 .8mm;
     break-after:avoid;page-break-after:avoid}
   .doc-setor table+.sub{margin-top:3mm}
+  .doc-setor .sub small{font-weight:400;text-transform:none;letter-spacing:0}
+  .somente-impressao td.mais{background:#eee;border-bottom:.75pt solid #000;font-size:8pt;padding:1.2mm 1.5mm;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
 
   .somente-impressao table{width:100%;border-collapse:collapse;font-size:8.5pt;table-layout:fixed}
   .somente-impressao td{color:#000}
@@ -781,6 +784,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.14.0 — 09/09/2026</h3>
+  <ul>
+    <li><b>A folha da reunião ganhou teto: 15 linhas por tabela, as mais antigas primeiro.</b> Com o lote real, uma linha por ordem virava vinte páginas, e listagem ninguém cobra. O que passa do teto vira uma linha de total — quantas ordens, quantas peças e onde está a lista completa (tela do setor, CSV). Veredito e ranking não mudam: tela, papel e CSV continuam com o mesmo número.</li>
+    <li>Em "Sem apontamento", ESQUECIDO vem primeiro (é certeza), depois A CONFIRMAR do prazo mais antigo para o mais novo. Duas coisas saem da lista e entram só no total: <b>A CONFIRMAR de ordem que já está em "Parado aqui" do mesmo setor</b> — mesma ordem, mesmo fato, tratativa lá — e <b>operação ainda dentro do prazo</b>, que não é cobrança hoje.</li>
+    <li>As duas tabelas ganharam a coluna <b>Lote</b> e perderam "Produto" como coluna — o código passa a acompanhar o nome da peça. Com mais de um lote na folha, é o lote que o líder procura.</li>
+  </ul>
   <h3>3.13.0 — 09/09/2026</h3>
   <ul>
     <li><b>A folha da reunião passou a cobrar o atraso, não só o apontamento.</b> Ela listava o que cada setor deixou de <b>registrar</b>; o que o setor está <b>segurando</b> — ordem em aberto atrás do programado, parada nele — só existia na tela. A folha agora chama <b>Cobrança por setor — apontamento e atraso</b>: em cada setor, primeiro a tabela "Parado aqui" (ordem, peça, produto, onde deveria estar, situação, setores atrás, dias parada, peças, tratativa), depois "Sem apontamento", que não mudou.</li>
@@ -1641,7 +1650,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.13.0';
+const VERSAO='3.14.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3639,56 +3648,91 @@ function montarImpresso(soSetor){
     </div>`:'';
 
   const situacaoTxt=pos=>pos.naoComecou?'nada apontado':pos.parcial?`parcial — ${nf(pos.esta.op.pronto||0)} de ${nf(pos.esta.op.qtd)}`:'aguardando esta fase';
-  const tabelaAtraso=at=>`<div class="sub">Parado aqui — atrás do programado</div>
+  /* TETO POR TABELA. Uma linha por ordem é o grão certo para o chão — o líder
+     procura a peça pelo nome — mas com 200 ordens atrasadas a folha vira
+     listagem, e listagem ninguém cobra. Ficam as TETO_FOLHA mais antigas;
+     o resto vira uma linha de total que declara o que não está na folha e
+     onde está (tela, CSV). Os totais do veredito e do ranking não mudam:
+     tela, papel e CSV continuam com o mesmo número. */
+  const TETO_FOLHA=15;
+  const linhaMais=(cols,txt)=>`<tr><td colspan="${cols}" class="mais">${txt}</td></tr>`;
+  const tabelaAtraso=at=>{
+    const ordenadas=at.itens.slice().sort((a,b)=>(b.pos.diasParada||0)-(a.pos.diasParada||0)||b.pos.fasesAtras-a.pos.fasesAtras||b.pos.pecas-a.pos.pecas);
+    const vis=ordenadas.slice(0,TETO_FOLHA), resto=ordenadas.slice(TETO_FOLHA);
+    const restoPecas=resto.reduce((s,x)=>s+x.pos.pecas,0);
+    return `<div class="sub">Parado aqui — atrás do programado${resto.length?` <small>· as ${vis.length} mais antigas de ${ordenadas.length}</small>`:''}</div>
       <table>
         <colgroup>
-          <col style="width:9%"><col style="width:20%"><col style="width:11%"><col style="width:15%">
-          <col style="width:14%"><col style="width:7%"><col style="width:6%"><col style="width:6%"><col style="width:12%">
+          <col style="width:9%"><col style="width:27%"><col style="width:9%"><col style="width:14%">
+          <col style="width:13%"><col style="width:6%"><col style="width:7%"><col style="width:15%">
         </colgroup>
         <thead><tr>
-          <th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th>
-          <th>Situação</th><th class="n">Setores atrás</th><th class="n">Dias</th><th class="n">Peças</th><th>Tratativa</th>
+          <th>Ordem</th><th>Peça</th><th>Lote</th><th>Deveria estar em</th>
+          <th>Situação</th><th class="n">Dias</th><th class="n">Peças</th><th>Tratativa</th>
         </tr></thead>
-        <tbody>${at.itens.map(x=>`<tr>
+        <tbody>${vis.map(x=>`<tr>
           <td class="cod">${esc(x.of.of)}${ehReposicao(x.of)?'<br><small>reposição</small>':''}</td>
-          <td>${esc(x.of.descricao)}</td>
-          <td class="cod">${esc(x.of.produto)}</td>
+          <td>${esc(x.of.descricao)} <small class="cod">${esc(x.of.produto)}</small></td>
+          <td class="cod">${esc(x.of.lote||'—')}</td>
           <td>${faseTxt(x.pos.deveria)}</td>
           <td>${situacaoTxt(x.pos)}</td>
-          <td class="n">${x.pos.fasesAtras||'—'}</td>
-          <td class="n">${x.pos.diasParada!=null?`<b>${x.pos.diasParada} d.ú.</b>`:'—'}</td>
+          <td class="n">${x.pos.diasParada!=null?`<b>${x.pos.diasParada}</b>`:'—'}</td>
           <td class="n"><b>${nf(x.pos.pecas)}</b></td>
           <td><span class="doc-tratativa"></span></td>
-        </tr>`).join('')}</tbody>
+        </tr>`).join('')}
+        ${resto.length?linhaMais(8,`<b>+${resto.length} ${resto.length===1?'ordem':'ordens'} · ${nf(restoPecas)} pç</b> paradas neste setor, com prazo mais recente — lista completa na tela do setor ou em Exportar CSV (Onde travou).`):''}</tbody>
       </table>`;
-  const tabelaFaltas=st=>`<div class="sub">Sem apontamento</div>
+  };
+  const tabelaFaltas=(st,at)=>{
+    /* ESQUECIDO primeiro (é certeza), depois A CONFIRMAR vencido do prazo mais
+       antigo para o mais novo. Duas coisas saem da lista e entram só no total,
+       para a conta bater com a tela:
+       - A CONFIRMAR de ordem que já está em "Parado aqui" deste setor: é a
+         mesma ordem e o mesmo fato, e ela já tem nome e linha de tratativa
+         logo acima. Repetir 15 linhas iguais foi o que engordou a folha.
+       - o que ainda está dentro do prazo: não é cobrança hoje. */
+    const paradasAqui=new Set(at?at.itens.map(x=>x.of.of):[]);
+    const cobraveis=st.itens.filter(x=>x.furo||x.vencida).sort((a,b)=>(b.furo?1:0)-(a.furo?1:0)||String(a.op.previsao||'').localeCompare(String(b.op.previsao||'')));
+    const repetidas=cobraveis.filter(x=>!x.furo&&paradasAqui.has(x.of.of));
+    const listaveis=cobraveis.filter(x=>x.furo||!paradasAqui.has(x.of.of));
+    const noPrazo=st.itens.filter(x=>!x.furo&&!x.vencida);
+    const vis=listaveis.slice(0,TETO_FOLHA), resto=listaveis.slice(TETO_FOLHA);
+    const partes=[];
+    if(resto.length){ const rf=resto.filter(x=>x.furo).length, rc=resto.length-rf;
+      partes.push(`<b>+${rf?`${rf} esquecido(s)`:''}${rf&&rc?' e ':''}${rc?`${rc} a confirmar`:''} · ${nf(resto.reduce((s,x)=>s+x.pecas,0))} pç</b> neste setor — lista completa na tela ou em Exportar CSV (Sem apontamento)`); }
+    if(repetidas.length) partes.push(`<b>${repetidas.length} a confirmar · ${nf(repetidas.reduce((s,x)=>s+x.pecas,0))} pç</b> — as mesmas ordens de "Parado aqui" acima: mesma ordem, mesmo fato, tratativa lá`);
+    if(noPrazo.length) partes.push(`${noPrazo.length} operação(ões) · ${nf(noPrazo.reduce((s,x)=>s+x.pecas,0))} pç <b>ainda dentro do prazo</b>, sem registro: não é cobrança hoje, fica na tela`);
+    if(!vis.length&&!partes.length) return '';
+    return `<div class="sub">Sem apontamento${resto.length?` <small>· ${vis.length} de ${listaveis.length}</small>`:''}</div>
       <table>
         <colgroup>
-          <col style="width:13%"><col style="width:9%"><col style="width:12%"><col style="width:17%">
-          <col style="width:13%"><col style="width:7%"><col style="width:15%"><col style="width:14%">
+          <col style="width:12%"><col style="width:9%"><col style="width:27%"><col style="width:9%">
+          <col style="width:12%"><col style="width:7%"><col style="width:12%"><col style="width:12%">
         </colgroup>
         <thead><tr>
-          <th>Situação</th><th>Ordem</th><th>Produto</th><th>Descrição</th>
+          <th>Situação</th><th>Ordem</th><th>Peça</th><th>Lote</th>
           <th>Previsão</th><th class="n">Peças</th><th>Por que</th><th>Tratativa</th>
         </tr></thead>
-        <tbody>${st.itens.map(x=>`<tr>
+        <tbody>${vis.map(x=>`<tr>
           <td><span class="${x.furo?'sit-certeza':'sit-duvida'}">${rotuloFalta(x)}</span></td>
           <td class="cod">${esc(x.of.of)}</td>
-          <td class="cod">${esc(x.of.produto)}</td>
-          <td>${esc(x.of.descricao)}</td>
+          <td>${esc(x.of.descricao)} <small class="cod">${esc(x.of.produto)}</small></td>
+          <td class="cod">${esc(x.of.lote||'—')}</td>
           <td class="cod">${br(x.op.previsao)}${x.vencida?'<span class="venc">venc.</span>':''}</td>
           <td class="n">${nf(x.pecas)}</td>
           <td>${esc(motivoFalta(x))}</td>
           <td><span class="doc-tratativa"></span></td>
-        </tr>`).join('')}</tbody>
+        </tr>`).join('')}
+        ${partes.map(t=>linhaMais(8,t)).join('')}</tbody>
       </table>`;
+  };
   /* Atraso primeiro: é o que trava o setor da frente. O registro vem depois. */
   const blocos=blocosSetor.map(b=>`<section class="doc-setor">
       <h2>${esc(b.nome)}
         <span>${[b.at?`${b.at.itens.length} ${b.at.itens.length===1?'ordem parada':'ordens paradas'} · ${nf(b.at.pecas)} pç`:'',
                  b.ap?`${b.ap.itens.length} sem apontar · ${nf(b.ap.somaPecas)} pç${b.ap.furos?` · ${b.ap.furos} esquecido(s)`:''}`:''].filter(Boolean).join(' — ')}</span></h2>
       ${b.at?tabelaAtraso(b.at):''}
-      ${b.ap?tabelaFaltas(b.ap):''}
+      ${b.ap?tabelaFaltas(b.ap,b.at):''}
     </section>`).join('');
 
   /* MENOS, MAS MELHOR.
@@ -3711,6 +3755,8 @@ function rodape(ref){
     setor. "Deveria estar em" é a última fase com previsão até a data de referência. A mesma ordem pode
     aparecer também em A CONFIRMAR: é o mesmo fato visto de dois lados — ou a peça passou e falta o
     registro, ou não passou e falta produzir. A reunião decide qual.</p>
+    <p><b>Teto de 15 linhas por tabela</b> — as mais antigas. O que passa do teto está declarado na linha de total,
+    com o caminho para a lista completa. Operação ainda dentro do prazo não é cobrança e não é listada.</p>
     <p><b>Prazos em dias úteis</b> — segunda a sexta, descontando feriados nacionais e de São Paulo.</p>
     <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
     Vencimento medido contra ${br(ref)}. O relatório mostra ausência de <i>registro</i> no sistema,
