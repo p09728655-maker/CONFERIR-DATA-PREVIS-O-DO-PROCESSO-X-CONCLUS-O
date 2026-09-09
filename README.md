@@ -64,8 +64,11 @@ primeira cobrança errada.
    hoje, onde está, e qual setor a está segurando (ver seção 5.2).
 5. **Sem apontamento** é a segunda pergunta: fases sem registro, com peças e setor. O que estiver
    marcado como `esquecido` é cobrança direta; `a confirmar` é dúvida a esclarecer no setor.
-6. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
-7. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
+6. **Atraso por setor** é a tela do líder, no tablet: um setor por vez, pesquisa por ordem, código,
+   peça ou lote, e cada linha vencida com o que fazer — `parada aqui`, `não chegou` (e quem segura)
+   ou `esquecido`. Começa pela embalagem (ver seção 5.2.1).
+7. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
+8. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
 Cada tela termina em **"Como ler esta tela"**, fechada por padrão: o significado de cada coluna, um
 parágrafo por termo. Abrir uma vez vale para todas as telas e a escolha fica guardada no aparelho.
@@ -295,6 +298,48 @@ Regras que evitam leitura errada:
 - Com filtro de operação, a seção mostra as ordens travadas **naquele** setor.
 
 ---
+
+## 5.2.1 Atraso por setor — a tela do líder
+
+"Onde travou" e a tela do setor respondem ao PPCP. O líder, de pé, com o tablet na mão, pergunta
+uma coisa mais simples: **o que está vencido no meu setor, e o que eu faço com isso.** Esta tela
+responde com uma lista pesquisável, um setor por vez.
+
+- **Setor** num chip, na ordem do roteiro, com o número de linhas de cada um. A escolha fica
+  guardada no aparelho; sem escolha, abre na embalagem.
+- **Pesquisa** por ordem, código, descrição ou lote — a ordem que o líder tem na mão. É da tela,
+  não da barra: não mexe no recorte que o PPCP montou.
+- **Situação**, uma por linha:
+
+| Situação | Significa | Ação |
+|---|---|---|
+| `parada aqui` | a próxima fase a apontar é esta (mesma conta de "Onde travou") | o setor pode agir agora |
+| `não chegou` | venceu aqui, mas a ordem está presa num setor anterior, nomeado | aviso de que vai chegar atrasada, e de quem a segura |
+| `esquecido` | uma fase posterior já tem apontamento | a peça passou, faltou o registro |
+
+O universo é o que o ERP mostraria como vencido no setor, em ordem **em aberto**, mais a ordem
+parada aqui atrás do programado com a previsão desta fase ainda no prazo. Ordem concluída fica
+fora — fase em branco em ordem fechada é apontamento a cobrar, não atraso.
+
+### A embalagem espera peça
+
+A pergunta na embalagem é **quais peças estão travando**. O componente quase nunca tem `EMBALAR`
+no próprio roteiro — ela é apontada na ordem do acabado ou do volume, que é isenta — e só com as
+operações a fila da embalagem sairia vazia. Por isso, na embalagem entra cada componente em aberto
+que **ainda não terminou o roteiro**, com a última previsão do roteiro vencida (quando deveria
+estar pronto), como `não chegou`, preso no setor onde está. Acima da lista, um cartão por setor
+que **segura** peças: ordens, peças, dias úteis da mais antiga, produtos — o maior leva "comece
+por aqui". Produto acabado e volume não entram.
+
+### Tablet
+
+Alvo de toque de 44px, campo de pesquisa com 16px (o iOS dá zoom abaixo disso), lista que rola
+com a página. O atalho `/?tela=atraso` abre direto na tela depois de ler o PDF. **O PDF precisa
+chegar ao tablet**: a ferramenta não tem servidor, então o relatório emitido pelo PPCP tem de ser
+aberto no próprio aparelho (pasta compartilhada, Drive, mensagem). A integração por views
+(seção 12) é o que elimina esse passo.
+
+CSV e "Imprimir a lista" seguem a pesquisa e a situação escolhida, declaradas no cabeçalho.
 
 ## 5.3 Conjunto incompleto
 
@@ -591,6 +636,7 @@ menu, em **Todos os CSVs**, para quem alimenta o Power BI de uma vez só.
 
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
+| CSV desta tela (Atraso por setor) | `atraso-<setor>.csv` | Uma linha por operação **listada** — segue a pesquisa e a situação; colunas `Origem` e `OndeEsta` |
 | CSV sem apontamento | `sem-apontamento.csv` | Uma linha por fase sem registro, com situação, setor e peças |
 | CSV de conjuntos | `conjuntos.csv` | Uma linha por **conjunto × fase**, com `% pronto` do conjunto, ordens na fase, quantas passaram, quantas faltam e quais |
 | CSV achados | `achados.csv` | Uma linha por achado, com severidade, regra e detalhe |
