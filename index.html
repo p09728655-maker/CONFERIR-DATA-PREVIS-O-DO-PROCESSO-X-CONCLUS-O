@@ -551,8 +551,12 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-cartoes:has(.n1 .r){grid-template-columns:repeat(3,1fr)}
   .doc-cartoes .numeros{gap:3mm;margin:.5mm 0}
   .doc-cartoes .n1 .v{font-size:10.5pt}
-  .somente-impressao td.peca .cod{display:inline;margin:0 0 0 1.5mm;font-size:7.5pt;font-weight:700}
+  /* Código em linha própria também no papel, como na tela: na mesma linha da
+     descrição ele some no fim do texto. A linha fica mais justa para compensar. */
+  .somente-impressao td.peca .cod{display:block;margin:.3mm 0 0;font-size:7.5pt;font-weight:700;line-height:1.2}
   .somente-impressao td.peca{min-width:0}
+  .somente-impressao td.peca~td,.somente-impressao td.peca{padding-top:1mm;padding-bottom:1mm}
+  .somente-impressao tr:has(td.peca) td{padding-top:1mm;padding-bottom:1mm;line-height:1.25}
   .somente-impressao .so-tela{display:none}
   .somente-impressao .selo{border:.5pt solid #000;background:transparent!important;color:#000!important;
     padding:.2mm 1.2mm;font-size:6.5pt;white-space:nowrap}
@@ -831,6 +835,10 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.15.3 — 09/09/2026</h3>
+  <ul>
+    <li><b>Código da peça em linha própria também no papel.</b> A 3.15.2 tinha devolvido o código para a mesma linha da descrição na folha impressa, e ele voltou a sumir no fim do texto. Agora a folha segue a tela: descrição em cima, código embaixo, com a linha mais justa para não gastar página.</li>
+  </ul>
   <h3>3.15.2 — 09/09/2026</h3>
   <ul>
     <li><b>"Imprimir a lista" de "Atraso por setor" cabe em menos folhas.</b> 21 linhas saíam em 3 páginas: os cartões de "quem segura" ocupavam meia folha, a peça tomava duas linhas e a situação repetia um prefixo longo. No papel os cartões vão em três colunas compactas, o código da peça volta para a mesma linha da descrição (em negrito, ainda separado) e a situação vai direto ao ponto.</li>
@@ -1711,7 +1719,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.15.2';
+const VERSAO='3.15.3';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE

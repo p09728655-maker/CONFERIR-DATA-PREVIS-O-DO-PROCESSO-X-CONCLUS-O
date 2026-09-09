@@ -3,6 +3,15 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.15.3] — 2026-09-09
+
+### Corrigido
+
+- **Código da peça em linha própria também no papel.** A 3.15.2 tinha devolvido o código para a
+  mesma linha da descrição na folha impressa de "Atraso por setor", e ele voltou a sumir no fim do
+  texto. A folha segue a tela: descrição em cima, código embaixo em negrito, com a linha mais justa
+  para compensar a altura.
+
 ## [3.15.2] — 2026-09-09
 
 ### Corrigido
