@@ -273,6 +273,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   border-bottom:1px solid var(--borda);background:var(--papel-cabecalho)}
 .buscaLinha .f{max-width:440px;flex:1 1 260px}
 .buscaLinha .chips{padding:0;border:0}
+/* Peça em duas linhas: descrição em cima, código embaixo em mono. Na mesma
+   linha, "…MDP 5 OFF WHITE 796.005.006" virava um texto só, e o código — que é
+   o que o líder confere com a etiqueta — sumia no fim da descrição. */
+td.peca{min-width:220px;color:var(--texto)}
+td.peca .cod{display:block;margin-top:2px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--texto-medio)}
 /* TABLET: a tela é usada de pé, com o dedo. Alvo de 44px, campo com 16px
    (abaixo disso o iOS dá zoom ao focar) e a lista rola com a página — rolagem
    dentro de rolagem, no toque, prende o dedo na tabela. */
@@ -815,6 +820,10 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.15.1 — 09/09/2026</h3>
+  <ul>
+    <li><b>Código da peça em linha própria</b> na tela "Atraso por setor". Na mesma linha da descrição, "…MDP 5 OFF WHITE 796.005.006" virava um texto só e o código, que é o que o líder confere com a etiqueta, sumia no fim. Agora fica embaixo, em fonte de código.</li>
+  </ul>
   <h3>3.15.0 — 09/09/2026</h3>
   <ul>
     <li><b>Tela "Atraso por setor", para o líder no tablet.</b> Um setor por vez, escolhido num chip, com pesquisa por ordem, código, peça ou lote. Lista tudo que está vencido no setor em ordem em aberto e diz o que fazer com cada linha: <b>parada aqui</b> (a próxima fase a apontar é esta — pode agir agora), <b>não chegou</b> (venceu aqui, mas a ordem está presa num setor anterior, nomeado) ou <b>esquecido</b> (fase posterior já apontada — falta o registro). "Parada aqui" é a mesma conta de "Onde travou" e da tela do setor.</li>
@@ -1687,7 +1696,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.15.0';
+const VERSAO='3.15.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3080,7 +3089,7 @@ function desenharAtraso(p,ref){
         <th>Ordem</th><th>Peça</th><th>Lote</th><th>Previsão aqui</th><th class="n">Vencida há (d.ú.)</th><th>Situação</th><th class="n">Peças a fazer</th>
         </tr></thead><tbody>${linhas.map(x=>`<tr>
         <td class="cod forte">${esc(x.of.of)}${ehReposicao(x.of)?' <span class="selo neutro">reposição</span>':''}</td>
-        <td>${esc(x.of.descricao)} <small class="cod">${esc(x.of.produto)}</small></td>
+        <td class="peca">${esc(x.of.descricao)}<span class="cod">${esc(x.of.produto)}</span></td>
         <td class="cod">${esc(x.of.lote)}</td>
         <td class="cod">${br(x.previsao)||'—'}</td>
         <td class="n">${x.dias!=null?`<b class="c-critico">${x.dias} d</b>`:'—'}</td>
