@@ -3,6 +3,15 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.15.1] — 2026-09-09
+
+### Corrigido
+
+- **Código da peça em linha própria** na tela "Atraso por setor". Na mesma linha da descrição,
+  "…MDP 5 OFF WHITE 796.005.006" virava um texto só, e o código — o que o líder confere com a
+  etiqueta — sumia no fim. Agora fica embaixo da descrição, em fonte de código, e a coluna tem
+  largura mínima para a descrição não quebrar em cinco linhas no tablet.
+
 ## [3.15.0] — 2026-09-09
 
 ### Adicionado
