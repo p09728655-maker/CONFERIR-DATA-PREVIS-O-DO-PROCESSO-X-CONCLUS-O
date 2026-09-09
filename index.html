@@ -277,6 +277,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
    linha, "…MDP 5 OFF WHITE 796.005.006" virava um texto só, e o código — que é
    o que o líder confere com a etiqueta — sumia no fim da descrição. */
 td.peca{min-width:220px;color:var(--texto)}
+tr.grupo td{background:var(--papel-cabecalho);border-top:2px solid var(--borda);padding:var(--sm) var(--lg);color:var(--texto)}
+tr.grupo td small{margin-left:var(--sm);color:var(--texto-fraco)}
+tr.grupo:hover td{background:var(--papel-cabecalho)}
 td.peca .cod{display:block;margin-top:2px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--texto-medio)}
 /* TABLET: a tela é usada de pé, com o dedo. Alvo de 44px, campo com 16px
    (abaixo disso o iOS dá zoom ao focar) e a lista rola com a página — rolagem
@@ -558,6 +561,9 @@ dialog form{margin-top:var(--lg);text-align:right}
   .somente-impressao td.peca~td,.somente-impressao td.peca{padding-top:1mm;padding-bottom:1mm}
   .somente-impressao tr:has(td.peca) td{padding-top:1mm;padding-bottom:1mm;line-height:1.25}
   .somente-impressao .so-tela{display:none}
+  .somente-impressao tr.grupo td{background:#eee;border-top:1pt solid #000;border-bottom:.75pt solid #000;font-size:8.5pt;padding:1.2mm 1.5mm;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .somente-impressao tr.grupo td small{margin-left:2mm}
   .somente-impressao .selo{border:.5pt solid #000;background:transparent!important;color:#000!important;
     padding:.2mm 1.2mm;font-size:6.5pt;white-space:nowrap}
   .doc-nota{font-size:7.5pt;line-height:1.4;border-top:.75pt solid #000;padding-top:1.8mm;margin-top:3mm}
@@ -835,6 +841,10 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.16.0 — 09/09/2026</h3>
+  <ul>
+    <li><b>A lista de "Atraso por setor" sai agrupada pelo setor que segura a peça</b>, na ordem do roteiro, com uma linha de grupo dizendo quantas ordens e quantas peças (na tela e no papel). Antes as linhas alternavam COLAR BORDA, PINTAR UV, COLAR BORDA, e o líder tinha de garimpar. "Parada aqui" continua primeiro; "esquecido" fecha a lista.</li>
+  </ul>
   <h3>3.15.3 — 09/09/2026</h3>
   <ul>
     <li><b>Código da peça em linha própria também no papel.</b> A 3.15.2 tinha devolvido o código para a mesma linha da descrição na folha impressa, e ele voltou a sumir no fim do texto. Agora a folha segue a tela: descrição em cima, código embaixo, com a linha mais justa para não gastar página.</li>
@@ -1719,7 +1729,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.15.3';
+const VERSAO='3.16.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2984,12 +2994,17 @@ function atrasoTodos(){
       }
     }
   });
-  const peso=x=>SIT_ATR[x.sit].peso;
+  const peso=x=>SIT_ATR[x.sit].peso, R=ordemRoteiro();
   const nomes=setoresDisponiveis(); if(por.has(emb)&&!nomes.includes(emb)) nomes.push(emb);
   const setores=nomes.map(nome=>{
-    // Ação primeiro (parada aqui), depois a previsão mais antiga; sem previsão vai para o fim.
+    // Ação primeiro (parada aqui). Dentro de "não chegou", AGRUPADO pelo setor
+    // que segura a peça, na ordem do roteiro: o líder cobra setor por setor,
+    // e uma lista que alterna COLAR BORDA, PINTAR UV, COLAR BORDA obriga a
+    // garimpar. Depois a previsão mais antiga; sem previsão vai para o fim.
     const prev=x=>x.previsao||'9';
+    const rot=x=>x.sit==='chegou'?(R[x.onde.op.descricao]==null?99:R[x.onde.op.descricao]):0;
     const linhas=(por.get(nome)||[]).sort((a,b)=>peso(a)-peso(b)
+      ||rot(a)-rot(b)
       ||(prev(a)<prev(b)?-1:prev(a)>prev(b)?1:0)
       ||b.saldo-a.saldo||a.of.of.localeCompare(b.of.of));
     const n=k=>linhas.filter(x=>x.sit===k).length, pc=k=>linhas.filter(x=>x.sit===k).reduce((s,x)=>s+x.saldo,0);
@@ -3000,7 +3015,7 @@ function atrasoTodos(){
       pcParada:pc('parada'), pcChegou:pc('chegou'), pcEsquecido:pc('esquecido'),
       maisAntiga:venc.length?venc.reduce((m,x)=>!m||x.previsao<m.previsao?x:m,null):null,
       seguram:[...new Set(linhas.filter(x=>x.sit==='chegou').map(x=>x.onde.op.descricao))]};
-  }).sort(porRoteiro(ordemRoteiro()));
+  }).sort(porRoteiro(R));
   return {setores, total:setores.reduce((s,x)=>s+x.n,0)};
 }
 const atrasoDoSetor=nome=>atrasoTodos().setores.find(x=>x.nome===nome)||null;
@@ -3108,9 +3123,18 @@ function desenharAtraso(p,ref){
   if(!d) return;
   const lista=()=>{
     const linhas=linhasAtrasoListadas(d);
+    /* Uma linha de grupo quando muda a situação ou o setor que segura: é o
+       que o líder lê para saber onde a cobrança começa e onde termina. */
+    const chave=x=>x.sit==='chegou'?`chegou:${x.onde.op.descricao}`:x.sit;
+    const grupos=new Map();
+    linhas.forEach(x=>{ const k=chave(x), g=grupos.get(k)||{n:0,pecas:0}; g.n++; g.pecas+=x.saldo; grupos.set(k,g); });
+    const rotuloGrupo=x=>{ const g=grupos.get(chave(x)), s=SIT_ATR[x.sit];
+      const t=x.sit==='chegou'?`${s.rotulo} — presa em <b>${esc(x.onde.op.descricao)}</b>`:s.rotulo;
+      return `<tr class="grupo"><td colspan="7"><span class="selo ${s.cls}">${s.rotulo}</span> ${x.sit==='chegou'?`presa em <b>${esc(x.onde.op.descricao)}</b>`:''}<small>${g.n} ${g.n>1?'ordens':'ordem'} · ${nf(g.pecas)} pç</small></td></tr>`; };
+    let ant=null;
     $('#atrLista').innerHTML=linhas.length?`<div class="wrap"><table><thead><tr>
         <th>Ordem</th><th>Peça</th><th>Lote</th><th>Previsão aqui</th><th class="n">Vencida há (d.ú.)</th><th>Situação</th><th class="n">Peças a fazer</th>
-        </tr></thead><tbody>${linhas.map(x=>`<tr>
+        </tr></thead><tbody>${linhas.map(x=>`${chave(x)!==ant?(ant=chave(x),rotuloGrupo(x)):''}<tr>
         <td class="cod forte">${esc(x.of.of)}${ehReposicao(x.of)?' <span class="selo neutro">reposição</span>':''}</td>
         <td class="peca">${esc(x.of.descricao)}<span class="cod">${esc(x.of.produto)}</span></td>
         <td class="cod">${esc(x.of.lote)}</td>
