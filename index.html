@@ -545,6 +545,17 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-cartoes .n1 .v{font-size:12pt;font-weight:700;line-height:1.1}
   .doc-cartoes .n1 .r{font-size:6.5pt;text-transform:uppercase;letter-spacing:.2pt}
   .doc-cartoes .pct .b{display:none}
+  /* ATRASO POR SETOR NO PAPEL: 21 linhas saíam em 3 páginas. Os cartões
+     ocupavam meia folha em duas colunas, a peça tomava duas linhas e a
+     situação repetia um prefixo que na tela ajuda e no papel só alonga. */
+  .doc-cartoes:has(.n1 .r){grid-template-columns:repeat(3,1fr)}
+  .doc-cartoes .numeros{gap:3mm;margin:.5mm 0}
+  .doc-cartoes .n1 .v{font-size:10.5pt}
+  .somente-impressao td.peca .cod{display:inline;margin:0 0 0 1.5mm;font-size:7.5pt;font-weight:700}
+  .somente-impressao td.peca{min-width:0}
+  .somente-impressao .so-tela{display:none}
+  .somente-impressao .selo{border:.5pt solid #000;background:transparent!important;color:#000!important;
+    padding:.2mm 1.2mm;font-size:6.5pt;white-space:nowrap}
   .doc-nota{font-size:7.5pt;line-height:1.4;border-top:.75pt solid #000;padding-top:1.8mm;margin-top:3mm}
   .doc-setor{margin-bottom:5mm}
   /* MATRIZ NA FOLHA: em preto e branco quem marca a frente aberta é o peso e
@@ -820,6 +831,10 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.15.2 — 09/09/2026</h3>
+  <ul>
+    <li><b>"Imprimir a lista" de "Atraso por setor" cabe em menos folhas.</b> 21 linhas saíam em 3 páginas: os cartões de "quem segura" ocupavam meia folha, a peça tomava duas linhas e a situação repetia um prefixo longo. No papel os cartões vão em três colunas compactas, o código da peça volta para a mesma linha da descrição (em negrito, ainda separado) e a situação vai direto ao ponto.</li>
+  </ul>
   <h3>3.15.1 — 09/09/2026</h3>
   <ul>
     <li><b>Código da peça em linha própria</b> na tela "Atraso por setor". Na mesma linha da descrição, "…MDP 5 OFF WHITE 796.005.006" virava um texto só e o código, que é o que o líder confere com a etiqueta, sumia no fim. Agora fica embaixo, em fonte de código.</li>
@@ -1696,7 +1711,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.15.1';
+const VERSAO='3.15.2';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2995,7 +3010,7 @@ const situacaoAtr=x=>{
       ?(x.pos.naoComecou?'nada apontado ainda':x.pos.parcial?`parcial — ${nf(x.op.pronto||0)} de ${nf(x.op.qtd)} apontadas`:'aguardando esta fase')
         +(!x.vencida&&x.pos.deveria?` · no prazo aqui, mas deveria estar em ${esc(x.pos.deveria.op.descricao)}`:'')
     :x.sit==='chegou'
-      ?`${x.paraEmbalar?'roteiro da peça não terminou — ':''}presa em <b>${esc(x.onde.op.descricao)}</b>${x.pos.diasParada!=null?` — lá venceu há ${x.pos.diasParada} d.ú.`:' — lá ainda no prazo'}`
+      ?`${x.paraEmbalar?'<span class="so-tela">roteiro da peça não terminou — </span>':''}presa em <b>${esc(x.onde.op.descricao)}</b>${x.pos.diasParada!=null?` — lá venceu há ${x.pos.diasParada} d.ú.`:' — lá ainda no prazo'}`
     :`${esc(x.prova)} — a peça passou, falta o registro`;
   return `<span class="selo ${s.cls}">${s.rotulo}</span> <small>${det}</small>`;
 };
