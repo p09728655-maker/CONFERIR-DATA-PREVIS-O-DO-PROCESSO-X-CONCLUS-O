@@ -536,6 +536,9 @@ dialog form{margin-top:var(--lg);text-align:right}
     break-after:avoid;page-break-after:avoid;
     display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
   .doc-setor h2 span{font-size:8.5pt;font-weight:400;white-space:nowrap}
+  .doc-setor .sub{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.3pt;margin:2mm 0 .8mm;
+    break-after:avoid;page-break-after:avoid}
+  .doc-setor table+.sub{margin-top:3mm}
 
   .somente-impressao table{width:100%;border-collapse:collapse;font-size:8.5pt;table-layout:fixed}
   .somente-impressao td{color:#000}
@@ -778,6 +781,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>3.13.0 — 09/09/2026</h3>
+  <ul>
+    <li><b>A folha da reunião passou a cobrar o atraso, não só o apontamento.</b> Ela listava o que cada setor deixou de <b>registrar</b>; o que o setor está <b>segurando</b> — ordem em aberto atrás do programado, parada nele — só existia na tela. A folha agora chama <b>Cobrança por setor — apontamento e atraso</b>: em cada setor, primeiro a tabela "Parado aqui" (ordem, peça, produto, onde deveria estar, situação, setores atrás, dias parada, peças, tratativa), depois "Sem apontamento", que não mudou.</li>
+    <li>O veredito traz os dois números lado a lado: peças sem apontar e peças paradas. E um segundo ranking, <b>"Quem segura o atraso"</b>, na ordem do roteiro, como o de apontamento.</li>
+    <li>A mesma conta de "Onde travou", agrupada pelo setor onde a ordem <b>está</b>, não onde deveria estar — é lá que a conversa acontece. A folha de um setor (botão na tela do setor) leva só o atraso parado nele.</li>
+    <li>O rodapé explica a ordem que aparece nas duas tabelas: A CONFIRMAR e PARADO AQUI são o mesmo fato visto de dois lados — ou passou e falta o registro, ou não passou e falta produzir. A reunião decide qual.</li>
+  </ul>
   <h3>3.12.0 — 09/09/2026</h3>
   <ul>
     <li><b>As definições saíram do caminho.</b> Em Onde travou, Sem apontamento, Conjunto incompleto, Operação fechada e na tela de cada setor, a nota com o significado de cada coluna ficava aberta abaixo da lista e tomava metade da tela — em Conjunto incompleto, 20 definições num bloco só. Agora é uma linha fechada, <b>"Como ler esta tela"</b>, com os termos que ela cobre. Abre com um clique.</li>
@@ -1631,7 +1641,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='3.12.0';
+const VERSAO='3.13.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2665,8 +2675,8 @@ function atualizarAcoesTela(){
      faltasFiltradas, não a aba), o da direita é a tela da vez. Sem dizer isso
      no rótulo, clicar em "Folha da reunião" de dentro de "Onde travou" troca
      de assunto em silêncio. */
-  $('#btnImprimir').title='Documento da reunião, em retrato: uma folha por setor com o apontamento a cobrar '
-    +'e espaço para escrever a tratativa. É sempre este documento — não muda com a tela aberta.';
+  $('#btnImprimir').title='Documento da reunião, em retrato: uma folha por setor com o atraso (ordens paradas aqui) '
+    +'e o apontamento a cobrar, com espaço para escrever a tratativa. É sempre este documento — não muda com a tela aberta.';
 }
 $('#btnCsvTela').onclick=()=>{
   if(ABA==='setor'){ if(SETOR_SEL) csvDoSetor(SETOR_SEL); return; }
@@ -3507,10 +3517,32 @@ function montarImpresso(soSetor){
   const ordem=ordemRoteiro();
   const setores=agregarPorSetor(f).sort(porRoteiro(ordem));
 
+  /* ATRASO NA MESMA FOLHA. A cobrança tem duas faces e o líder responde pelas
+     duas: o que o setor deixou de REGISTRAR (sem apontamento) e o que ele está
+     SEGURANDO (ordem em aberto atrás do programado, parada aqui). É a mesma
+     conta de "Onde travou", agrupada pelo setor onde a ordem ESTÁ — não onde
+     deveria estar — porque é lá que a conversa acontece. */
+  const atr=travadasAtrasadas().filter(x=>!soSetor||x.pos.esta.op.descricao===soSetor);
+  const mAtr=new Map();
+  atr.forEach(x=>{
+    const k=x.pos.esta.op.descricao;
+    let r=mAtr.get(k); if(!r) mAtr.set(k,r={nome:k,itens:[],pecas:0,pior:null});
+    r.itens.push(x); r.pecas+=x.pos.pecas;
+    if(x.pos.diasParada!=null&&(!r.pior||x.pos.diasParada>r.pior.d)) r.pior={of:x.of.of,peca:x.of.descricao,d:x.pos.diasParada};
+  });
+  const rankAtr=[...mAtr.values()].sort(porRoteiro(ordem));
+  const pecasParadas=atr.reduce((s,x)=>s+x.pos.pecas,0);
+  const piorAtr=rankAtr.slice().sort((a,b)=>b.itens.length-a.itens.length||b.pecas-a.pecas)[0]||null;
+  /* Um bloco por setor com as DUAS tabelas, na ordem do roteiro. Setor que só
+     tem atraso, ou só apontamento, também entra — a folha é do setor. */
+  const blocosSetor=[...new Set([...setores.map(x=>x.nome),...mAtr.keys()])]
+    .map(nome=>({nome,ap:setores.find(x=>x.nome===nome)||null,at:mAtr.get(nome)||null}))
+    .sort(porRoteiro(ordem));
+
   const cab=`<div class="doc-topo">
       <div class="doc-marca">
         <img src="${LOGO}" alt="Patrimar Móveis">
-        <h1 class="doc-titulo">Apontamentos pendentes por setor</h1>
+        <h1 class="doc-titulo">Cobrança por setor — apontamento e atraso</h1>
         <p class="doc-sub">
           ${lotes.length?`Lote <b>${esc(lotes.join(', '))}</b>${desc.length?' — '+esc(desc.join(' · ')):''}<br>`:''}
           Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b><br>
@@ -3565,22 +3597,25 @@ function montarImpresso(soSetor){
     </div>`;
   })():'';
 
-  if(!f.length){
+  if(!f.length&&!atr.length){
     $('#impresso').innerHTML=cab+matrizHtml+loteHtml+
-      `<div class="doc-vazio">Nenhuma operação sem apontamento nos filtros selecionados.</div>`+rodape(ref);
+      `<div class="doc-vazio">Nenhum apontamento pendente e nenhuma ordem parada nos filtros selecionados.</div>`+rodape(ref);
     return;
   }
 
   /* A conclusão primeiro, em uma frase; a comparação (ranking) depois; o
      detalhe por setor por último, que é onde está a ação. */
   const maior=Math.max(1,...rank.map(r=>r.pecas));
+  const tituloAtr=atr.length?`${atr.length} ${atr.length===1?'ordem parada':'ordens paradas'} atrás do programado`:'';
   const veredito=`<div class="doc-veredito">
       <div>
-        <h2>${tituloVeredito(f,furos,rank)}</h2>
-        <p>${piorRank?`Comece por <b>${esc(piorRank.nome)}</b>, com ${nf(piorRank.pecas)} peças sem registro.`:''}
-        ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}</p>
+        <h2>${f.length?tituloVeredito(f,furos,rank)+(tituloAtr?` · ${tituloAtr}`:''):tituloAtr+', nenhum apontamento pendente'}</h2>
+        <p>${piorRank?`Apontamento: comece por <b>${esc(piorRank.nome)}</b>, com ${nf(piorRank.pecas)} peças sem registro.`:''}
+        ${furos.length?'Nos marcados como ESQUECIDO há prova de que a peça passou pelo setor.':''}
+        ${piorAtr?`Atraso: <b>${esc(piorAtr.nome)}</b> segura ${piorAtr.itens.length} ${piorAtr.itens.length===1?'ordem':'ordens'} e ${nf(piorAtr.pecas)} peças${piorAtr.pior?`, a mais antiga há ${piorAtr.pior.d} dia(s) útil(eis)`:''}.`:''}</p>
       </div>
       <div class="big">${nf(pecas)}<span>peças sem apontar</span></div>
+      <div class="big">${nf(pecasParadas)}<span>peças paradas</span></div>
     </div>`;
 
   const rankHtml=rank.length?`<div class="doc-rank">
@@ -3592,10 +3627,41 @@ function montarImpresso(soSetor){
         <span class="marca">${marcaSetor(r)}</span>
       </div>`).join('')}</div>
     </div>`:'';
+  const maiorAtr=Math.max(1,...rankAtr.map(r=>r.pecas));
+  const rankAtrHtml=rankAtr.length?`<div class="doc-rank">
+      <div class="tit">Quem segura o atraso — na ordem do roteiro</div>
+      <div class="grade">${rankAtr.map(r=>`<div class="l">
+        <span class="nome">${esc(r.nome)}</span>
+        <span class="barra"><i style="width:${Math.max(4,Math.round(r.pecas/maiorAtr*100))}%"></i></span>
+        <span class="qtd">${nf(r.pecas)}</span>
+        <span class="marca">${r.itens.length} ${r.itens.length===1?'parada':'paradas'}${r.pior?` · ${r.pior.d} d.ú.`:''}</span>
+      </div>`).join('')}</div>
+    </div>`:'';
 
-  const blocos=setores.map(st=>`<section class="doc-setor">
-      <h2>${esc(st.nome)}
-        <span>${st.itens.length} operação(ões) · ${nf(st.somaPecas)} pç${st.furos?` · ${st.furos} esquecido(s)`:''}</span></h2>
+  const situacaoTxt=pos=>pos.naoComecou?'nada apontado':pos.parcial?`parcial — ${nf(pos.esta.op.pronto||0)} de ${nf(pos.esta.op.qtd)}`:'aguardando esta fase';
+  const tabelaAtraso=at=>`<div class="sub">Parado aqui — atrás do programado</div>
+      <table>
+        <colgroup>
+          <col style="width:9%"><col style="width:20%"><col style="width:11%"><col style="width:15%">
+          <col style="width:14%"><col style="width:7%"><col style="width:6%"><col style="width:6%"><col style="width:12%">
+        </colgroup>
+        <thead><tr>
+          <th>Ordem</th><th>Peça</th><th>Produto</th><th>Deveria estar em</th>
+          <th>Situação</th><th class="n">Setores atrás</th><th class="n">Dias</th><th class="n">Peças</th><th>Tratativa</th>
+        </tr></thead>
+        <tbody>${at.itens.map(x=>`<tr>
+          <td class="cod">${esc(x.of.of)}${ehReposicao(x.of)?'<br><small>reposição</small>':''}</td>
+          <td>${esc(x.of.descricao)}</td>
+          <td class="cod">${esc(x.of.produto)}</td>
+          <td>${faseTxt(x.pos.deveria)}</td>
+          <td>${situacaoTxt(x.pos)}</td>
+          <td class="n">${x.pos.fasesAtras||'—'}</td>
+          <td class="n">${x.pos.diasParada!=null?`<b>${x.pos.diasParada} d.ú.</b>`:'—'}</td>
+          <td class="n"><b>${nf(x.pos.pecas)}</b></td>
+          <td><span class="doc-tratativa"></span></td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  const tabelaFaltas=st=>`<div class="sub">Sem apontamento</div>
       <table>
         <colgroup>
           <col style="width:13%"><col style="width:9%"><col style="width:12%"><col style="width:17%">
@@ -3615,7 +3681,14 @@ function montarImpresso(soSetor){
           <td>${esc(motivoFalta(x))}</td>
           <td><span class="doc-tratativa"></span></td>
         </tr>`).join('')}</tbody>
-      </table>
+      </table>`;
+  /* Atraso primeiro: é o que trava o setor da frente. O registro vem depois. */
+  const blocos=blocosSetor.map(b=>`<section class="doc-setor">
+      <h2>${esc(b.nome)}
+        <span>${[b.at?`${b.at.itens.length} ${b.at.itens.length===1?'ordem parada':'ordens paradas'} · ${nf(b.at.pecas)} pç`:'',
+                 b.ap?`${b.ap.itens.length} sem apontar · ${nf(b.ap.somaPecas)} pç${b.ap.furos?` · ${b.ap.furos} esquecido(s)`:''}`:''].filter(Boolean).join(' — ')}</span></h2>
+      ${b.at?tabelaAtraso(b.at):''}
+      ${b.ap?tabelaFaltas(b.ap):''}
     </section>`).join('');
 
   /* MENOS, MAS MELHOR.
@@ -3624,7 +3697,7 @@ function montarImpresso(soSetor){
      reforça — faz o leitor procurar qual das quatro é a certa, que é
      exatamente o oposto de entender em dois segundos. Ficam o veredito (a
      conclusão), o ranking (a comparação) e o detalhe por setor (a ação). */
-  $('#impresso').innerHTML=cab+veredito+matrizHtml+loteHtml+rankHtml+blocos+rodape(ref);
+  $('#impresso').innerHTML=cab+veredito+matrizHtml+loteHtml+rankAtrHtml+rankHtml+blocos+rodape(ref);
 }
 
 function rodape(ref){
@@ -3634,6 +3707,10 @@ function rodape(ref){
     <b>registro</b>, não a produção.</p>
     <p><b>A CONFIRMAR</b> — nada apontado e a previsão venceu, sem prova de que a peça passou.
     Pode ser falta de apontamento ou de produção; é o que esta reunião precisa esclarecer.</p>
+    <p><b>PARADO AQUI</b> — ordem em aberto atrás do programado cuja próxima fase a apontar é deste
+    setor. "Deveria estar em" é a última fase com previsão até a data de referência. A mesma ordem pode
+    aparecer também em A CONFIRMAR: é o mesmo fato visto de dois lados — ou a peça passou e falta o
+    registro, ou não passou e falta produzir. A reunião decide qual.</p>
     <p><b>Prazos em dias úteis</b> — segunda a sexta, descontando feriados nacionais e de São Paulo.</p>
     <p><b>Origem:</b> relatório "Situação do Lote de Produção" do ERP Industrial, lido pelo RitmoPatrimar.
     Vencimento medido contra ${br(ref)}. O relatório mostra ausência de <i>registro</i> no sistema,
