@@ -70,6 +70,11 @@ primeira cobrança errada.
 7. **Detalhe** (fechado por padrão) traz a evidência: Ordens, Operações, Achados.
 8. Antes de tirar conclusão, confira **Leitura dos arquivos** (ver seção 5).
 
+> **4.0.0:** a tela antiga de cada setor, a lista "Setores" da lateral, a matriz "Começou ×
+> terminou", a tela "Operação fechada" e as caixas de regras foram removidas por redundância.
+> O que só existia nelas (avanço por lote, prioridade invertida, folha do setor) está em
+> "Atraso por setor". As seções abaixo que descrevem esses blocos ficam como registro do critério.
+
 Cada tela termina em **"Como ler esta tela"**, fechada por padrão: o significado de cada coluna, um
 parágrafo por termo. Abrir uma vez vale para todas as telas e a escolha fica guardada no aparelho.
 
@@ -130,8 +135,7 @@ O campo pode ser alterado manualmente na tela.
 | `ROTEIRO_DIVERGENTE` | atenção | Mesmo produto com roteiros diferentes entre ordens (inclusive entre arquivos) | Cadastro inconsistente entre ordens do mesmo item |
 | `OF_ATRASO` | info | Ordem concluída depois da previsão | Histórico de aderência; não exige ação imediata |
 
-Todas as regras podem ser ligadas e desligadas na tela, em **Filtros e parâmetros → Regras de conferência ativas**.
-A escolha vale só para a sessão; para mudar o padrão, edite `CFG.regras` no `index.html`.
+Para ligar ou desligar uma regra, edite `CFG.regras` no `index.html` (as caixas na tela saíram na 4.0.0).
 
 ### Setores que ainda não apontam no ERP
 
@@ -403,7 +407,7 @@ curso. Cobrar o líder que está fazendo a coisa certa seria pior que não medir
 > No lote 025139, o conjunto INTENSE aparece como **junto** — as 3 ordens passaram CORTAR e FURAR e
 > pararam juntas na COLAR BORDA. SPACE e SLEEP aparecem como **quebrados**.
 
-### Avanço por lote, na tela de cada setor
+### Avanço por lote, em "Atraso por setor" (bloco fechado abaixo da lista)
 
 O líder do CORTAR abre a tela dele e lê:
 
@@ -425,7 +429,7 @@ setor, o cabeçalho vai para atenção: é o estado que dói.
 - Um setor que aparece duas vezes no roteiro (dois passes de COLAR BORDA) soma os dois passes.
 - O mesmo bloco sai na **folha impressa do setor** — é ela que chega no chão.
 
-### Operação fechada por lote
+### Operação fechada por lote (tela removida na 4.0.0; o CSV continua)
 
 A regra do PPCP virada em indicador: **o lote finaliza por completo cada operação antes de andar**,
 independente de haver peça ou setup diferente dentro dele.
@@ -446,7 +450,7 @@ independente de haver peça ou setup diferente dentro dele.
   contá-los tornaria 100% inatingível por construção. Ficam visíveis na faixa, fora do denominador.
 - `operacao-fechada.csv` acumula o indicador entre lotes no Power BI.
 
-### Prazo e prioridade invertida na tela do setor
+### Prazo e prioridade invertida (em "Atraso por setor")
 
 A tabela de avanço por lote mostra o **Prazo aqui** — a previsão mais antiga ainda não apontada
 daquele lote naquele setor — e ordena **vencido primeiro**, do prazo mais antigo para o mais novo.
@@ -514,7 +518,7 @@ sequência absoluta joga `EMBALAR` para o começo (a ordem do acabado só tem el
 relativa joga `USINAR` para depois de `COLAR BORDA` (nas ordens `CORTAR > FURAR > USINAR` ela vale
 3/3). Empate vai para a posição relativa, que é o que separa `PINTAR UV` de `EMBALAR`.
 
-### Começou × terminou — a matriz de frentes
+### Começou × terminou — a matriz de frentes (removida na 4.0.0)
 
 Uma linha por setor, uma coluna por produto, o avanço em peça-fase em cada cruzamento. É o
 indicador de **"começa tudo e não termina nada"**.
@@ -631,8 +635,7 @@ dizer que estava filtrada, faz o problema parecer menor do que é.
 ## 6.1 Exportação
 
 **Exportar CSV**, na barra da tela, baixa o CSV da tela aberta; o rótulo do botão declara o grão,
-porque três deles **não** são a tela (ver abaixo). A lista completa dos sete continua no rodapé do
-menu, em **Todos os CSVs**, para quem alimenta o Power BI de uma vez só.
+porque três deles **não** são a tela (ver abaixo). **Exportar tudo**, no rodapé do menu, baixa os sete de uma vez para quem alimenta o Power BI.
 
 | Botão | Arquivo | Conteúdo |
 |---|---|---|
