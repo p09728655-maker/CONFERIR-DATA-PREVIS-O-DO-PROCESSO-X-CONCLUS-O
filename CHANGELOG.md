@@ -3,6 +3,33 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.13.0] — 2026-09-09
+
+### Adicionado
+
+- **A folha da reunião cobra o atraso, não só o apontamento.** Ela listava o que cada setor
+  deixou de **registrar** (ESQUECIDO / A CONFIRMAR). O que o setor está **segurando** — ordem em
+  aberto atrás do programado, parada nele — só existia na tela "Onde travou" e na tela do setor;
+  não chegava ao papel, e é no papel que a cobrança acontece.
+
+  A folha agora chama **Cobrança por setor — apontamento e atraso**. Em cada setor, na ordem do
+  roteiro, duas tabelas: **"Parado aqui — atrás do programado"** (ordem, peça, produto, onde
+  deveria estar, situação, setores atrás, dias parada, peças, tratativa) e **"Sem apontamento"**,
+  que não mudou. Atraso primeiro: é o que trava o setor da frente.
+
+- **Dois números no veredito**, lado a lado: peças sem apontar e peças paradas. E um segundo
+  ranking, **"Quem segura o atraso"**, na ordem do roteiro como o de apontamento — com o setor,
+  as peças paradas, quantas ordens e há quantos dias úteis a mais antiga.
+
+- **Mesma conta de "Onde travou"**, agrupada pelo setor onde a ordem **está**, não onde deveria
+  estar — é lá que a conversa acontece. A folha de um setor (botão na tela do setor) leva só o
+  atraso parado nele; a folha geral leva todos. Setor que só tem atraso, ou só apontamento,
+  também entra.
+
+- **O rodapé explica a ordem que aparece nas duas tabelas.** A CONFIRMAR e PARADO AQUI podem ser
+  a mesma ordem: é o mesmo fato visto de dois lados — ou a peça passou e falta o registro, ou
+  não passou e falta produzir. A reunião decide qual, e a tratativa é escrita na linha.
+
 ## [3.12.0] — 2026-09-09
 
 ### Alterado

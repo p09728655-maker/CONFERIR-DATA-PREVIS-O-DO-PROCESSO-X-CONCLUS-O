@@ -547,13 +547,20 @@ lista** e **Exportar CSV**. Ficam ali, e não no menu, porque duas delas seguem 
 na frente do usuário — e porque o menu é para navegar.
 
 **Folha da reunião** gera uma folha A4 agrupada **por setor** — cada líder responde pelo
-processo dele. Cada linha traz a situação, a ordem, o produto, a previsão, as peças, o motivo, e
-uma **coluna em branco para a tratativa**: o que a reunião decidir é escrito ali, e a folha vira o
+processo dele. É a **cobrança de apontamento e atraso**: em cada setor, primeiro a tabela
+**"Parado aqui"** (ordem em aberto atrás do programado cuja próxima fase é deste setor: ordem,
+peça, produto, onde deveria estar, situação, setores atrás, dias parada, peças), depois **"Sem
+apontamento"** (situação, ordem, produto, descrição, previsão, peças, motivo). As duas têm
+**coluna em branco para a tratativa**: o que a reunião decidir é escrito ali, e a folha vira o
 registro em vez de uma lista que se perde. Tem campo de assinatura do PPCP, do responsável pelo
 setor e a data.
 
-No topo vem o **quadro de responsabilidade por setor**: quem deixou de apontar, quantas
-operações e quantas peças, do pior para o menor. É a resposta consolidada antes do detalhe.
+A mesma ordem pode aparecer nas duas tabelas (A CONFIRMAR e PARADO AQUI): é o mesmo fato visto de
+dois lados — ou passou e falta o registro, ou não passou e falta produzir. A reunião decide qual.
+
+No topo vem o veredito com os dois números (peças sem apontar, peças paradas) e dois rankings na
+ordem do roteiro: **quem segura o atraso** e **onde falta apontamento**. É a resposta consolidada
+antes do detalhe.
 
 Feita para impressora preto e branco: a situação é dita por palavra, e o que é certeza
 (`ESQUECIDO`) leva tarja preta que sobrevive à fotocópia.
