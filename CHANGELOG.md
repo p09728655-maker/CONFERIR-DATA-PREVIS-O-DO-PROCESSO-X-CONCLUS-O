@@ -3,6 +3,16 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [3.15.2] — 2026-09-09
+
+### Corrigido
+
+- **"Imprimir a lista" de "Atraso por setor" cabe em menos folhas.** 21 linhas saíam em 3 páginas:
+  os cartões de "quem segura" ocupavam meia folha em duas colunas, a peça tomava duas linhas e a
+  situação repetia o prefixo "roteiro da peça não terminou", que na tela orienta e no papel só
+  alonga. No papel os cartões vão em três colunas compactas, o código da peça volta para a mesma
+  linha da descrição (em negrito, separado por espaço) e o prefixo some. Na tela nada muda.
+
 ## [3.15.1] — 2026-09-09
 
 ### Corrigido
