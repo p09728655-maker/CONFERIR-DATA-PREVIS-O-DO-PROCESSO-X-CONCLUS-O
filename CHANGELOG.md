@@ -3,6 +3,26 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.5.0] — 2026-09-10
+
+### Adicionado
+
+- **"Limpar filtros"** na barra. Aparece só quando há o que limpar — lote, produto, setor, tipo,
+  reposição, severidade, EMBALAR desmarcado ou a situação da tela Ordens — e volta tudo ao padrão
+  num clique. Data de referência e setores que não apontam são parâmetros, não filtro, e ficam.
+
+- **Situação como chip na tela Ordens**: todas, vencida, em aberto, concluída, reposição,
+  inconsistente, com a contagem em cada chip. Mesma regra da coluna Situação (`prazoOrdem`), agora
+  em `situacaoLinhaOrdem`. O "Exportar CSV" da tela leva o que está na tela, com o chip aplicado;
+  "Exportar tudo" continua levando o recorte inteiro da barra.
+
+- **Ordenar pela coluna**, clicando (ou Enter) no cabeçalho de qualquer tabela do painel. Ordena
+  as linhas já desenhadas: não refaz conta, não muda filtro, e a folha impressa sai na mesma ordem
+  da tela. Número em pt-BR, data dd/mm/aaaa e texto têm a régua certa; célula vazia ou "—" vai
+  sempre para o fim; coluna numérica começa pelo maior. Na coluna de desvio, "restante" conta como
+  negativo, para o maior atraso vir primeiro. A lista de "Atraso por setor" fica de fora porque é
+  agrupada por setor e reordenar quebraria os grupos.
+
 ## [4.4.0] — 2026-09-10
 
 ### Adicionado
