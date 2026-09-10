@@ -3,6 +3,46 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.2.0] — 2026-09-10
+
+### Alterado
+
+- **Dashboard PPCP com hierarquia visual.** Nenhum número, regra ou origem de dado mudou —
+  `dadosDashboard` é a mesma função. O que mudou é o peso de cada coisa na tela, em quatro níveis:
+
+  | Nível | O que | Como aparece |
+  |---|---|---|
+  | 1 — problema | ordens vencidas, saldo de peças | cartões grandes, cor de status, rótulo em cima |
+  | 2 — avanço | peças prontas, avanço operacional | cartões grandes com barra de progresso |
+  | 3 — contexto | ordens, concluídas, % conclusão, planejadas; status; prazo | cartões menores; status e prazo lado a lado |
+  | 4 — detalhe | peças por setor, alertas | blocos no fim |
+
+  Oito cartões de peso igual obrigavam o leitor a decidir qual importava. Continuam sendo os
+  mesmos oito; "Operações" passa a ler como **Avanço operacional: 71% — 636 concluídas de 900**,
+  e "Peças prontas" traz a relação **planejadas → prontas → saldo** com uma barra, sem indicador
+  novo.
+
+- **Alerta do topo em quatro linhas**, em ordem de importância: vencidas (manchete), peças
+  prontas com percentual, maior concentração (setor e saldo), onde travou. As duas últimas são
+  botões que abrem "Atraso por setor" no setor e "Onde travou".
+
+- **Status das ordens**: legenda em três colunas alinhadas (situação, quantidade, percentual), e a
+  barra ficou mais alta. **Prazo**: a unidade vai escrita ao lado do número — "1,4 dias úteis", não
+  "1,4" — e o subtítulo diz que o desvio é em dias úteis (D.U.).
+
+- **Peças por setor**: cada linha mostra saldo **e** % feito (apontado sobre previsto no setor); o
+  maior saldo tem a linha inteira marcada e a etiqueta "maior concentração" sob o nome. A ordem
+  continua a do roteiro, de propósito (ver 3.6.1): ranking por tamanho mente sobre causa numa
+  linha sequencial.
+
+- **Alertas** com ponto de cor ao lado do rótulo, sempre com a palavra. A tela "Operação fechada"
+  saiu na 4.0.0 (o indicador vive no Power BI) e por isso não entra nos alertas: não há contador
+  nem tela para abrir.
+
+- **Responsivo para os quatro lugares de uso**: em TV de gestão à vista (≥ 1700px) os números
+  principais crescem; no notebook os quatro cartões de decisão ficam numa linha; no tablet vão a
+  dois por linha (número grande não quebra); no celular a um por linha.
+
 ## [4.1.0] — 2026-09-09
 
 ### Adicionado

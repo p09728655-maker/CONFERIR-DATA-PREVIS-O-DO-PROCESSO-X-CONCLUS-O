@@ -245,48 +245,140 @@ td.peca .cod{display:block;margin-top:2px;font-family:var(--mono);font-variant-n
 }
 
 /* ---- Dashboard PPCP: números grandes, pouco texto. Cada cartão é um botão
-   que abre a tela que explica o número. Cor de status sempre com rótulo. ---- */
+   que abre a tela que explica o número. Cor de status sempre com rótulo.
+
+   HIERARQUIA EM QUATRO NÍVEIS, e o peso visual segue o nível:
+     1. problema  — vencidas, saldo, onde travou (veredito + cartões grandes)
+     2. avanço    — peças prontas, avanço operacional (cartões grandes)
+     3. contexto  — ordens, concluídas, % conclusão, planejadas (cartões menores),
+                    status e prazo
+     4. detalhe   — peças por setor e alertas
+   Oito cartões iguais obrigavam o leitor a decidir qual importava. ---- */
 .dash{padding:var(--lg) var(--xl);display:flex;flex-direction:column;gap:var(--lg)}
+.dash .nivel{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);
+  margin:0 0 calc(var(--sm)*-1)}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--md)}
-@media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)} .kpis.decisao{grid-template-columns:1fr}}
 .kpi{display:flex;flex-direction:column;gap:2px;padding:var(--md) var(--lg);min-height:88px;text-align:left;
   background:var(--papel);border:1px solid var(--borda);border-left:4px solid var(--borda-forte);border-radius:var(--r-md);
   font:inherit;color:var(--texto);cursor:pointer;transition:box-shadow var(--rapida)}
 .kpi:hover{box-shadow:var(--elev-media)}
 .kpi[data-ir=""]{cursor:default}
 .kpi .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+/* Unidade colada ao número, em corpo menor: "1,4" sozinho não diz se é dia,
+   hora ou peça. "dias úteis" escrito resolve sem tabela de legenda. */
+.kpi .v .un{display:block;font-family:var(--fonte);font-size:12px;font-weight:600;letter-spacing:0;line-height:1.3;color:var(--texto-fraco)}
 .kpi .r{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-medio)}
 .kpi .s{font-size:12px;color:var(--texto-fraco)}
 .kpi.critico{border-left-color:var(--critico)} .kpi.critico .v{color:var(--critico)}
 .kpi.atencao{border-left-color:var(--atencao)} .kpi.atencao .v{color:var(--atencao)}
 .kpi.ok{border-left-color:var(--ok)} .kpi.ok .v{color:var(--ok)}
+/* Cartões de decisão (níveis 1 e 2): número maior, mais respiro, rótulo em
+   cima para o olho ler "o quê" antes de "quanto". */
+.kpis.decisao .kpi{min-height:128px;padding:var(--lg) var(--xl);gap:var(--xs)}
+.kpis.decisao .kpi .r{order:-1;font-size:12px;color:var(--texto-medio)}
+.kpis.decisao .kpi .v{font-size:44px;white-space:nowrap}
+/* Número grande não quebra: entre 641 e 1100px os quatro cartões viram
+   dois por linha; abaixo disso, um por linha e corpo menor. */
+@media (max-width:1100px){.kpis.decisao{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.kpis.decisao .kpi{min-height:0} .kpis.decisao .kpi .v{font-size:36px}}
+.kpis.decisao .kpi .s{font-size:13px;color:var(--texto-medio)}
+/* Barra fina de progresso dentro do cartão: mostra a relação planejado →
+   pronto → saldo sem um segundo indicador. Cheio é pronto, vazio é saldo. */
+.kpi .prog{display:block;width:100%;height:6px;margin-top:var(--sm);border-radius:3px;background:var(--fundo);overflow:hidden}
+.kpi .prog i{display:block;height:100%;border-radius:3px;background:var(--texto-medio)}
+.kpi.ok .prog i{background:var(--ok)}
+.kpi .fluxo{display:flex;flex-wrap:wrap;gap:var(--xs) var(--sm);margin-top:var(--xs);font-size:12px;color:var(--texto-fraco)}
+.kpi .fluxo b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;color:var(--texto-medio)}
+.kpi .fluxo .seta{color:var(--borda-forte)}
+/* Cartões de contexto (nível 3): menores, sem cor de status — são referência. */
+.kpis.contexto .kpi{min-height:76px;padding:var(--sm) var(--lg)}
+.kpis.contexto .kpi .v{font-size:24px}
 .kpis.mini .kpi{min-height:72px} .kpis.mini .kpi .v{font-size:24px}
 .kpis.alertas{grid-template-columns:repeat(4,1fr)}
 @media (max-width:900px){.kpis.alertas{grid-template-columns:repeat(2,1fr)}}
+/* Alerta: um ponto de cor ao lado do rótulo, com a palavra. Ponto sem palavra
+   não informa; palavra sem ponto não se acha de longe. */
+.kpis.alertas .kpi .r{display:flex;align-items:center;gap:var(--sm)}
+.kpis.alertas .kpi .r::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--borda-forte);flex-shrink:0}
+.kpis.alertas .kpi.critico .r::before{background:var(--critico)}
+.kpis.alertas .kpi.atencao .r::before{background:var(--atencao)}
+.kpis.alertas .kpi.ok .r::before{background:var(--ok)}
+.kpis.alertas .kpi .v{font-size:36px}
 .dashBloco{background:var(--papel);border:1px solid var(--borda);border-radius:var(--r-lg);padding:var(--lg) var(--xl)}
 .dashBloco .tit{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);margin-bottom:var(--md)}
 .dashBloco .tit small{font-weight:400;letter-spacing:0;text-transform:none;font-size:12px}
 .dashBloco .linha{margin-top:var(--md);font-size:13px;color:var(--texto-medio)}
-.statusBar{display:flex;gap:2px;height:22px;border-radius:4px;overflow:hidden;background:var(--fundo)}
+/* Dois blocos lado a lado quando há largura: status e prazo são a mesma
+   pergunta ("como estão as ordens?") vista de dois ângulos. */
+.dash .par{display:grid;grid-template-columns:1fr 1fr;gap:var(--lg)}
+.dash .par .kpis.mini{grid-template-columns:repeat(2,1fr)}
+@media (max-width:1100px){.dash .par{grid-template-columns:1fr}}
+.statusBar{display:flex;gap:2px;height:28px;border-radius:4px;overflow:hidden;background:var(--fundo)}
 .statusBar i,.statusLeg i{display:block;background:var(--neutro)}
 .statusBar i.ok,.statusLeg i.ok{background:var(--ok)} .statusBar i.critico,.statusLeg i.critico{background:var(--critico)}
 .statusBar i.neutro,.statusLeg i.neutro{background:var(--neutro)} .statusBar i.neutro2,.statusLeg i.neutro2{background:var(--borda-forte)}
 .statusBar i.critico2,.statusLeg i.critico2{background:var(--bordeaux)}
-.statusLeg{display:flex;flex-wrap:wrap;gap:var(--sm) var(--lg);margin-top:var(--md)}
-.statusLeg .leg{display:inline-flex;align-items:center;gap:var(--sm);padding:4px 0;background:none;border:0;font:inherit;font-size:13px;color:var(--texto-medio);cursor:pointer}
-.statusLeg .leg i{width:10px;height:10px;border-radius:2px}
-.statusLeg .leg b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
-.statusLeg .leg small{color:var(--texto-fraco)}
+/* Legenda em linhas alinhadas: rótulo, quantidade, percentual — três colunas
+   que se leem de cima a baixo sem procurar o número dentro da frase. */
+.statusLeg{display:grid;grid-template-columns:auto max-content max-content;gap:var(--xs) var(--lg);margin-top:var(--md);align-items:center}
+.statusLeg .leg{display:grid;grid-template-columns:subgrid;grid-column:1/-1;align-items:center;padding:4px 0;background:none;border:0;
+  border-radius:var(--r-sm);font:inherit;font-size:14px;color:var(--texto-medio);cursor:pointer;text-align:left}
+.statusLeg .leg:hover{background:var(--fundo)}
+.statusLeg .leg .rot{display:inline-flex;align-items:center;gap:var(--sm)}
+.statusLeg .leg i{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+.statusLeg .leg b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;text-align:right}
+.statusLeg .leg small{color:var(--texto-fraco);font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;text-align:right;min-width:4ch}
 .ranking.semBorda{margin:0;padding:0;border:0;background:transparent}
 /* Linha clicável com caixa própria: `display:contents` (o padrão de .l) tira
    a caixa do botão e o toque no tablet fica sem alvo. Subgrid mantém as
    colunas alinhadas com as outras linhas. */
 .ranking button.l{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:center;
-  background:none;border:0;border-radius:var(--r-sm);font:inherit;color:inherit;text-align:left;cursor:pointer;padding:0;min-height:36px}
+  background:none;border:0;border-radius:var(--r-sm);font:inherit;color:inherit;text-align:left;cursor:pointer;padding:0;min-height:40px}
 .ranking button.l:hover{background:var(--fundo)}
 .ranking button.l:hover .nome{color:var(--vermelho)}
 .ranking .barra i.sal{background:var(--texto-medio)}
+/* Setores no dashboard: barra mais alta e o maior saldo com a linha inteira
+   marcada, não só a barra — de longe é a linha que se vê. */
+.ranking.setoresDash .grade{grid-template-columns:minmax(150px,280px) 1fr 100px 110px}
+.ranking.setoresDash .nome{display:flex;flex-direction:column;line-height:1.3;white-space:normal}
+.ranking.setoresDash .nome .tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--critico)}
+.ranking.setoresDash .barra{height:24px}
+.ranking.setoresDash .qtd{font-size:16px}
+.ranking.setoresDash button.l.top{background:var(--critico-fundo)}
+.ranking.setoresDash button.l.top .nome{color:var(--critico)}
+.ranking.setoresDash .marca{min-width:0;line-height:1.3}
+.ranking.setoresDash .marca .pct{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;letter-spacing:0;text-transform:none;color:var(--texto)}
+.ranking.setoresDash .marca .pct small{font-family:var(--fonte);font-size:11px;color:var(--texto-fraco);margin-left:3px}
+.ranking.setoresDash .marca.esq .pct{color:var(--critico)}
+@media (max-width:640px){.ranking.setoresDash .grade{grid-template-columns:1fr auto auto}
+  .ranking.setoresDash .nome{grid-column:1/-1} .ranking.setoresDash .barra{grid-column:1/-1}
+  .ranking.setoresDash .qtd{grid-column:2} .ranking.setoresDash .marca{grid-column:3}}
 @media (pointer:coarse){.kpi{min-height:96px}}
+/* TV DE GESTÃO À VISTA: em tela larga os números principais crescem. O que
+   se lê a três metros é o veredito e os cartões de decisão, não a nota. */
+@media (min-width:1700px){
+  .kpis.decisao .kpi .v{font-size:56px} .kpis.decisao .kpi .s{font-size:15px}
+  .kpis.contexto .kpi .v{font-size:30px}
+  .kpis.alertas .kpi .v{font-size:44px}
+  .veredito h2{font-size:32px} .veredito .lins{font-size:17px} .veredito .big{font-size:56px}
+}
+/* VEREDITO DO DASHBOARD: quatro linhas em ordem de importância. A manchete é
+   o problema (vencidas); abaixo, em corpo menor e rotuladas, o avanço, a
+   concentração e onde começar. Linha com tela própria é botão. */
+.veredito.dashV{align-items:flex-start}
+.veredito.dashV .ico{margin-top:2px}
+.veredito.dashV h2{font-size:28px}
+.veredito .lins{list-style:none;margin:var(--sm) 0 0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:15px;color:var(--texto-medio)}
+.veredito .lins li{display:flex;gap:var(--sm) var(--md);align-items:baseline;flex-wrap:wrap}
+.veredito .lins .k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);min-width:160px}
+.veredito .lins b{color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700}
+.veredito .lins .pc{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;color:var(--texto)}
+.veredito .lins button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;
+  text-decoration:underline dotted;text-underline-offset:3px;text-decoration-color:var(--borda-forte)}
+.veredito .lins button:hover{color:var(--vermelho);text-decoration-color:var(--vermelho)}
+.veredito .lins button:hover b,.veredito .lins button:hover .pc{color:var(--vermelho)}
+@media (max-width:640px){.veredito .lins .k{min-width:0;flex-basis:100%}}
 
 /* ================================================== VEREDITO E RANKING
    A tela dizia quatro números de peso igual e deixava a conclusão por conta
@@ -800,6 +892,14 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.2.0 — 10/09/2026</h3>
+  <ul>
+    <li><b>Dashboard PPCP com hierarquia.</b> Os mesmos números, a mesma regra, os mesmos oito cartões — mas em quatro níveis de peso: primeiro o problema (<b>ordens vencidas</b>, <b>saldo de peças</b>), depois o avanço (<b>peças prontas</b> com a relação planejadas → prontas → saldo, e <b>avanço operacional</b> em percentual: concluídas de total), depois o contexto (ordens, concluídas, % conclusão, planejadas, menores), e por fim o detalhe (setores e alertas). Oito cartões iguais obrigavam o leitor a decidir qual importava.</li>
+    <li>O alerta do topo lê em quatro linhas, em ordem: vencidas, peças prontas, maior concentração, onde travou. As duas últimas são botões e abrem a tela correspondente.</li>
+    <li>Status das ordens: a legenda virou três colunas alinhadas (situação, quantidade, percentual). Prazo: "1,4" passa a sair como <b>1,4 dias úteis</b>, a unidade escrita ao lado do número. Status e prazo ficam lado a lado em tela larga.</li>
+    <li>Peças por setor: cada setor mostra saldo <b>e</b> % feito; o maior saldo tem a linha inteira marcada. A ordem continua a do roteiro (v3.6.1): ranking por tamanho mente sobre causa numa linha sequencial.</li>
+    <li>Alertas com ponto de cor ao lado do rótulo. Em TV de gestão à vista (a partir de 1700px) os números principais crescem; no tablet os cartões de decisão vão a dois por linha e no celular a um.</li>
+  </ul>
   <h3>4.1.0 — 09/09/2026</h3>
   <ul>
     <li><b>Tela "Dashboard PPCP"</b>, no alto do menu: a visão gerencial sobre o que as outras telas já calculam. Oito cartões (ordens, vencidas, concluídas, % conclusão, peças planejadas, prontas, saldo, operações), status das ordens numa barra só, prazo (dentro do prazo, vencidas, atraso médio e maior atraso em dias úteis), peças a fazer por setor na ordem do roteiro e os quatro alertas do menu em cartões. Nenhum número nasce aqui: é a regra da tela Ordens, os contadores do menu e as operações do recorte. Cada cartão abre a tela que explica o número; clicar num setor abre "Atraso por setor" nele. Atalho <code>/?tela=dashboard</code>.</li>
@@ -1698,7 +1798,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.1.0';
+const VERSAO='4.2.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3041,23 +3141,34 @@ function desenharDashboard(p,ref){
   const d=dadosDashboard();
   if(!d.ordens){ p.innerHTML='<div class="vazio">Nenhuma ordem com os filtros atuais.</div>'; return; }
   const pct=v=>Math.round(v*100);
-  const tile=(v,rot,sub,cls,t,alvo)=>`<button type="button" class="kpi ${cls||''}" data-ir="${alvo||''}" ${t?`title="${esc(t)}"`:''}>
-      <span class="v">${v}</span><span class="r">${rot}</span>${sub?`<span class="s">${sub}</span>`:''}</button>`;
+  /* `extra` é HTML opcional abaixo do subtítulo (barra de progresso, fluxo). */
+  const tile=(v,rot,sub,cls,t,alvo,extra)=>`<button type="button" class="kpi ${cls||''}" data-ir="${alvo||''}" ${t?`title="${esc(t)}"`:''}>
+      <span class="v">${v}</span><span class="r">${rot}</span>${sub?`<span class="s">${sub}</span>`:''}${extra||''}</button>`;
   const pctConcl=d.ordens?d.st.concluida/d.ordens:0;
+  const pctPecas=d.pecas?d.prontas/d.pecas:0;
+  const pctOps=d.ops?d.opsFeitas/d.ops:0;
+  const prog=(v,cls)=>`<span class="prog ${cls||''}" role="img" aria-label="${pct(v)}%"><i style="width:${Math.min(100,Math.max(0,pct(v)))}%"></i></span>`;
 
-  const kpis=`<div class="kpis">
-    ${tile(nf(d.ordens),'Ordens','no recorte','', 'Abrir a lista de ordens','ord')}
+  /* NÍVEIS 1 E 2 — decisão: vencidas, saldo, prontas, avanço operacional.
+     São os mesmos oito cartões de sempre; só o peso mudou. */
+  const decisao=`<div class="kpis decisao">
     ${tile(nf(d.st.vencida),'Ordens vencidas','em aberto, prazo vencido',d.st.vencida?'critico':'ok','Abrir "Onde travou" — onde cada uma está parada','trav')}
+    ${tile(nf(d.saldo),'Saldo de peças',`ainda por produzir · ${pct(1-pctPecas)}% do planejado`,d.saldo?'atencao':'ok','Abrir a lista de ordens','ord')}
+    ${tile(nf(d.prontas),'Peças prontas',`${pct(pctPecas)}% do planejado`,pctPecas>=1?'ok':'','Abrir a lista de ordens','ord',
+      prog(pctPecas)+`<span class="fluxo"><span><b>${nf(d.pecas)}</b> planejadas</span><span class="seta">→</span><span><b>${nf(d.prontas)}</b> prontas</span><span class="seta">→</span><span><b>${nf(d.saldo)}</b> saldo</span></span>`)}
+    ${tile(pct(pctOps)+'%','Avanço operacional',`${nf(d.opsFeitas)} concluídas de ${nf(d.ops)} operações`,pctOps>=1?'ok':'','Abrir a lista de operações','op',prog(pctOps))}
+  </div>`;
+
+  /* NÍVEL 3 — contexto: os quatro cartões de referência, menores. */
+  const contexto=`<div class="kpis contexto">
+    ${tile(nf(d.ordens),'Ordens','no recorte','', 'Abrir a lista de ordens','ord')}
     ${tile(nf(d.st.concluida),'Ordens concluídas',`${d.conclAtrasada?`${d.conclAtrasada} depois do prazo`:'todas no prazo'}`,'', 'Abrir a lista de ordens','ord')}
     ${tile(pct(pctConcl)+'%','Conclusão','ordens concluídas sobre o total',pctConcl>=1?'ok':'', null,'ord')}
     ${tile(nf(d.pecas),'Peças planejadas','soma das ordens','', null,'ord')}
-    ${tile(nf(d.prontas),'Peças prontas',`${d.pecas?pct(d.prontas/d.pecas):0}% do planejado`,'', null,'ord')}
-    ${tile(nf(d.saldo),'Saldo de peças','ainda por produzir',d.saldo?'atencao':'ok', null,'ord')}
-    ${tile(nf(d.ops),'Operações',`${nf(d.opsFeitas)} concluídas · ${pct(d.ops?d.opsFeitas/d.ops:0)}%`,'', 'Abrir a lista de operações','op')}
   </div>`;
 
   /* STATUS: uma barra só, segmentada, com a legenda em número. A cor nunca
-     informa sozinha — cada segmento tem rótulo e contagem. */
+     informa sozinha — cada segmento tem rótulo, contagem e percentual. */
   const segs=[
     {k:'concluida',rot:'Concluídas',cls:'ok',ir:'ord'},
     {k:'vencida',rot:'Vencidas',cls:'critico',ir:'trav'},
@@ -3068,40 +3179,48 @@ function desenharDashboard(p,ref){
   const status=`<div class="dashBloco">
     <div class="tit">Status das ordens <small>mesma regra da tela Ordens · prazo pela última previsão do processo, em dias úteis</small></div>
     <div class="statusBar" role="img" aria-label="${segs.map(s=>`${s.rot} ${d.st[s.k]}`).join(', ')}">
-      ${segs.map(s=>`<i class="${s.cls}" style="flex:${d.st[s.k]}" title="${s.rot}: ${d.st[s.k]}"></i>`).join('')}</div>
-    <div class="statusLeg">${segs.map(s=>`<button type="button" class="leg" data-ir="${s.ir}"><i class="${s.cls}"></i>${s.rot} <b>${nf(d.st[s.k])}</b> <small>${pct(d.st[s.k]/d.ordens)}%</small></button>`).join('')}</div>
+      ${segs.map(s=>`<i class="${s.cls}" style="flex:${d.st[s.k]}" title="${s.rot}: ${d.st[s.k]} (${pct(d.st[s.k]/d.ordens)}%)"></i>`).join('')}</div>
+    <div class="statusLeg">${segs.map(s=>`<button type="button" class="leg" data-ir="${s.ir}"><span class="rot"><i class="${s.cls}"></i>${s.rot}</span><b>${nf(d.st[s.k])}</b><small>${pct(d.st[s.k]/d.ordens)}%</small></button>`).join('')}</div>
   </div>`;
 
   /* PRAZO: só ordens em aberto entram em "no prazo" e "vencidas"; o atraso é
-     medido contra a data de referência, em dias úteis. */
+     medido contra a data de referência, em dias úteis — e a unidade vai
+     escrita ao lado do número. */
+  const du=v=>`${v}<small class="un">dias úteis</small>`;
   const prazo=`<div class="dashBloco">
-    <div class="tit">Prazo <small>ordens em aberto, contra ${br(ref)}</small></div>
+    <div class="tit">Prazo <small>ordens em aberto, contra ${br(ref)} · desvio em dias úteis (D.U.)</small></div>
     <div class="kpis mini">
       ${tile(nf(d.noPrazo),'Dentro do prazo','em aberto, prazo ainda não vencido',d.noPrazo?'ok':'', null,'ord')}
       ${tile(nf(d.st.vencida),'Vencidas','em aberto, prazo vencido',d.st.vencida?'critico':'ok', null,'trav')}
-      ${tile(d.atrasoMedio==null?'—':nf(d.atrasoMedio,1),'Atraso médio','dias úteis, só as vencidas',d.atrasoMedio?'critico':'', null,'trav')}
-      ${tile(d.maiorAtraso==null?'—':nf(d.maiorAtraso),'Maior atraso','dias úteis',d.maiorAtraso?'critico':'', null,'trav')}
+      ${tile(d.atrasoMedio==null?'—':du(nf(d.atrasoMedio,1)),'Atraso médio','só as vencidas',d.atrasoMedio?'critico':'', null,'trav')}
+      ${tile(d.maiorAtraso==null?'—':du(nf(d.maiorAtraso)),'Maior atraso','a ordem mais atrasada',d.maiorAtraso?'critico':'', null,'trav')}
     </div>
     <div class="linha"><b>Concluídas:</b> ${nf(d.conclNoPrazo)} no prazo · ${nf(d.conclAtrasada)} depois do prazo${d.st.inconsistente?` · ${d.st.inconsistente} inconsistente(s) fora da conta`:''}${d.st.reposicao?` · ${d.st.reposicao} reposição fora da aderência`:''}.</div>
   </div>`;
 
-  /* SETORES: uma barra por setor, na ordem do roteiro, com o saldo a produzir.
-     Uma cor só — é magnitude, não status. O maior recebe o rótulo. */
+  /* SETORES: uma barra por setor, na ordem do roteiro, com o saldo a produzir
+     e o % feito. Uma cor só — é magnitude, não status. O maior saldo recebe
+     a linha marcada. A ordem é a do roteiro de propósito (v3.6.1): ranking
+     por tamanho mente sobre causa numa linha sequencial. */
   const maior=Math.max(1,...d.setores.map(s=>s.saldo));
   const top=d.setores.filter(s=>!setorCego(s.nome)).sort((a,b)=>b.saldo-a.saldo)[0];
   const setores=`<div class="dashBloco">
     <div class="tit">Peças por setor <small>saldo ainda não apontado em cada operação · na ordem do roteiro · clique abre "Atraso por setor"</small></div>
-    <div class="ranking semBorda"><div class="grade">
-      ${d.setores.map(s=>`<button type="button" class="l" data-setor="${esc(s.nome)}" title="${setorCego(s.nome)?'Setor que ainda não aponta no ERP':`${nf(s.saldo)} de ${nf(s.plan)} peças a fazer em ${s.ops} operação(ões)`}">
-        <span class="nome">${esc(s.nome)}</span>
-        <span class="barra" role="img" aria-label="${nf(s.saldo)} peças a fazer"><i class="${top&&s===top?'esq':'sal'}" style="width:${setorCego(s.nome)?0:Math.max(s.saldo?3:0,Math.round(s.saldo/maior*100))}%"></i></span>
-        <span class="qtd">${setorCego(s.nome)?'—':nf(s.saldo)+' pç'}</span>
-        <span class="marca ${top&&s===top?'esq':'pend'}">${setorCego(s.nome)?'não aponta':s===top?'maior concentração':s.saldo?`${pct(s.plan?s.feito/s.plan:0)}% feito`:'fechado'}</span>
-      </button>`).join('')}
+    <div class="ranking semBorda setoresDash"><div class="grade">
+      ${d.setores.map(s=>{
+        const cego=setorCego(s.nome), ehTop=top&&s===top&&s.saldo>0, feito=s.plan?s.feito/s.plan:0;
+        return `<button type="button" class="l ${ehTop?'top':''}" data-setor="${esc(s.nome)}" title="${cego?'Setor que ainda não aponta no ERP':`${nf(s.saldo)} de ${nf(s.plan)} peças a fazer em ${s.ops} operação(ões)`}">
+        <span class="nome">${esc(s.nome)}${ehTop?'<span class="tag">maior concentração</span>':''}</span>
+        <span class="barra" role="img" aria-label="${nf(s.saldo)} peças a fazer"><i class="${ehTop?'esq':'sal'}" style="width:${cego?0:Math.max(s.saldo?3:0,Math.round(s.saldo/maior*100))}%"></i></span>
+        <span class="qtd">${cego?'—':nf(s.saldo)+' pç'}</span>
+        <span class="marca ${ehTop?'esq':'pend'}">${cego?'não aponta':s.saldo
+          ?`<span class="pct">${pct(feito)}%<small>feito</small></span>`
+          :'fechado'}</span>
+      </button>`;}).join('')}
     </div></div>
   </div>`;
 
-  /* ALERTAS: os cinco contadores do menu, em cartões grandes. Zero é verde. */
+  /* ALERTAS: os quatro contadores do menu, em cartões grandes. Zero é verde. */
   const al=d.alertas;
   const alertas=`<div class="dashBloco">
     <div class="tit">Alertas do PPCP <small>os mesmos números do menu · clique abre a análise</small></div>
@@ -3110,23 +3229,30 @@ function desenharDashboard(p,ref){
     </div>
   </div>`;
 
+  /* VEREDITO: a manchete é o problema. Abaixo, em ordem: avanço, concentração,
+     onde começar. Nada aqui é novo — são os mesmos números dos cartões. */
   const estado=d.st.vencida?'critico':al.apont.forte?'atencao':'ok';
-  const veredito=`<div class="veredito ${estado}">
+  const veredito=`<div class="veredito dashV ${estado}">
       <span class="ico" aria-hidden="true">${estado==='ok'?'✓':'!'}</span>
       <div class="txt"><h2>${d.st.vencida?`${d.st.vencida} de ${d.ordens} ordens vencidas`:`Nenhuma ordem vencida em ${d.ordens} ordens`}</h2>
-        <p>${nf(d.prontas)} de ${nf(d.pecas)} peças prontas (${d.pecas?pct(d.prontas/d.pecas):0}%)${top&&top.saldo?` · maior concentração em <b>${esc(top.nome)}</b>, ${nf(top.saldo)} pç a fazer`:''}${al.trav.n?` · comece por <b>Onde travou</b>: ${al.trav.n} ordem(ns) parada(s)`:''}.</p></div>
+        <ul class="lins">
+          <li><span class="k">Peças prontas</span><span><b>${nf(d.prontas)}</b> de <b>${nf(d.pecas)}</b> — <span class="pc">${pct(pctPecas)}%</span></span></li>
+          ${top&&top.saldo?`<li><span class="k">Maior concentração</span><button type="button" data-setor="${esc(top.nome)}"><b>${esc(top.nome)}</b> — ${nf(top.saldo)} peças a fazer</button></li>`:''}
+          ${al.trav.n?`<li><span class="k">Onde travou</span><button type="button" data-ir="trav"><b>${nf(al.trav.n)}</b> ordem(ns) parada(s) — comece por aqui</button></li>`
+                     :`<li><span class="k">Onde travou</span><span>nenhuma ordem parada atrás do programado</span></li>`}
+        </ul></div>
       <div class="big">${pct(pctConcl)}%<span>concluído</span></div></div>`;
 
   p.innerHTML=`${veredito}${avisoForaDaConta()}<div class="cabecalhoSecao"><h2>Dashboard PPCP</h2>
       <span class="meta">${d.ordens} ordens · ${d.ops} operações · referência ${br(ref)} · respeita os filtros da barra</span></div>
-    <div class="dash">${kpis}${status}${prazo}${setores}${alertas}</div>
+    <div class="dash">${decisao}${contexto}<div class="par">${status}${prazo}</div>${setores}${alertas}</div>
     ${notaLeitura(`
       <p><b>Ordens</b> = ordens do recorte (lote, produto, tipo e reposição da barra). <b>Vencidas</b> = em aberto, com a última previsão do processo anterior à data de referência — a mesma regra da coluna Situação da tela Ordens. <b>Concluídas</b> = com data de conclusão; a nota diz quantas fecharam depois do prazo.</p>
-      <p><b>Peças planejadas</b> = soma da quantidade das ordens. <b>Peças prontas</b> = soma do "Já Pronto", limitada à quantidade da ordem. <b>Saldo</b> = o que falta. <b>Operações</b> = linhas de roteiro do recorte, inclusive as fora da conta.</p>
-      <p><b>Peças por setor</b> = saldo ainda não apontado em cada operação daquele setor, na ordem do roteiro. Fase fora da conta (setor que não aponta, EMBALAR isenta) não entra. É concentração de trabalho a fazer, não medição de capacidade.</p>
+      <p><b>Peças planejadas</b> = soma da quantidade das ordens. <b>Peças prontas</b> = soma do "Já Pronto", limitada à quantidade da ordem. <b>Saldo</b> = o que falta. <b>Avanço operacional</b> = operações com data de conclusão sobre as operações do recorte, inclusive as fora da conta.</p>
+      <p><b>Peças por setor</b> = saldo ainda não apontado em cada operação daquele setor, na ordem do roteiro; <b>% feito</b> = apontado sobre o previsto no setor. Fase fora da conta (setor que não aponta, EMBALAR isenta) não entra. É concentração de trabalho a fazer, não medição de capacidade.</p>
       <p><b>Atraso médio</b> e <b>maior atraso</b> = dias úteis entre a última previsão do processo e a data de referência, só das ordens vencidas em aberto. Reposição e ordem inconsistente ficam fora, como na tela Ordens.</p>
       <p><b>Alertas</b> = os mesmos contadores do menu. Nenhum número nasce nesta tela; cada bloco abre a tela que o explica.</p>`,
-      'ordens, vencidas, peças, saldo, peças por setor, atraso médio, alertas')}`;
+      'ordens, vencidas, peças, saldo, avanço operacional, peças por setor, atraso médio, alertas')}`;
 
   p.querySelectorAll('[data-ir]').forEach(b=>{ if(b.dataset.ir) b.onclick=()=>irPara(b.dataset.ir); });
   p.querySelectorAll('[data-setor]').forEach(b=>b.onclick=()=>{
