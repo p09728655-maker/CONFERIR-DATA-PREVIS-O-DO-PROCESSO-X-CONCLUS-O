@@ -60,11 +60,13 @@ primeira cobrança errada.
 1. No ERP, emita o relatório **Situação do Lote de Produção** com *Status das Ordens: Todas*.
 2. Salve em PDF.
 3. Abra a ferramenta e arraste um ou vários PDFs para a área de upload.
-4. **Dashboard PPCP** é a visão gerencial, em ordem de importância: primeiro o problema (ordens
-   vencidas, saldo de peças), depois o avanço (peças prontas, avanço operacional), depois o
-   contexto (ordens, status numa barra, prazo em dias úteis) e por fim o detalhe (peças a fazer
-   por setor e os alertas do menu). Nenhum número nasce ali; cada cartão abre a tela que o
-   explica. Atalho `/?tela=dashboard`.
+4. **Dashboard PPCP** é a visão gerencial, em ordem de importância: primeiro a situação (vencidas,
+   em risco, no prazo, sem apontamento), depois o avanço (saldo, peças prontas, avanço
+   operacional), depois onde está o problema (qual setor está segurando, lotes por prioridade e a
+   faixa "Prioridade do PPCP"), depois o contexto (ordens, status numa barra, prazo em dias úteis)
+   e por fim o detalhe (peças a fazer por setor e os alertas do menu). Nenhum número nasce ali;
+   cada cartão abre a tela que o explica, e clicar num lote ou setor abre "Onde travou" com o
+   filtro aplicado. Atalho `/?tela=dashboard`.
 5. **Onde travou** abre por padrão: *por que* cada ordem ficou para trás — onde deveria estar
    hoje, onde está, e qual setor a está segurando (ver seção 5.2).
 6. **Sem apontamento** é a segunda pergunta: fases sem registro, com peças e setor. O que estiver
