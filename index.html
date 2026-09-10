@@ -389,6 +389,41 @@ td.peca .cod{display:block;margin-top:2px;font-family:var(--mono);font-variant-n
 .prioridade .v b{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .prioridade .v small{display:block;font-size:12px;color:var(--texto-fraco)}
 @media (min-width:1700px){.kpis.situacao .kpi .v{font-size:64px} .prioridade .v{font-size:21px}}
+/* PAINEL DO LOTE (Onde travou, com lote filtrado): cabeçalho com os números
+   da situação, a faixa de fases do roteiro e o "por quê" em lista. */
+.lotePainel{margin:0 0 var(--lg);padding:var(--lg) var(--xl);background:var(--papel);border:1px solid var(--borda);
+  border-left:6px solid var(--borda-forte);border-radius:var(--r-lg)}
+.lotePainel.critico{border-left-color:var(--critico)} .lotePainel.atencao{border-left-color:var(--atencao)} .lotePainel.ok{border-left-color:var(--ok)}
+.lotePainel .cab{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--lg);flex-wrap:wrap}
+.lotePainel .k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco)}
+.lotePainel h3{margin:0;font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-.02em}
+.lotePainel h3 small{font-size:15px;font-weight:400;color:var(--texto-medio);letter-spacing:0}
+.lotePainel .linha{margin-top:var(--xs);font-size:13px;color:var(--texto-medio)}
+.lotePainel .nums{display:flex;gap:var(--xl);flex-wrap:wrap}
+.lotePainel .n1{display:flex;flex-direction:column;min-width:64px}
+.lotePainel .n1 .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:700;line-height:1.1}
+.lotePainel .n1 .v small{font-size:13px;font-weight:600;color:var(--texto-fraco);margin-left:2px;font-family:var(--fonte)}
+.lotePainel .n1 .r{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-medio)}
+.lotePainel .n1.critico .v{color:var(--critico)} .lotePainel .n1.atencao .v{color:var(--atencao)} .lotePainel .n1.ok .v{color:var(--ok)}
+.lotePainel .fases{display:flex;align-items:stretch;gap:var(--xs);margin-top:var(--lg);overflow-x:auto;padding-bottom:var(--xs)}
+.lotePainel .fase{flex:1 1 120px;min-width:120px;display:flex;flex-direction:column;gap:2px;padding:var(--sm) var(--md);
+  background:var(--fundo);border:1px solid var(--borda);border-top:4px solid var(--borda-forte);border-radius:var(--r-sm);
+  font:inherit;color:var(--texto);text-align:left;cursor:pointer;transition:box-shadow var(--rapida)}
+.lotePainel .fase:hover{box-shadow:var(--elev-media)}
+.lotePainel .fase.ok{border-top-color:var(--ok)} .lotePainel .fase.critico{border-top-color:var(--critico);background:var(--critico-fundo)}
+.lotePainel .fase.aberta{border-top-color:var(--neutro)} .lotePainel .fase.apagada{opacity:.55;cursor:default}
+.lotePainel .fase .nome{font-size:12px;font-weight:700;line-height:1.3}
+.lotePainel .fase .pct{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:21px;font-weight:700;line-height:1.1}
+.lotePainel .fase.critico .pct{color:var(--critico)} .lotePainel .fase.ok .pct{color:var(--ok)}
+.lotePainel .fase .rot{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--texto-fraco)}
+.lotePainel .fase.critico .rot{color:var(--critico)}
+.lotePainel .fase .ab{font-size:12px;color:var(--texto-medio)}
+.lotePainel .seta{align-self:center;color:var(--borda-forte);font-size:16px;flex-shrink:0}
+.lotePainel .porque{margin-top:var(--lg);padding-top:var(--md);border-top:1px dashed var(--borda)}
+.lotePainel .porque ul{margin:var(--xs) 0 0;padding-left:var(--xl);color:var(--texto-medio)}
+.lotePainel .porque li{margin-top:2px} .lotePainel .porque b{color:var(--texto)}
+.lotePainel .porque small{display:block;margin-top:var(--sm);color:var(--texto-fraco);font-size:12px}
+@media (max-width:640px){.lotePainel .nums{gap:var(--lg)} .lotePainel .n1 .v{font-size:24px}}
 /* TV DE GESTÃO À VISTA: em tela larga os números principais crescem. O que
    se lê a três metros é o veredito e os cartões de decisão, não a nota. */
 @media (min-width:1700px){
@@ -926,6 +961,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.4.0 — 10/09/2026</h3>
+  <ul>
+    <li><b>Painel do lote em "Onde travou".</b> Com um lote escolhido na barra (ou vindo do clique no dashboard), a tela abre com o lote inteiro: previsão do lote e há quantos dias úteis venceu, ordens vencidas, em risco, no prazo e concluídas de total, maior atraso, e a <b>faixa de fases do roteiro</b> — cada fase com % apontado, situação (fechada, venceu em tal data, aberta, não aponta) e quantas ordens ainda estão abertas nela. Clicar na fase abre "Atraso por setor" nela.</li>
+    <li><b>"Por que está atrasado"</b>, só com o que os dados dizem: ordens paradas atrás do programado e em quais setores, fases sem apontamento e em quantas ordens, conjuntos incompletos, previsão do lote vencida. A nota deixa claro que é registro no ERP, não a causa no chão de fábrica.</li>
+    <li>A conta das fases é a de "Operação fechada" (<code>fechamentoPorLote</code>); a situação das ordens é a mesma do dashboard, agora numa função só (<code>situacaoOrdem</code>) para as duas telas nunca discordarem.</li>
+  </ul>
   <h3>4.3.0 — 10/09/2026</h3>
   <ul>
     <li><b>Dashboard: a situação primeiro.</b> Quatro cartões grandes no topo — <b>Vencidas</b>, <b>Em risco</b>, <b>No prazo</b> e <b>Sem apontamento</b>. Em risco é novo na tela, não na regra: ordem em aberto, ainda no prazo, mas já atrás do programado pela conta de "Onde travou" (a fase onde está venceu, ou ela está num setor anterior ao previsto). Vencidas + em risco + no prazo = as ordens em aberto, fora reposição e inconsistente.</li>
@@ -1844,7 +1885,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.3.0';
+const VERSAO='4.4.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3136,6 +3177,17 @@ function csvAtrasoSetor(){
    contadores do menu, as peças por setor vêm das operações do recorte. Tudo
    respeita os filtros da barra. Cada bloco é um atalho para a tela que já
    responde a pergunta em detalhe — o dashboard não cria lógica nova. */
+/* A SITUAÇÃO DE UMA ORDEM, em um lugar só. É a regra da coluna Situação da
+   tela Ordens (prazoOrdem) mais o "em risco" de Onde travou (posicaoOrdem).
+   Dashboard e painel do lote leem daqui, para nunca discordarem. */
+function situacaoOrdem(o,ref,travPorOf){
+  const pz=prazoOrdem(o), concl=!!o.conclusao;
+  if(pz.inconsistente) return {cat:'inconsistente',pz};
+  if(pz.reposicao) return {cat:'reposicao',pz};
+  if(concl) return {cat:'concluida',pz,depoisDoPrazo:!!(pz.ref&&o.conclusao>pz.ref)};
+  if(pz.ref&&pz.ref<ref) return {cat:'vencida',pz,atraso:dias(pz.ref,ref)};
+  return {cat:'aberta',pz,risco:travPorOf.has(o)};
+}
 function dadosDashboard(){
   const ref=$('#fRef').value, flagEmb=$('#fEmb').checked;
   const ordens=ordensFiltradas();
@@ -3151,14 +3203,11 @@ function dadosDashboard(){
   const lotesInfo={}; DOCS.flatMap(d=>d.lotes||[]).forEach(l=>lotesInfo[l.lote]={lt:l.lt,desc:l.descricao,prev:l.dataPrevisao});
   const porLote=new Map();
   ordens.forEach(o=>{
-    const pz=prazoOrdem(o), concl=!!o.conclusao;
     pecas+=o.qtd||0; prontas+=Math.min(o.pronto||0,o.qtd||0); saldo+=Math.max(0,(o.qtd||0)-(o.pronto||0));
-    let cat, atraso=null, risco=false;
-    if(pz.inconsistente) cat='inconsistente';
-    else if(pz.reposicao) cat='reposicao';
-    else if(concl){ cat='concluida'; if(pz.ref){ if(o.conclusao>pz.ref) conclAtrasada++; else conclNoPrazo++; } }
-    else if(pz.ref&&pz.ref<ref){ cat='vencida'; atraso=dias(pz.ref,ref); atrasos.push(atraso); }
-    else { cat='aberta'; noPrazo++; risco=travPorOf.has(o); if(risco) emRisco++; }
+    const so=situacaoOrdem(o,ref,travPorOf), {cat}=so, atraso=so.atraso==null?null:so.atraso, risco=!!so.risco;
+    if(cat==='concluida'&&so.pz.ref){ if(so.depoisDoPrazo) conclAtrasada++; else conclNoPrazo++; }
+    if(cat==='vencida') atrasos.push(atraso);
+    if(cat==='aberta'){ noPrazo++; if(risco) emRisco++; }
     st[cat]++;
     // Uma linha por lote: o mesmo julgamento da ordem, somado.
     const k=o.lote||'—', info=lotesInfo[k]||{};
@@ -3432,6 +3481,60 @@ function desenharApont(p){
     'Por setor a soma é válida, porque cada peça passa uma vez por lá.');
 }
 
+/* ---- PAINEL DO LOTE: só quando há um lote filtrado na barra ----
+   Responde, para o lote inteiro, o que a tabela responde por ordem: onde
+   ele está no roteiro (fase a fase), quanto está vencido, e por quê. Fases
+   vêm de fechamentoPorLote (a mesma conta de "Operação fechada"); situação
+   das ordens vem de situacaoOrdem; os motivos são os contadores das outras
+   telas para este mesmo recorte. Nada nasce aqui. */
+function painelLote(atr,ref){
+  const f=filtros(); if(!f.lote) return '';
+  const F=fechamentoPorLote(), L=F.lotes.find(x=>x.lote===f.lote); if(!L) return '';
+  const travPorOf=new Map(atr.map(x=>[x.of,x]));
+  const c={concluida:0,vencida:0,aberta:0,risco:0,reposicao:0,inconsistente:0}; let maior=null;
+  ordensFiltradas().forEach(o=>{ const so=situacaoOrdem(o,ref,travPorOf); c[so.cat]++;
+    if(so.cat==='aberta'&&so.risco) c.risco++;
+    if(so.cat==='vencida'&&(maior==null||so.atraso>maior)) maior=so.atraso; });
+  const total=c.concluida+c.vencida+c.aberta+c.reposicao+c.inconsistente;
+  const seg=new Map(); atr.forEach(x=>{ const k=x.pos.esta.op.descricao; seg.set(k,(seg.get(k)||0)+1); });
+  const segura=[...seg.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const g=resumoGeral(), cj=conjuntos().filter(x=>x.disperso).length;
+  const venceu=!!L.prev&&L.prev<ref, dl=L.prev?dias(L.prev,ref):null;
+  const estado=c.vencida?'critico':c.risco||venceu?'atencao':'ok';
+  const fases=L.ops.map(x=>{
+    const cls=x.naoApontavel?'apagada':x.fechada?'ok':x.vencida?'critico':x.abertas.length?'aberta':'ok';
+    const rot=x.naoApontavel?'não aponta':x.fechada?'fechada':x.vencida?`venceu ${br(x.prev)}`:x.prev?`prev. ${br(x.prev)}`:'aberta';
+    return `<button type="button" class="fase ${cls}" data-setor="${esc(x.nome)}" title="${x.naoApontavel?'Setor fora da conta: não aponta no ERP ou EMBALAR isenta':`${esc(x.nome)}: ${Math.round(x.pct*100)}% das peças apontadas · ${x.ordensAbertas.length} ordem(ns) ainda aberta(s) aqui · abre "Atraso por setor"`}">
+      <span class="nome">${esc(x.nome)}</span>
+      <span class="pct">${x.naoApontavel?'—':Math.round(x.pct*100)+'%'}</span>
+      <span class="rot">${rot}</span>
+      ${!x.naoApontavel&&x.ordensAbertas.length?`<span class="ab">${x.ordensAbertas.length} ord. aberta(s)</span>`:'<span class="ab">&nbsp;</span>'}
+    </button>`;}).join('<span class="seta" aria-hidden="true">→</span>');
+  const motivos=[];
+  if(segura.length) motivos.push(`<b>${atr.length}</b> ordem(ns) parada(s) atrás do programado — ${segura.slice(0,3).map(([k,n])=>`${esc(k)} <b>${n}</b>`).join(', ')}${segura.length>3?` e mais ${segura.length-3} setor(es)`:''}`);
+  if(g.falt.length) motivos.push(`<b>${g.falt.length}</b> fase(s) sem apontamento em ${new Set(g.falt.map(x=>x.of.of)).size} ordem(ns)${g.furos.length?`, <b>${g.furos.length}</b> com prova de que a peça passou`:''}`);
+  if(cj) motivos.push(`<b>${cj}</b> conjunto(s) incompleto(s): parte adiante, parte atrás`);
+  if(venceu) motivos.push(`previsão do lote <b>${br(L.prev)}</b> vencida há <b>${dl}</b> dia(s) útil(eis)`);
+  return `<div class="lotePainel ${estado}">
+    <div class="cab">
+      <div class="id"><span class="k">Lote</span><h3>${esc(L.lt?'LT '+L.lt:L.lote)}${L.desc?` <small>${esc(L.desc)}</small>`:''}</h3>
+        <div class="linha">previsão do lote <b>${br(L.prev)||'—'}</b>${venceu?` <span class="selo critico">venceu há ${dl} d.ú.</span>`:L.prev?` <span class="selo ok">${-dl} d.ú. restante(s)</span>`:''}
+          · fases fechadas <b>${L.fechadas}/${L.total}</b>${L.naoApontaveis?` <small>(+${L.naoApontaveis} fora da conta)</small>`:''}</div></div>
+      <div class="nums">
+        <span class="n1 ${c.vencida?'critico':''}"><span class="v">${nf(c.vencida)}</span><span class="r">Vencidas</span></span>
+        <span class="n1 ${c.risco?'atencao':''}"><span class="v">${nf(c.risco)}</span><span class="r">Em risco</span></span>
+        <span class="n1 ok"><span class="v">${nf(c.aberta-c.risco)}</span><span class="r">No prazo</span></span>
+        <span class="n1"><span class="v">${nf(c.concluida)}<small>/${nf(total)}</small></span><span class="r">Concluídas</span></span>
+        ${maior!=null?`<span class="n1 critico"><span class="v">${nf(maior)}<small>d.ú.</small></span><span class="r">Maior atraso</span></span>`:''}
+      </div>
+    </div>
+    <div class="fases" role="list" aria-label="Fases do roteiro deste lote">${fases}</div>
+    <div class="porque"><span class="k">${motivos.length?'Por que está atrasado':'Situação'}</span>
+      ${motivos.length?`<ul>${motivos.map(m=>`<li>${m}</li>`).join('')}</ul>`:'<span>Nenhuma ordem atrás do programado, nenhuma fase sem apontamento e nenhum conjunto incompleto neste lote.</span>'}
+      <small>Só o que os dados dizem: registro no ERP, não a causa no chão de fábrica. Clique numa fase para abrir "Atraso por setor" nela.</small></div>
+  </div>`;
+}
+
 /* ---- ONDE TRAVOU: a ordem atrasada, e o setor que a está segurando ---- */
 const faseTxt=x=>x?`<b>${esc(x.op.descricao)}</b> <small class="cod">${br(x.op.previsao)||'sem prev.'}</small>`:'—';
 /* O que saiu da conta por não apontar, dito na tela. Um setor que some em
@@ -3497,7 +3600,7 @@ function desenharTravadas(p,ref){
                 :abertas?`${abertas} em aberto, todas na fase programada para ${br(ref)} ou adiante.`:'Nenhuma ordem em aberto nos filtros atuais.'}</p></div>
       <div class="big">${atr.length}<span>ordens paradas</span></div>
     </div>`;
-  p.innerHTML=veredito+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Onde travou</h2>
+  p.innerHTML=veredito+painelLote(atr,ref)+avisoForaDaConta()+`<div class="cabecalhoSecao"><h2>Onde travou</h2>
       <span class="meta">${atr.length} ${atr.length===1?'ordem':'ordens'} em aberto atrás do programado · de ${abertas} em aberto · referência ${br(ref)}</span></div>
     ${setores.length?`<div class="setores">${cartoes}</div>`:''}
     ${linhas.length?`<div class="wrap"><table><thead><tr>
@@ -3520,6 +3623,10 @@ function desenharTravadas(p,ref){
       <p><b>Fase concluída (ERP)</b> = a linha "Qtd. Concluída na Fase" do próprio relatório: a última fase que o ERP dá como completa e quantas peças. Se discordar de "Está em", confira a ordem.</p>
       <p>Os cartões dizem <b>qual setor está segurando</b> as ordens: é lá que a conversa começa.</p>`,
       'deveria estar em, está em, parado, setores atrás, peças na fase')}`;
+  p.querySelectorAll('.lotePainel [data-setor]').forEach(b=>b.onclick=()=>{
+    if(setorCego(b.dataset.setor)) return;
+    ATR_SETOR=b.dataset.setor; ATR_SIT=''; guardarAtrSetor(); irPara('atr');
+  });
 }
 
 /* ---- CONJUNTO INCOMPLETO: o produto fecha ou não fecha ---- */

@@ -3,6 +3,27 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.4.0] — 2026-09-10
+
+### Adicionado
+
+- **Painel do lote em "Onde travou".** Aparece só com um lote escolhido na barra (ou vindo do
+  clique no dashboard). Traz, para o lote inteiro:
+
+  - previsão do lote e há quantos dias úteis venceu; fases fechadas de total;
+  - ordens vencidas, em risco, no prazo, concluídas de total, maior atraso;
+  - **faixa de fases do roteiro**: cada fase com % das peças apontadas, situação (fechada, venceu
+    em tal data, aberta, não aponta) e quantas ordens ainda estão abertas nela. Clicar na fase
+    abre "Atraso por setor" nela;
+  - **"Por que está atrasado"**: ordens paradas atrás do programado e em quais setores, fases sem
+    apontamento e em quantas ordens, conjuntos incompletos, previsão do lote vencida. Só o que os
+    dados dizem — registro no ERP, não a causa no chão de fábrica — e a nota diz isso.
+
+  A conta das fases é a de "Operação fechada" (`fechamentoPorLote`). A situação das ordens é a do
+  dashboard, agora numa função só (`situacaoOrdem`), para as duas telas nunca discordarem.
+
+  Fecha o drill-down pedido: dashboard → lote → fases do lote → setor → ordem → operação.
+
 ## [4.3.0] — 2026-09-10
 
 ### Adicionado
