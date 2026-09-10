@@ -651,6 +651,7 @@ dialog form{margin-top:var(--lg);text-align:right}
   .doc-titulo{font-size:15pt;font-weight:700;margin:0 0 1mm;letter-spacing:-.2pt}
   .doc-sub{font-size:9pt;margin:0;line-height:1.5}
   .doc-sub b{font-weight:700}
+  .doc-fonte{font-size:7.5pt}
   .doc-carimbo{text-align:right;font-size:8pt;line-height:1.5;white-space:nowrap}
 
   /* VEREDITO NO PAPEL — a conclusão em uma frase, legível de longe.
@@ -966,6 +967,10 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.5.1 — 10/09/2026</h3>
+  <ul>
+    <li><b>A hora do relatório do ERP, na folha.</b> "Impresso às 07:52" sozinho não diz de que foto a folha foi tirada. Agora a folha traz <b>"Relatório do ERP emitido em 10/09/2026 às 07:46"</b> e de onde a hora veio: do cabeçalho do relatório, quando o ERP a imprime; senão, da hora gravada dentro do PDF pelo ERP ao exportar; em último caso, da hora do arquivo — e nesse caso a folha diz que é hora do arquivo, não do ERP. Com mais de um PDF de horas diferentes, sai o intervalo. A mesma hora aparece na lista de arquivos e no cabeçalho do dashboard ("dado do ERP de…").</li>
+  </ul>
   <h3>4.5.0 — 10/09/2026</h3>
   <ul>
     <li><b>"Limpar filtros"</b> na barra: aparece só quando há o que limpar (lote, produto, setor, tipo, reposição, severidade, EMBALAR ou a situação da tela Ordens) e volta tudo ao padrão num clique. A data de referência e os setores que não apontam são parâmetros, não filtro, e ficam.</li>
@@ -1491,7 +1496,7 @@ function splitRow(tokens){
    que apareceram no primeiro lote real. O cabeçalho se repete em toda
    página; só um NÚMERO DE LOTE diferente abre um lote novo. */
 function parseDoc(pages,arquivo){
-  const doc={arquivo,lotes:[],dataRelatorio:null,ofs:[],avisos:[],ignoradas:0,suspeitas:0,paginas:pages.length};
+  const doc={arquivo,lotes:[],dataRelatorio:null,horaRelatorio:null,geradoEm:null,arquivoEm:null,ofs:[],avisos:[],ignoradas:0,suspeitas:0,paginas:pages.length};
   const dt=s=>{if(!s)return null;if(s.k==='D')return s.v;doc.suspeitas++;return null;};
   const nm=s=>{if(!s)return null;if(s.k==='N')return s.v;doc.suspeitas++;return null;};
   let cur=null, lote=null;
@@ -1500,6 +1505,7 @@ function parseDoc(pages,arquivo){
       const line=tokens.map(t=>t.t).join(' ');
       if(!doc.dataRelatorio&&/Data:/.test(line)){
         const m=line.match(/Data:\s*(\d{2}\/\d{2}\/\d{2,4})/);if(m)doc.dataRelatorio=toIso(m[1]);
+        const h=line.match(/Hora:?\s*(\d{1,2}):(\d{2})/i);if(h)doc.horaRelatorio=`${h[1].padStart(2,'0')}:${h[2]}`;
       }
       if(/Lote\s*Nr\.?:/i.test(line)){
         const m=line.match(/Nr\.?:\s*(\d+)\s*(?:LT\s*(\S+))?\s*(.*?)\s*(?:Status|$)/i);
@@ -1574,9 +1580,38 @@ function parseDoc(pages,arquivo){
   return doc;
 }
 
+/* A HORA DO RELATÓRIO, e de onde ela vem. O cabeçalho do ERP traz a data;
+   a hora, quando não vem impressa, está gravada dentro do PDF (CreationDate,
+   escrita pelo ERP no momento da exportação) — é a hora da foto. O horário do
+   arquivo no disco é o último recurso: muda ao copiar ou salvar de novo.
+   A folha impressa diz qual das três usou, para ninguém tomar "hora do
+   arquivo" por "hora do ERP". */
+const dataPdf=s=>{ const m=/D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?/.exec(s||''); return m?`${m[1]}-${m[2]}-${m[3]}T${m[4]||'00'}:${m[5]||'00'}`:null; };
+const isoLocal=ms=>{ if(!ms) return null; const d=new Date(ms), p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+function emissaoDoc(d){
+  if(!d) return null;
+  if(d.dataRelatorio&&d.horaRelatorio) return {quando:`${d.dataRelatorio}T${d.horaRelatorio}`,fonte:'cabeçalho do relatório'};
+  if(d.geradoEm&&(!d.dataRelatorio||d.geradoEm.slice(0,10)===d.dataRelatorio)) return {quando:d.geradoEm,fonte:'gravada no PDF pelo ERP'};
+  if(d.arquivoEm&&(!d.dataRelatorio||d.arquivoEm.slice(0,10)===d.dataRelatorio)) return {quando:d.arquivoEm,fonte:'hora do arquivo, não do ERP'};
+  return d.dataRelatorio?{quando:d.dataRelatorio,fonte:null}:null;
+}
+const brHora=iso=>!iso?'':iso.length>10?`${br(iso)} às ${iso.slice(11,16)}`:br(iso);
+/* Para a folha: um arquivo, "emitido em"; vários com horas diferentes, o
+   intervalo — mostrar só o mais novo esconderia que parte do dado é mais velha. */
+function emissaoDocs(docs){
+  const e=docs.map(emissaoDoc).filter(Boolean).sort((a,b)=>a.quando.localeCompare(b.quando));
+  if(!e.length) return {texto:'—',nota:'',frase:'Relatório do ERP emitido em —',de:'de —'};
+  const a=e[0], z=e[e.length-1];
+  const nota=[...new Set(e.map(x=>x.fonte).filter(Boolean))].join('; ');
+  if(a.quando===z.quando||e.length===1){ const t=brHora(z.quando); return {texto:t,nota,frase:`Relatório do ERP emitido em <b>${t}</b>`,de:`de <b>${t}</b>`}; }
+  const t=`entre ${brHora(a.quando)} e ${brHora(z.quando)}`;
+  return {texto:t,nota,frase:`Relatórios do ERP emitidos <b>${t}</b>`,de:`<b>${t}</b>`};
+}
 async function lerPdf(file){
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const meta=await pdf.getMetadata().catch(()=>null);
   const pages=[];
   for(let i=1;i<=pdf.numPages;i++){
     const pg=await pdf.getPage(i);
@@ -1587,7 +1622,10 @@ async function lerPdf(file){
       return {t:it.str.trim(),x0:tx[4],x1:tx[4]+it.width,y:tx[5]};
     }));
   }
-  return parseDoc(pages,file.name);
+  const doc=parseDoc(pages,file.name);
+  doc.geradoEm=dataPdf(meta&&meta.info&&(meta.info.CreationDate||meta.info.ModDate));
+  doc.arquivoEm=isoLocal(file.lastModified);
+  return doc;
 }
 
 /* ============================================================================
@@ -1896,7 +1934,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.5.0';
+const VERSAO='4.5.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3500,7 +3538,7 @@ function desenharDashboard(p,ref){
       <div class="big">${pct(pctConcl)}%<span>concluído</span></div></div>`;
 
   p.innerHTML=`${veredito}${avisoForaDaConta()}<div class="cabecalhoSecao"><h2>Dashboard PPCP</h2>
-      <span class="meta">${d.ordens} ordens · ${d.ops} operações · referência ${br(ref)} · respeita os filtros da barra</span></div>
+      <span class="meta">${d.ordens} ordens · ${d.ops} operações · dado do ERP ${emissaoDocs(DOCS).de} · referência ${br(ref)} · respeita os filtros da barra</span></div>
     <div class="dash">${situacao}${decisao}<div class="par problema">${segurando}${lotes}</div>${contexto}<div class="par">${status}${prazo}</div>${setores}${alertas}</div>
     ${notaLeitura(`
       <p><b>Ordens</b> = ordens do recorte (lote, produto, tipo e reposição da barra). <b>Vencidas</b> = em aberto, com a última previsão do processo anterior à data de referência — a mesma regra da coluna Situação da tela Ordens. <b>Concluídas</b> = com data de conclusão; a nota diz quantas fecharam depois do prazo.</p>
@@ -4035,7 +4073,7 @@ function desenharLeitura(p){
     return `<div class="cartao ${cls}">
         <div class="nome">${esc(d.arquivo)} ${confere?'<span class="selo ok">leitura conferida</span>':''}</div>
         <div class="det">${d.paginas} página(s) · ${d.lotes.length} lote(s) · <span class="num">${d.ofs.length}</span> ordens ·
-          relatório emitido em ${br(d.dataRelatorio)}${lotes}</div>
+          relatório emitido em ${(e=>e?`<b>${brHora(e.quando)}</b>${e.fonte?` <small>(${e.fonte})</small>`:''}`:'—')(emissaoDoc(d))}${lotes}</div>
         ${d.avisos.map(a=>`<div class="aviso${d.erro?' err':''}">${esc(a)}</div>`).join('')}
       </div>`;});
   p.innerHTML=`<div class="cabecalhoSecao"><h2>Leitura dos arquivos</h2><span class="meta">${DOCS.length} arquivo(s)</span></div>
@@ -4124,7 +4162,7 @@ function filtrosNoPapel(secao){
    "Operação fechada" saiu no papel sem o percentual nem a faixa do roteiro. */
 function montarImpressoLista(){
   const tabela=document.querySelector('#painel table');
-  const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
+  const emissao=emissaoDocs(DOCS);
   const hoje=agora();
   const linhas=tabela?tabela.querySelectorAll('tbody tr').length:0;
 
@@ -4142,7 +4180,7 @@ function montarImpressoLista(){
         <img src="${LOGO}" alt="Patrimar Móveis">
         <h1 class="doc-titulo">${esc(ABA==='atr'?`Atraso por setor — ${ATR_SETOR||nomeEmbalagem()}`:SECOES[ABA]||'Conferência')}</h1>
         <p class="doc-sub">
-          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br($('#fRef').value)}</b><br>
+          ${emissao.frase}${emissao.nota?` <span class="doc-fonte">(hora: ${esc(emissao.nota)})</span>`:''} · vencimento medido contra <b>${br($('#fRef').value)}</b><br>
           Recorte impresso: <b>${esc(filtrosNoPapel(ABA))}</b> · ${linhas} linha(s)
         </p>
       </div>
@@ -4161,7 +4199,7 @@ function montarImpressoLista(){
 
 function montarImpresso(soSetor){
   const f=faltasFiltradas().filter(x=>!soSetor||x.op.descricao===soSetor), ref=$('#fRef').value;
-  const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
+  const emissao=emissaoDocs(DOCS);
   const lotes=[...new Set(f.map(x=>x.of.lote).filter(Boolean))];
   const desc=DOCS.flatMap(d=>d.lotes).filter(l=>lotes.includes(l.lote)).map(l=>[l.lt?'LT '+l.lt:'',l.descricao].filter(Boolean).join(' ')).filter(Boolean);
   const hoje=agora();
@@ -4206,7 +4244,7 @@ function montarImpresso(soSetor){
         <h1 class="doc-titulo">Cobrança por setor — apontamento e atraso</h1>
         <p class="doc-sub">
           ${lotes.length?`Lote <b>${esc(lotes.join(', '))}</b>${desc.length?' — '+esc(desc.join(' · ')):''}<br>`:''}
-          Relatório do ERP emitido em <b>${br(emissao)||'—'}</b> · vencimento medido contra <b>${br(ref)}</b><br>
+          ${emissao.frase}${emissao.nota?` <span class="doc-fonte">(hora: ${esc(emissao.nota)})</span>`:''} · vencimento medido contra <b>${br(ref)}</b><br>
           Recorte impresso: <b>${soSetor?`somente o setor ${esc(soSetor)}`:esc(filtrosNoPapel('apont'))}</b>
         </p>
       </div>
