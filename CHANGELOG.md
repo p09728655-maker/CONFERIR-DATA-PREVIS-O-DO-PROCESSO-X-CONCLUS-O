@@ -3,6 +3,32 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.2.1] — 2026-09-10
+
+### Corrigido
+
+- **Cada folha impressa tem nome próprio ao salvar em PDF.** Ao "salvar como PDF" o navegador
+  sugere `document.title` como nome do arquivo, e ele era fixo: toda impressão saía como
+  "RitmoPatrimar — Estudo de Datas de Produção" e a seguinte sobrescrevia a anterior. Agora, só
+  durante a impressão, o título vira o nome do documento com lote e hora, e volta ao normal em
+  `afterprint`:
+
+  | Botão | Nome sugerido |
+  |---|---|
+  | Imprimir a lista | `RitmoPatrimar — Onde travou — LT 163 — 2026-09-10 07h52` |
+  | Imprimir a lista, em Atraso por setor | `RitmoPatrimar — Atraso por setor PINTAR UV — LT 163 — 2026-09-10 07h52` |
+  | Folha da reunião | `RitmoPatrimar — Folha da reunião — LT 163 — 2026-09-10 07h52` |
+  | Folha deste setor | `RitmoPatrimar — Folha do setor PINTAR UV — LT 163 — 2026-09-10 07h52` |
+
+  O lote vem do filtro; sem filtro, dos lotes abertos (até três nomes, depois "N lotes"). A data
+  vai primeiro, em ano-mês-dia, para a pasta ordenar por data; sem dois-pontos nem barra, que o
+  Windows não aceita em nome de arquivo.
+
+- **Carimbo com hora**: "Impresso em 10/09/2026 às 07:52". A mesma folha é impressa mais de uma
+  vez no dia (de manhã e depois da reunião) e sem a hora não se sabe qual é a atual. Junto, a
+  data do carimbo deixou de ser calculada em UTC: uma folha impressa às 22h saía datada de
+  amanhã.
+
 ## [4.2.0] — 2026-09-10
 
 ### Alterado

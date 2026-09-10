@@ -892,6 +892,11 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.2.1 — 10/09/2026</h3>
+  <ul>
+    <li><b>Cada folha impressa tem nome próprio ao salvar em PDF.</b> O navegador sugere o título da página como nome do arquivo, e ele era fixo: toda impressão saía como "RitmoPatrimar — Estudo de Datas de Produção" e a seguinte sobrescrevia a anterior. Agora, só durante a impressão, o título vira o nome do documento com lote e hora: <code>RitmoPatrimar — Onde travou — LT 163 — 2026-09-10 07h52</code>. Vale para "Folha da reunião", "Folha deste setor" e "Imprimir a lista".</li>
+    <li><b>Carimbo com hora.</b> "Impresso em 10/09/2026 às 07:52" — a mesma folha é impressa mais de uma vez no dia, e sem a hora não se sabe qual é a atual. Correção junto: a data do carimbo era calculada em UTC, e uma folha impressa às 22h saía com a data de amanhã.</li>
+  </ul>
   <h3>4.2.0 — 10/09/2026</h3>
   <ul>
     <li><b>Dashboard PPCP com hierarquia.</b> Os mesmos números, a mesma regra, os mesmos oito cartões — mas em quatro níveis de peso: primeiro o problema (<b>ordens vencidas</b>, <b>saldo de peças</b>), depois o avanço (<b>peças prontas</b> com a relação planejadas → prontas → saldo, e <b>avanço operacional</b> em percentual: concluídas de total), depois o contexto (ordens, concluídas, % conclusão, planejadas, menores), e por fim o detalhe (setores e alertas). Oito cartões iguais obrigavam o leitor a decidir qual importava.</li>
@@ -1798,7 +1803,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.2.0';
+const VERSAO='4.2.1';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3784,7 +3789,7 @@ function filtrosNoPapel(secao){
 function montarImpressoLista(){
   const tabela=document.querySelector('#painel table');
   const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=agora();
   const linhas=tabela?tabela.querySelectorAll('tbody tr').length:0;
 
   const v=document.querySelector('#painel .veredito');
@@ -3805,7 +3810,7 @@ function montarImpressoLista(){
           Recorte impresso: <b>${esc(filtrosNoPapel(ABA))}</b> · ${linhas} linha(s)
         </p>
       </div>
-      <div class="doc-carimbo">RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${br(hoje)}</div>
+      <div class="doc-carimbo">RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${hoje.carimbo}</div>
     </div>
     ${vered}${cartoes}
     ${tabela?`<section class="doc-setor doc-lista">${tabela.outerHTML}</section>`
@@ -3823,7 +3828,7 @@ function montarImpresso(soSetor){
   const emissao=DOCS.map(d=>d.dataRelatorio).filter(Boolean).sort().pop();
   const lotes=[...new Set(f.map(x=>x.of.lote).filter(Boolean))];
   const desc=DOCS.flatMap(d=>d.lotes).filter(l=>lotes.includes(l.lote)).map(l=>[l.lt?'LT '+l.lt:'',l.descricao].filter(Boolean).join(' ')).filter(Boolean);
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=agora();
 
   const furos=f.filter(x=>x.furo);
   const pecas=pecasDistintas(f);
@@ -3870,7 +3875,7 @@ function montarImpresso(soSetor){
         </p>
       </div>
       <div class="doc-carimbo">
-        RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${br(hoje)}
+        RitmoPatrimar v${VERSAO}<br>PPCP — Patrimar Móveis<br>Impresso em ${hoje.carimbo}
       </div>
     </div>`;
 
@@ -4060,6 +4065,40 @@ function rodape(ref){
   </div>`;
 }
 
+/* HORA LOCAL, não UTC. `toISOString()` devolve o dia em Greenwich: uma folha
+   impressa às 22h em Brasília saía carimbada com a data de amanhã. O carimbo
+   leva a hora porque a mesma folha é impressa mais de uma vez no dia — de
+   manhã e depois da reunião — e sem a hora não se sabe qual é a atual. */
+function agora(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  const data=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`, hora=`${p(d.getHours())}:${p(d.getMinutes())}`;
+  return {data, hora, carimbo:`${br(data)} às ${hora}`, arquivo:`${data} ${p(d.getHours())}h${p(d.getMinutes())}`};
+}
+
+/* O NOME DO ARQUIVO É O TÍTULO DA PÁGINA. Ao "salvar como PDF", o navegador
+   sugere document.title — e ele era fixo, então toda folha saía como
+   "RitmoPatrimar — Estudo de Datas de Produção" e a próxima sobrescrevia a
+   anterior. Aqui o título vira, só durante a impressão, o nome do documento
+   com lote e hora: "RitmoPatrimar — Onde travou — LT 163 — 2026-09-10 07h52".
+   Sem dois-pontos nem barra, que o Windows não aceita em nome de arquivo;
+   a data primeiro no formato ano-mês-dia, para a pasta ordenar por data. */
+function loteNoNome(){
+  const f=filtros();
+  const lotes=f.lote?[f.lote]:[...new Set(DOCS.flatMap(d=>(d.lotes||[]).map(l=>l.lote)).filter(Boolean))];
+  if(!lotes.length) return '';
+  return lotes.length<=3?'LT '+lotes.join('+'):`${lotes.length} lotes`;
+}
+function imprimir(titulo){
+  const original=document.title;
+  const nome=['RitmoPatrimar',titulo,loteNoNome(),agora().arquivo].filter(Boolean).join(' — ').replace(/[\\/:*?"<>|]+/g,' ').trim();
+  document.title=nome;
+  const voltar=()=>{ document.title=original; window.removeEventListener('afterprint',voltar); };
+  window.addEventListener('afterprint',voltar);
+  window.print();
+  // Navegador que não dispara afterprint (impressão assíncrona): volta depois.
+  setTimeout(voltar,60000);
+}
+
 /* A orientação do papel muda com o documento: o da reunião cabe em retrato,
    a lista bruta tem colunas demais e só fica legível deitada. @page não aceita
    condicional, então a regra é trocada antes de chamar a impressão. */
@@ -4072,11 +4111,12 @@ function orientar(modo){
 /* Folha e CSV de UM setor: o filtro da tela não é tocado, para o usuário não
    voltar da impressão com o recorte mudado sem perceber. */
 function imprimirFolhaSetor(nome){
-  orientar('portrait'); montarImpresso(nome); window.print(); montarImpresso();
+  orientar('portrait'); montarImpresso(nome); imprimir(`Folha do setor ${nome}`); montarImpresso();
 }
 
-$('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); window.print(); };
-$('#btnImprimirLista').onclick=()=>{ orientar('landscape'); montarImpressoLista(); window.print(); };
+$('#btnImprimir').onclick=()=>{ orientar('portrait'); montarImpresso(); imprimir('Folha da reunião'); };
+$('#btnImprimirLista').onclick=()=>{ orientar('landscape'); montarImpressoLista();
+  imprimir(ABA==='atr'?`Atraso por setor ${ATR_SETOR||nomeEmbalagem()}`:SECOES[ABA]||'Lista'); };
 
 /* ============================================================================
    EXPORTAÇÃO CSV (; decimal vírgula, datas dd/mm/aaaa — Excel e Power BI pt-BR)
