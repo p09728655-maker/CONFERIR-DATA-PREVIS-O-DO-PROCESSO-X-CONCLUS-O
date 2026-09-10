@@ -541,6 +541,10 @@ table{width:100%;border-collapse:collapse}
 th{position:sticky;top:0;z-index:2;text-align:left;padding:var(--md) var(--lg);background:var(--papel-cabecalho);border-bottom:1px solid var(--borda);
   font-size:11px;line-height:1.45;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-fraco);white-space:nowrap}
 th.n{text-align:right}
+table[data-ordenavel] th{cursor:pointer;user-select:none}
+table[data-ordenavel] th:hover{color:var(--texto)}
+th[aria-sort]{color:var(--texto)} th[aria-sort]::after{content:' \25B4';font-size:10px} th[aria-sort="descending"]::after{content:' \25BE'}
+.chips.sit .qt.c{background:var(--critico-fundo);color:var(--critico)}
 td{padding:var(--sm) var(--lg);border-bottom:1px solid var(--borda);color:var(--texto-medio);vertical-align:top}
 td.n{text-align:right;white-space:nowrap;color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 td.cod{white-space:nowrap;color:var(--texto);font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -914,6 +918,7 @@ dialog form{margin-top:var(--lg);text-align:right}
       <div class="grade">
         <div class="f"><label for="fLote">Lote</label><select id="fLote"></select></div>
         <div class="f"><label for="fRef">Data de referência</label><input type="date" id="fRef" title="O que conta como vencido é medido contra esta data. Padrão: data de emissão do relatório."></div>
+        <button type="button" class="secundario hide" id="btnLimpar" title="Volta lote, produto, setor, tipo, reposição, severidade, EMBALAR e a situação da tela Ordens ao padrão. A data de referência fica.">Limpar filtros</button>
         <div class="acoesTela">
           <button type="button" class="btnPri" id="btnImprimir">Folha da reunião</button>
           <button type="button" class="secundario" id="btnImprimirLista">Imprimir a lista</button>
@@ -961,6 +966,12 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.5.0 — 10/09/2026</h3>
+  <ul>
+    <li><b>"Limpar filtros"</b> na barra: aparece só quando há o que limpar (lote, produto, setor, tipo, reposição, severidade, EMBALAR ou a situação da tela Ordens) e volta tudo ao padrão num clique. A data de referência e os setores que não apontam são parâmetros, não filtro, e ficam.</li>
+    <li><b>Situação como chip na tela Ordens</b>: todas, vencida, em aberto, concluída, reposição, inconsistente, cada uma com a contagem. O "Exportar CSV" da tela leva o que está na tela, com o chip; "Exportar tudo" continua levando o recorte inteiro.</li>
+    <li><b>Ordenar pela coluna</b>, clicando no cabeçalho de qualquer tabela: número, data e texto com a régua certa, vazio sempre no fim, coluna numérica começando pelo maior. Na coluna de desvio, "restante" conta como negativo, para o maior atraso vir primeiro. A folha impressa sai na ordem que está na tela. A lista de "Atraso por setor" fica de fora: é agrupada por setor e reordenar quebraria os grupos.</li>
+  </ul>
   <h3>4.4.0 — 10/09/2026</h3>
   <ul>
     <li><b>Painel do lote em "Onde travou".</b> Com um lote escolhido na barra (ou vindo do clique no dashboard), a tela abre com o lote inteiro: previsão do lote e há quantos dias úteis venceu, ordens vencidas, em risco, no prazo e concluídas de total, maior atraso, e a <b>faixa de fases do roteiro</b> — cada fase com % apontado, situação (fechada, venceu em tal data, aberta, não aponta) e quantas ordens ainda estão abertas nela. Clicar na fase abre "Atraso por setor" nela.</li>
@@ -1885,7 +1896,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.4.0';
+const VERSAO='4.5.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -2160,8 +2171,13 @@ function montarFiltros(){
     guardarSemApont(); c.parentElement.classList.toggle('on',c.checked); recalc();});
 }
 
+$('#btnLimpar').onclick=()=>{
+  ['#fLote','#fProduto','#fOper','#fTipo','#fRepo','#fSev'].forEach(k=>{ const el=$(k); if(el) el.value=''; });
+  $('#fEmb').checked=true; ORD_SIT='';
+  recalc();
+};
 ['input','change'].forEach(ev=>document.addEventListener(ev,e=>{
-  if(e.target.closest('.filtros')) recalc();
+  if(e.target.closest('.filtros')&&!e.target.closest('#btnLimpar')) recalc();
 }));
 
 function filtros(){
@@ -2691,6 +2707,10 @@ function recalc(){
   const cegos=setoresDisponiveis().filter(setorCego);
   const f=filtros(), ativos=[f.prod,f.oper,f.tipo,f.repo,f.sev.length?'s':'',$('#fEmb').checked?'':'e'].filter(Boolean).length+cegos.length;
   $('#filtrosAtivos').textContent=ativos?`· ${ativos} ativo${ativos>1?'s':''}`:'';
+  // "Limpar" aparece só quando há o que limpar: lote, um filtro escondido ou a
+  // situação da tela Ordens. Setor cego e data de referência são parâmetros,
+  // não filtro, e ficam.
+  $('#btnLimpar').classList.toggle('hide',!(f.lote||f.prod||f.oper||f.tipo||f.repo||f.sev.length||!$('#fEmb').checked||ORD_SIT));
   if(!tem)return;
   ACH=analisar(DOCS,$('#fRef').value||new Date().toISOString().slice(0,10),$('#fEmb').checked);
   renderAviso(); renderResposta(); render();
@@ -2858,14 +2878,59 @@ function atualizarAcoesTela(){
 }
 $('#btnCsvTela').onclick=()=>{
   if(ABA==='atr'){ csvAtrasoSetor(); return; }
+  if(ABA==='ord'){ csvOrdens(ordensDaTela()); return; } // o que está na tela, com o chip de situação
   const alvo=CSV_DA_TELA[ABA]; if(alvo) $('#'+alvo[0]).click();
 };
 // Um clique, sete arquivos. O intervalo evita o navegador engolir downloads seguidos.
 $('#btnCsvTudo').onclick=()=>['btnCsvApont','btnCsvTrav','btnCsvConj','btnCsvFech','btnCsvAch','btnCsvOrd','btnCsvOp']
   .forEach((id,i)=>setTimeout(()=>$('#'+id).click(),i*400));
 
+/* ORDENAR PELA COLUNA, clicando no cabeçalho. Ordena as linhas que já estão
+   na tela — não refaz a conta, não muda filtro, e a folha impressa sai na
+   mesma ordem que se vê. Número (pt-BR), data (dd/mm/aaaa) e texto têm a
+   régua certa; célula vazia ou "—" vai sempre para o fim. Coluna numérica
+   começa pelo maior, que é o que se procura; texto começa por A. Tabela com
+   linha de grupo (a lista de "Atraso por setor") fica de fora: reordenar
+   quebraria os grupos. */
+function chaveCelula(td){
+  const t=(td.textContent||'').trim();
+  if(!t||t==='—') return {vazio:true};
+  const dt=t.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if(dt) return {v:`${dt[3]}-${dt[2]}-${dt[1]}`,num:false};
+  const n=t.replace(/\s/g,'').match(/^[+\-]?\d{1,3}(\.\d{3})*(,\d+)?%?|^[+\-]?\d+(,\d+)?%?/);
+  if(n&&/\d/.test(n[0])){
+    let v=parseFloat(n[0].replace(/\./g,'').replace(',','.').replace('%',''));
+    // "11 d restante(s)" é prazo que ainda falta, não atraso: conta negativo,
+    // para o maior atraso vir primeiro e o que ainda tem folga, por último.
+    if(/restante/i.test(t)) v=-Math.abs(v);
+    return {v,num:true};
+  }
+  return {v:t.toLocaleLowerCase('pt-BR'),num:false};
+}
+function ativarOrdenacao(root){
+  root.querySelectorAll('table').forEach(tb=>{
+    const thead=tb.tHead, tbody=tb.tBodies[0];
+    if(!thead||!tbody||tbody.querySelector('tr.grupo')||tb.dataset.ordenavel) return;
+    tb.dataset.ordenavel='1';
+    thead.querySelectorAll('th').forEach((th,i)=>{
+      th.tabIndex=0; th.setAttribute('role','button'); th.title='Clique para ordenar por esta coluna';
+      const go=()=>{
+        const asc=th.getAttribute('aria-sort')==='descending'||(th.getAttribute('aria-sort')!=='ascending'&&!th.classList.contains('n'));
+        thead.querySelectorAll('th').forEach(x=>x.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort',asc?'ascending':'descending');
+        const linhas=[...tbody.rows].map((tr,ord)=>({tr,ord,k:chaveCelula(tr.cells[i]||{})}));
+        linhas.sort((a,b)=>{
+          if(a.k.vazio||b.k.vazio) return (a.k.vazio?1:0)-(b.k.vazio?1:0)||a.ord-b.ord;
+          const c=a.k.num&&b.k.num?a.k.v-b.k.v:String(a.k.v).localeCompare(String(b.k.v),'pt-BR',{numeric:true});
+          return (asc?c:-c)||a.ord-b.ord;
+        });
+        linhas.forEach(l=>tbody.appendChild(l.tr));
+      };
+      th.onclick=go; th.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } };
+    });
+  });
+}
 function render(){
-  try{ desenhar(); }
+  try{ desenhar(); ativarOrdenacao($('#painel')); }
   catch(err){
     $('#painel').innerHTML=`<div class="cabecalhoSecao"><h2>${SECOES[ABA]}</h2></div>
       <div class="vazio">Não foi possível montar esta seção: ${esc(err.message)}.<br>
@@ -3852,20 +3917,38 @@ function desenharAchados(p){
 }
 
 /* ---- ORDENS: prazo julgado pela última previsão do processo ---- */
+/* Situação da ordem, como a coluna mostra: chave, rótulo e cor. A mesma regra
+   de prazoOrdem; aqui só ganha um nome para o chip e para o CSV. */
+const SIT_ORD={vencida:['Vencida','critico'],aberta:['Em aberto','neutro'],concluida:['Concluída','ok'],
+  reposicao:['Reposição','neutro'],inconsistente:['Inconsistente','critico']};
+function situacaoLinhaOrdem(o,ref){
+  const pz=prazoOrdem(o), concl=!!o.conclusao;
+  if(pz.inconsistente) return {k:'inconsistente',sit:'Inconsistente',cls:'critico',pz,concl};
+  if(pz.reposicao) return {k:'reposicao',sit:concl?'Reposição concluída':'Reposição',cls:concl?'ok':'neutro',pz,concl};
+  if(concl) return {k:'concluida',sit:'Concluída',cls:'ok',pz,concl};
+  if(pz.ref&&pz.ref<ref) return {k:'vencida',sit:'Vencida',cls:'critico',pz,concl};
+  return {k:'aberta',sit:'Em aberto',cls:'neutro',pz,concl};
+}
+let ORD_SIT='';
+/* As ordens que a tela Ordens está mostrando: o recorte da barra mais o chip
+   de situação. É o que o "Exportar CSV" da tela leva. */
+function ordensDaTela(){
+  const ref=$('#fRef').value;
+  return ordensFiltradas().filter(o=>!ORD_SIT||situacaoLinhaOrdem(o,ref).k===ORD_SIT);
+}
 function desenharOrdens(p,ref){
-  const ord=ordensFiltradas();
+  const todas=ordensFiltradas(), cont={};
+  todas.forEach(o=>{ const k=situacaoLinhaOrdem(o,ref).k; cont[k]=(cont[k]||0)+1; });
+  if(ORD_SIT&&!cont[ORD_SIT]) ORD_SIT='';
+  const ord=ordensDaTela();
+  const chip=(k,rot,n)=>`<button type="button" class="chip" data-sit="${k}" aria-pressed="${ORD_SIT===k}">${rot} <span class="qt ${k==='vencida'||k==='inconsistente'?'c':''}">${n}</span></button>`;
+  const chips=`<div class="chips sit" role="group" aria-label="Situação">${chip('','todas',todas.length)}${['vencida','aberta','concluida','reposicao','inconsistente'].filter(k=>cont[k]).map(k=>chip(k,SIT_ORD[k][0],cont[k])).join('')}</div>`;
   p.innerHTML=tabela('Ordens',
-    `${ord.length} ordem(ns) · prazo julgado pela última previsão do processo, em DIAS ÚTEIS (seg a sex, sem feriado)`,
+    `${ord.length}${ORD_SIT?` de ${todas.length}`:''} ordem(ns)${ORD_SIT?` · só ${SIT_ORD[ORD_SIT][0].toLowerCase()}`:''} · prazo julgado pela última previsão do processo, em DIAS ÚTEIS (seg a sex, sem feriado)`,
     [{h:'Ordem'},{h:'Produto'},{h:'Descrição'},{h:'Situação'},{h:'Prev. processo'},{h:'Prev. ordem'},{h:'Conclusão'},
      {h:'Desvio / prazo (d.ú.)',n:1},{h:'Qtd.',n:1},{h:'Pronto',n:1},{h:'Saldo',n:1},{h:'Ops',n:1},{h:'Lote'}],
     ord.map(o=>{
-      const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), pz=prazoOrdem(o), concl=!!o.conclusao;
-      let sit,cls;
-      if(pz.inconsistente){sit='Inconsistente';cls='critico';}
-      else if(pz.reposicao){sit=concl?'Reposição concluída':'Reposição';cls=concl?'ok':'neutro';}
-      else if(concl){sit='Concluída';cls='ok';}
-      else if(pz.ref&&pz.ref<ref){sit='Vencida';cls='critico';}
-      else {sit='Em aberto';cls='neutro';}
+      const saldo=Math.max(0,(o.qtd||0)-(o.pronto||0)), {sit,cls,pz,concl}=situacaoLinhaOrdem(o,ref);
       // Fechada antes de o roteiro começar: o desvio não é desempenho, e
       // exibi-lo como adiantamento é o que fazia a ordem parecer exemplar.
       const dv=pz.inconsistente?null
@@ -3887,6 +3970,8 @@ function desenharOrdens(p,ref){
     '<b>Prev. ordem</b> = a previsão da capa da ordem, mantida para conferência. '+
     '<b>Inconsistente</b> = concluída antes da primeira previsão de processo: não é adiantamento, é fechamento antes de a produção existir, e fica fora do cálculo de aderência. '+
     '<b>Reposição</b> = ordem aberta a partir de perda, com previsão posterior à do lote. Como o prazo dela começa na criação da ordem, e não no início do lote, ela fica fora da aderência — mas a falta de apontamento continua valendo, porque reposição é produção real.');
+  p.querySelector('.cabecalhoSecao').insertAdjacentHTML('afterend',chips);
+  p.querySelectorAll('.chips.sit .chip').forEach(c=>c.onclick=()=>{ ORD_SIT=c.dataset.sit; recalc(); });
 }
 
 /* ---- OPERAÇÕES: uma linha por fase do roteiro ---- */
@@ -4436,12 +4521,13 @@ $('#btnCsvAch').onclick=()=>csv('achados.csv',
   ['Severidade','Regra','Arquivo','Lote','Ordem','Produto','Descricao','Operacao','Detalhe'],
   achFiltrados().map(a=>[a.sev,a.regra,a.arquivo,a.lote,a.of,a.produto,a.descricao,a.operacao,a.detalhe]));
 
-$('#btnCsvOrd').onclick=()=>csv('ordens.csv',
+function csvOrdens(lista){ csv('ordens.csv',
   ['Arquivo','Lote','LT','Ordem','Produto','Descricao','M3','Previsao','Conclusao','DesvioDiasUteis',
    'QtdTotal','JaPronto','Saldo','OpsTotal','OpsConcluidas'],
-  ordensFiltradas().map(o=>[o.arquivo,o.lote,o.lt,o.of,o.produto,o.descricao,dec(o.m3),br(o.previsao),br(o.conclusao),
+  lista.map(o=>[o.arquivo,o.lote,o.lt,o.of,o.produto,o.descricao,dec(o.m3),br(o.previsao),br(o.conclusao),
     o.conclusao&&o.previsao?dias(o.previsao,o.conclusao):'',dec(o.qtd),dec(o.pronto),
-    dec(Math.max(0,(o.qtd||0)-(o.pronto||0))),o.operacoes.length,o.operacoes.filter(x=>x.conclusao).length]));
+    dec(Math.max(0,(o.qtd||0)-(o.pronto||0))),o.operacoes.length,o.operacoes.filter(x=>x.conclusao).length])); }
+$('#btnCsvOrd').onclick=()=>csvOrdens(ordensFiltradas());
 
 /* O CSV leva TODAS as fases do recorte, inclusive as que a tela deixa fora da
    conta, com a coluna ForaDaConta dizendo quais são. No Power BI o que se quer
