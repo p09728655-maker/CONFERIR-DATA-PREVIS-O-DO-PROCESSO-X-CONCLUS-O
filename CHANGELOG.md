@@ -3,6 +3,24 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.5.1] — 2026-09-10
+
+### Adicionado
+
+- **A hora do relatório do ERP, na folha.** "Impresso às 07:52" sozinho não diz de que foto a
+  folha foi tirada. A folha passa a trazer **"Relatório do ERP emitido em 10/09/2026 às 07:46"**
+  e de onde a hora veio, nesta ordem de confiança:
+
+  | Fonte | Quando é usada | Como aparece |
+  |---|---|---|
+  | `Hora:` no cabeçalho do relatório | se o ERP a imprimir ao lado de `Data:` | "(hora: cabeçalho do relatório)" |
+  | data de criação gravada dentro do PDF (`CreationDate`) | escrita pelo ERP no momento da exportação; aceita só se o dia bater com `Data:` | "(hora: gravada no PDF pelo ERP)" |
+  | hora do arquivo no disco | último recurso; muda ao copiar ou salvar de novo | "(hora: hora do arquivo, não do ERP)" |
+
+  Com mais de um PDF de horas diferentes, sai o intervalo ("entre … e …") — mostrar só o mais
+  novo esconderia que parte do dado é mais velha. A mesma hora aparece na lista de arquivos e no
+  cabeçalho do dashboard ("dado do ERP de …").
+
 ## [4.5.0] — 2026-09-10
 
 ### Adicionado
