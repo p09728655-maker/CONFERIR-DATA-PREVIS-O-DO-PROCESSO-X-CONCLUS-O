@@ -3,6 +3,37 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico.
 
+## [4.3.0] — 2026-09-10
+
+### Adicionado
+
+- **Dashboard: a situação primeiro.** Quatro cartões grandes no topo — Vencidas, Em risco, No prazo,
+  Sem apontamento — antes de qualquer outro número.
+
+  | Cartão | Regra | De onde vem |
+  |---|---|---|
+  | Vencidas | ordem em aberto com a última previsão do processo anterior à referência | `prazoOrdem`, como na tela Ordens |
+  | Em risco | ordem em aberto, **ainda no prazo**, mas já atrás do programado: a fase onde está venceu, ou está num setor anterior ao previsto para hoje | `posicaoOrdem.atrasada`, como em "Onde travou" |
+  | No prazo | em aberto e na fase programada | as demais em aberto |
+  | Sem apontamento | fases sem registro, e em quantas ordens | `faltasApontamento`, como em "Sem apontamento" |
+
+  "Em risco" é novo na tela, não na regra: é o atraso interno que vira atraso de entrega se ninguém
+  agir. Não há limiar novo de "vence em N dias" — foi decidido não criar um.
+
+- **Qual setor está segurando**: os cartões de "Onde travou" (setor onde cada ordem atrás do
+  programado está parada) viram ranking no dashboard, do maior para o menor. Aqui ordenar por
+  tamanho é correto: a atribuição já é ao setor que segura, não ao que acumula rio abaixo. Clicar
+  no setor aplica o filtro de setor da barra e abre "Onde travou".
+
+- **Lotes por prioridade**: uma linha por lote — previsão do lote, situação (vencido, em risco, no
+  prazo, concluído), setor que mais segura ordens do lote, vencidas, em risco, maior atraso em dias
+  úteis, ordens concluídas de total. Ordenado por mais vencidas, maior atraso, mais em risco, prazo
+  do lote. A primeira linha vira a faixa **"Prioridade do PPCP: LT 163 → COLAR BORDA → 3 dias
+  úteis de atraso"**. Clicar no lote aplica o filtro de lote da barra e abre "Onde travou".
+
+  O drill-down usa os filtros que já existem: o usuário vê o filtro aplicado na barra e tira de lá.
+  Nenhum estado novo, nenhuma tela nova.
+
 ## [4.2.1] — 2026-09-10
 
 ### Corrigido

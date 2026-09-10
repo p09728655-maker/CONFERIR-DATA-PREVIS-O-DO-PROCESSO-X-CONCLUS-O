@@ -355,6 +355,40 @@ td.peca .cod{display:block;margin-top:2px;font-family:var(--mono);font-variant-n
   .ranking.setoresDash .nome{grid-column:1/-1} .ranking.setoresDash .barra{grid-column:1/-1}
   .ranking.setoresDash .qtd{grid-column:2} .ranking.setoresDash .marca{grid-column:3}}
 @media (pointer:coarse){.kpi{min-height:96px}}
+/* NÍVEL 1 — situação: quatro cartões grandes com a cor da situação. */
+.kpis.situacao .kpi{min-height:120px;padding:var(--lg) var(--xl);gap:var(--xs)}
+.kpis.situacao .kpi .r{order:-1;font-size:12px;color:var(--texto-medio)}
+.kpis.situacao .kpi .v{font-size:48px;white-space:nowrap}
+.kpis.situacao .kpi .s{font-size:13px;color:var(--texto-medio)}
+.kpis.situacao .kpi.critico{background:var(--critico-fundo)} .kpis.situacao .kpi.atencao{background:var(--atencao-fundo)}
+.kpis.situacao .kpi.ok{background:var(--ok-fundo)}
+.kpis.decisao.tres{grid-template-columns:repeat(3,1fr)}
+@media (max-width:1100px){.kpis.situacao{grid-template-columns:repeat(2,1fr)} .kpis.decisao.tres{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.kpis.situacao{grid-template-columns:repeat(2,1fr)} .kpis.situacao .kpi{min-height:0} .kpis.situacao .kpi .v{font-size:36px} .kpis.decisao.tres{grid-template-columns:1fr}}
+/* O problema em dois blocos lado a lado: quem segura e qual lote primeiro. */
+.dash .par>*{min-width:0}
+.dash .par.problema{grid-template-columns:1fr;align-items:start}
+@media (min-width:1600px){.dash .par.problema{grid-template-columns:2fr 3fr}}
+.lotesDash .wrap{max-height:none;overflow-x:auto;margin:0 calc(var(--xl)*-1) calc(var(--lg)*-1)}
+.lotesDash td:first-child{white-space:nowrap} .lotesDash td:first-child small{white-space:normal}
+.lotesDash table th:first-child,.lotesDash table td:first-child{padding-left:var(--xl)}
+.lotesDash table th:last-child,.lotesDash table td:last-child{padding-right:var(--xl)}
+.lotesDash td small{color:var(--texto-fraco)}
+.lotesDash tbody tr[data-lote]{cursor:pointer}
+.lotesDash tbody tr[data-lote]:hover td:first-child b{color:var(--vermelho)}
+.lotesDash tbody tr:focus-visible{outline:3px solid var(--areia);outline-offset:-3px}
+/* PRIORIDADE DO PPCP: uma linha só, a resposta para "o que resolvo primeiro". */
+.prioridade{display:flex;align-items:center;gap:var(--lg);width:100%;margin-bottom:var(--md);padding:var(--md) var(--lg);
+  background:var(--papel);border:1px solid var(--borda);border-left:6px solid var(--critico);border-radius:var(--r-md);
+  font:inherit;color:var(--texto);text-align:left;cursor:pointer;transition:box-shadow var(--rapida)}
+.prioridade:hover{box-shadow:var(--elev-media)}
+.prioridade.atencao{border-left-color:var(--atencao)}
+.prioridade .k{flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--critico)}
+.prioridade.atencao .k{color:var(--atencao)}
+.prioridade .v{font-size:17px;line-height:1.35}
+.prioridade .v b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.prioridade .v small{display:block;font-size:12px;color:var(--texto-fraco)}
+@media (min-width:1700px){.kpis.situacao .kpi .v{font-size:64px} .prioridade .v{font-size:21px}}
 /* TV DE GESTÃO À VISTA: em tela larga os números principais crescem. O que
    se lê a três metros é o veredito e os cartões de decisão, não a nota. */
 @media (min-width:1700px){
@@ -892,6 +926,13 @@ dialog form{margin-top:var(--lg);text-align:right}
 <dialog id="dlgVersao">
   <h2>Histórico de versões</h2>
   <div class="legenda">RitmoPatrimar — Estudo de Datas de Produção</div>
+  <h3>4.3.0 — 10/09/2026</h3>
+  <ul>
+    <li><b>Dashboard: a situação primeiro.</b> Quatro cartões grandes no topo — <b>Vencidas</b>, <b>Em risco</b>, <b>No prazo</b> e <b>Sem apontamento</b>. Em risco é novo na tela, não na regra: ordem em aberto, ainda no prazo, mas já atrás do programado pela conta de "Onde travou" (a fase onde está venceu, ou ela está num setor anterior ao previsto). Vencidas + em risco + no prazo = as ordens em aberto, fora reposição e inconsistente.</li>
+    <li><b>Qual setor está segurando</b>: os cartões de "Onde travou" viram ranking no dashboard, do maior para o menor. Clicar no setor abre "Onde travou" com o filtro de setor aplicado na barra.</li>
+    <li><b>Lotes por prioridade</b>: uma linha por lote com previsão, situação, setor que segura, vencidas, em risco, maior atraso e ordens concluídas de total. Ordem: mais vencidas, maior atraso, mais em risco, prazo do lote. A primeira linha vira a faixa <b>"Prioridade do PPCP: LT → setor → dias de atraso"</b>. Clicar no lote abre "Onde travou" com o lote filtrado.</li>
+    <li>Nenhum número novo nasce aqui: são as ordens do recorte somadas por lote e por setor, com as regras que já existiam. O filtro aplicado pelo clique fica visível na barra e se tira de lá.</li>
+  </ul>
   <h3>4.2.1 — 10/09/2026</h3>
   <ul>
     <li><b>Cada folha impressa tem nome próprio ao salvar em PDF.</b> O navegador sugere o título da página como nome do arquivo, e ele era fixo: toda impressão saía como "RitmoPatrimar — Estudo de Datas de Produção" e a seguinte sobrescrevia a anterior. Agora, só durante a impressão, o título vira o nome do documento com lote e hora: <code>RitmoPatrimar — Onde travou — LT 163 — 2026-09-10 07h52</code>. Vale para "Folha da reunião", "Folha deste setor" e "Imprimir a lista".</li>
@@ -1803,7 +1844,7 @@ function analisar(docs,ref,flagEmb){
 /* ============================================================================
    ESTADO E UI
    ========================================================================== */
-const VERSAO='4.2.1';
+const VERSAO='4.3.0';
 
 /* ============================================================================
    INSTALAÇÃO E USO OFFLINE
@@ -3100,15 +3141,53 @@ function dadosDashboard(){
   const ordens=ordensFiltradas();
   const st={concluida:0,vencida:0,aberta:0,reposicao:0,inconsistente:0};
   let pecas=0, prontas=0, saldo=0, atrasos=[], noPrazo=0, conclNoPrazo=0, conclAtrasada=0;
+  /* EM RISCO = ordem em aberto, ainda dentro do prazo, mas já atrás do
+     programado segundo "Onde travou" (posicaoOrdem.atrasada): a fase onde ela
+     está venceu, ou ela está num setor anterior ao previsto para hoje. É o
+     atraso interno que vira atraso de entrega se ninguém agir. Nenhum limiar
+     novo: é a mesma regra que a tela Onde travou já aplica. */
+  const travadas=travadasAtrasadas(), travPorOf=new Map(travadas.map(x=>[x.of,x]));
+  let emRisco=0;
+  const lotesInfo={}; DOCS.flatMap(d=>d.lotes||[]).forEach(l=>lotesInfo[l.lote]={lt:l.lt,desc:l.descricao,prev:l.dataPrevisao});
+  const porLote=new Map();
   ordens.forEach(o=>{
     const pz=prazoOrdem(o), concl=!!o.conclusao;
     pecas+=o.qtd||0; prontas+=Math.min(o.pronto||0,o.qtd||0); saldo+=Math.max(0,(o.qtd||0)-(o.pronto||0));
-    if(pz.inconsistente) st.inconsistente++;
-    else if(pz.reposicao) st.reposicao++;
-    else if(concl){ st.concluida++; if(pz.ref){ if(o.conclusao>pz.ref) conclAtrasada++; else conclNoPrazo++; } }
-    else if(pz.ref&&pz.ref<ref){ st.vencida++; atrasos.push(dias(pz.ref,ref)); }
-    else { st.aberta++; noPrazo++; }
+    let cat, atraso=null, risco=false;
+    if(pz.inconsistente) cat='inconsistente';
+    else if(pz.reposicao) cat='reposicao';
+    else if(concl){ cat='concluida'; if(pz.ref){ if(o.conclusao>pz.ref) conclAtrasada++; else conclNoPrazo++; } }
+    else if(pz.ref&&pz.ref<ref){ cat='vencida'; atraso=dias(pz.ref,ref); atrasos.push(atraso); }
+    else { cat='aberta'; noPrazo++; risco=travPorOf.has(o); if(risco) emRisco++; }
+    st[cat]++;
+    // Uma linha por lote: o mesmo julgamento da ordem, somado.
+    const k=o.lote||'—', info=lotesInfo[k]||{};
+    const L=porLote.get(k)||{lote:k,lt:info.lt||null,desc:info.desc||'',prev:info.prev||null,total:0,concluidas:0,vencidas:0,risco:0,noPrazo:0,outras:0,maiorAtraso:null,seg:new Map()};
+    L.total++;
+    if(cat==='concluida') L.concluidas++;
+    else if(cat==='vencida'){ L.vencidas++; if(L.maiorAtraso==null||atraso>L.maiorAtraso) L.maiorAtraso=atraso; }
+    else if(cat==='aberta'){ if(risco) L.risco++; else L.noPrazo++; }
+    else L.outras++;
+    const t=travPorOf.get(o);
+    if(t&&t.pos.esta){ const s=t.pos.esta.op.descricao; L.seg.set(s,(L.seg.get(s)||0)+1); }
+    porLote.set(k,L);
   });
+  /* PRIORIDADE DO LOTE: mais ordens vencidas, depois maior atraso, depois mais
+     em risco, depois o prazo do lote mais próximo. O primeiro é o que se
+     resolve primeiro. */
+  const lotes=[...porLote.values()].map(L=>{
+    const seg=[...L.seg.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]||null;
+    const sit=L.vencidas?'vencido':L.risco?'risco':L.concluidas===L.total?'concluido':'prazo';
+    return {...L, segura:seg?seg[0]:null, seguraN:seg?seg[1]:0, sit};
+  }).sort((a,b)=>b.vencidas-a.vencidas||(b.maiorAtraso||0)-(a.maiorAtraso||0)||b.risco-a.risco
+    ||String(a.prev||'9999').localeCompare(String(b.prev||'9999'))||String(a.lote).localeCompare(String(b.lote)));
+  /* QUEM SEGURA: o setor onde cada ordem atrás do programado está parada — a
+     mesma conta dos cartões de "Onde travou". Ordenado do maior para o menor
+     de propósito: aqui a atribuição já é ao setor que segura, não ao que
+     acumula rio abaixo, então ranking por tamanho aponta a causa. */
+  const segM=new Map();
+  travadas.forEach(x=>{ const k=x.pos.esta.op.descricao; const r=segM.get(k)||{nome:k,n:0,pecas:0}; r.n++; r.pecas+=x.pos.pecas; segM.set(k,r); });
+  const segurando=[...segM.values()].sort((a,b)=>b.n-a.n||b.pecas-a.pecas||a.nome.localeCompare(b.nome));
   const ops=opsFiltradas(true);
   const opsFeitas=ops.filter(({op})=>!!op.conclusao).length;
   // Peças por setor: o saldo ainda não apontado em cada operação do setor.
@@ -3125,8 +3204,9 @@ function dadosDashboard(){
   });
   const setores=[...porSetor.values()].sort(porRoteiro(R));
   const g=resumoGeral(), A=atrasoTodos(), cj=conjuntos();
+  const ordensSemApont=new Set(g.falt.map(x=>x.of.of)).size;
   return {ref, ordens:ordens.length, st, pecas, prontas, saldo, ops:ops.length, opsFeitas,
-    noPrazo, conclNoPrazo, conclAtrasada,
+    noPrazo, conclNoPrazo, conclAtrasada, emRisco, ordensSemApont, lotes, segurando,
     atrasoMedio:atrasos.length?atrasos.reduce((a,b)=>a+b,0)/atrasos.length:null,
     maiorAtraso:atrasos.length?Math.max(...atrasos):null,
     setores,
@@ -3141,6 +3221,15 @@ function dadosDashboard(){
 /* Abre outra tela pelo próprio menu, para o aria-current e a rolagem seguirem
    o caminho de sempre. */
 function irPara(t){ const b=$(`#navSecoes .item[data-t="${t}"]`); if(b) b.click(); }
+/* Drill-down pelos filtros que já existem: escolher o lote ou o setor na barra
+   e abrir "Onde travou". Nada de estado novo — o usuário vê o filtro aplicado
+   e tira quando quiser. */
+function abrirComFiltro(campo,valor,tela){
+  const el=$(campo); if(!el) return;
+  el.value=valor;
+  if(el.value!==valor) return; // opção inexistente: não abre com filtro errado
+  irPara(tela); el.dispatchEvent(new Event('change',{bubbles:true}));
+}
 
 function desenharDashboard(p,ref){
   const d=dadosDashboard();
@@ -3150,14 +3239,25 @@ function desenharDashboard(p,ref){
   const tile=(v,rot,sub,cls,t,alvo,extra)=>`<button type="button" class="kpi ${cls||''}" data-ir="${alvo||''}" ${t?`title="${esc(t)}"`:''}>
       <span class="v">${v}</span><span class="r">${rot}</span>${sub?`<span class="s">${sub}</span>`:''}${extra||''}</button>`;
   const pctConcl=d.ordens?d.st.concluida/d.ordens:0;
+  const al=d.alertas;
   const pctPecas=d.pecas?d.prontas/d.pecas:0;
   const pctOps=d.ops?d.opsFeitas/d.ops:0;
   const prog=(v,cls)=>`<span class="prog ${cls||''}" role="img" aria-label="${pct(v)}%"><i style="width:${Math.min(100,Math.max(0,pct(v)))}%"></i></span>`;
 
-  /* NÍVEIS 1 E 2 — decisão: vencidas, saldo, prontas, avanço operacional.
-     São os mesmos oito cartões de sempre; só o peso mudou. */
-  const decisao=`<div class="kpis decisao">
-    ${tile(nf(d.st.vencida),'Ordens vencidas','em aberto, prazo vencido',d.st.vencida?'critico':'ok','Abrir "Onde travou" — onde cada uma está parada','trav')}
+  /* NÍVEL 1 — situação: as quatro contagens que o PPCP olha primeiro. Vencidas,
+     em risco e no prazo repartem as ordens em aberto (fora reposição e
+     inconsistente); sem apontamento é outra dimensão — quantas fases estão
+     sem registro. Cada uma abre a tela que lista os casos. */
+  const noPrazoFase=d.noPrazo-d.emRisco;
+  const situacao=`<div class="kpis situacao">
+    ${tile(nf(d.st.vencida),'Vencidas','ordens em aberto com prazo vencido',d.st.vencida?'critico':'ok','Abrir "Onde travou" — onde cada uma está parada','trav')}
+    ${tile(nf(d.emRisco),'Em risco','no prazo, mas já atrás do programado',d.emRisco?'atencao':'ok','Ordens ainda no prazo cuja fase atual venceu ou que estão num setor anterior ao previsto para hoje — a lista está em "Onde travou"','trav')}
+    ${tile(nf(noPrazoFase),'No prazo','em aberto, na fase programada',noPrazoFase?'ok':'','Abrir a lista de ordens','ord')}
+    ${tile(nf(al.apont.n),'Sem apontamento',`fases sem registro em ${nf(d.ordensSemApont)} ordem(ns)`,al.apont.n?(al.apont.forte?'critico':'atencao'):'ok','Abrir "Sem apontamento"','apont')}
+  </div>`;
+
+  /* NÍVEL 2 — avanço: saldo, prontas, avanço operacional. */
+  const decisao=`<div class="kpis decisao tres">
     ${tile(nf(d.saldo),'Saldo de peças',`ainda por produzir · ${pct(1-pctPecas)}% do planejado`,d.saldo?'atencao':'ok','Abrir a lista de ordens','ord')}
     ${tile(nf(d.prontas),'Peças prontas',`${pct(pctPecas)}% do planejado`,pctPecas>=1?'ok':'','Abrir a lista de ordens','ord',
       prog(pctPecas)+`<span class="fluxo"><span><b>${nf(d.pecas)}</b> planejadas</span><span class="seta">→</span><span><b>${nf(d.prontas)}</b> prontas</span><span class="seta">→</span><span><b>${nf(d.saldo)}</b> saldo</span></span>`)}
@@ -3225,8 +3325,45 @@ function desenharDashboard(p,ref){
     </div></div>
   </div>`;
 
+  /* ONDE ESTÁ O PROBLEMA — dois blocos lado a lado: o setor que segura as
+     ordens (a causa) e os lotes por prioridade (o que resolver primeiro). */
+  const maxSeg=Math.max(1,...d.segurando.map(s=>s.n));
+  const segurando=`<div class="dashBloco">
+    <div class="tit">Qual setor está segurando <small>ordens atrás do programado, pelo setor onde estão paradas · maior primeiro · clique abre "Onde travou" no setor</small></div>
+    ${d.segurando.length?`<div class="ranking semBorda setoresDash"><div class="grade">
+      ${d.segurando.map((s,i)=>`<button type="button" class="l ${i===0?'top':''}" data-segura="${esc(s.nome)}" title="${s.n} ordem(ns) parada(s) em ${esc(s.nome)}, ${nf(s.pecas)} peças">
+        <span class="nome">${esc(s.nome)}${i===0?'<span class="tag">comece por aqui</span>':''}</span>
+        <span class="barra" role="img" aria-label="${s.n} ordens"><i class="${i===0?'esq':'sal'}" style="width:${Math.max(3,Math.round(s.n/maxSeg*100))}%"></i></span>
+        <span class="qtd">${nf(s.n)} ord.</span>
+        <span class="marca ${i===0?'esq':'pend'}"><span class="pct">${nf(s.pecas)}<small>pç paradas</small></span></span>
+      </button>`).join('')}
+    </div></div>`:'<div class="vazio" style="padding:var(--lg)">Nenhuma ordem atrás do programado.</div>'}
+  </div>`;
+
+  const SIT_LOTE={vencido:['Vencido','critico'],risco:['Em risco','atencao'],prazo:['No prazo','ok'],concluido:['Concluído','ok']};
+  const top1=d.lotes[0];
+  const prioridade=top1&&(top1.vencidas||top1.risco)
+    ?`<button type="button" class="prioridade ${top1.vencidas?'critico':'atencao'}" data-lote="${esc(top1.lote)}" title="Abrir \"Onde travou\" neste lote">
+        <span class="k">Prioridade do PPCP</span>
+        <span class="v"><b>${esc(top1.lt?'LT '+top1.lt:top1.lote)}</b>${top1.segura?` → <b>${esc(top1.segura)}</b>`:''}${top1.maiorAtraso!=null?` → <b>${nf(top1.maiorAtraso)}</b> dia(s) útil(eis) de atraso`:''}
+          <small>${top1.vencidas?`${nf(top1.vencidas)} vencida(s)`:''}${top1.vencidas&&top1.risco?' · ':''}${top1.risco?`${nf(top1.risco)} em risco`:''} de ${nf(top1.total)} ordens</small></span></button>`
+    :'';
+  const lotes=`<div class="dashBloco lotesDash">
+    <div class="tit">Lotes por prioridade <small>uma linha por lote: as mesmas ordens, somadas · clique abre "Onde travou" no lote</small></div>
+    ${prioridade}
+    <div class="wrap"><table><thead><tr><th>Lote</th><th>Previsão</th><th>Situação</th><th>Setor que segura</th><th class="n">Vencidas</th><th class="n">Em risco</th><th class="n">Maior atraso</th><th class="n">Ordens</th></tr></thead>
+    <tbody>${d.lotes.map(L=>{const [rot,cls]=SIT_LOTE[L.sit]; return `<tr class="sev-${cls==='ok'?'info':cls}" data-lote="${esc(L.lote)}" tabindex="0" role="button">
+      <td><b>${esc(L.lt?'LT '+L.lt:L.lote)}</b>${L.desc?`<br><small>${esc(L.desc)}</small>`:''}</td>
+      <td class="cod">${br(L.prev)||'—'}${L.prev&&L.prev<ref&&L.sit!=='concluido'?' <span class="selo critico">venceu</span>':''}</td>
+      <td><span class="selo ${cls}">${rot}</span></td>
+      <td>${L.segura?`${esc(L.segura)} <small>${L.seguraN} ord.</small>`:'—'}</td>
+      <td class="n ${L.vencidas?'c-critico':''}"><b>${L.vencidas||'—'}</b></td>
+      <td class="n ${L.risco?'c-atencao':''}">${L.risco||'—'}</td>
+      <td class="n ${L.maiorAtraso?'c-critico':''}">${L.maiorAtraso!=null?`${nf(L.maiorAtraso)} d.ú.`:'—'}</td>
+      <td class="n">${nf(L.concluidas)}/${nf(L.total)}</td></tr>`;}).join('')}</tbody></table></div>
+  </div>`;
+
   /* ALERTAS: os quatro contadores do menu, em cartões grandes. Zero é verde. */
-  const al=d.alertas;
   const alertas=`<div class="dashBloco">
     <div class="tit">Alertas do PPCP <small>os mesmos números do menu · clique abre a análise</small></div>
     <div class="kpis alertas">
@@ -3250,19 +3387,26 @@ function desenharDashboard(p,ref){
 
   p.innerHTML=`${veredito}${avisoForaDaConta()}<div class="cabecalhoSecao"><h2>Dashboard PPCP</h2>
       <span class="meta">${d.ordens} ordens · ${d.ops} operações · referência ${br(ref)} · respeita os filtros da barra</span></div>
-    <div class="dash">${decisao}${contexto}<div class="par">${status}${prazo}</div>${setores}${alertas}</div>
+    <div class="dash">${situacao}${decisao}<div class="par problema">${segurando}${lotes}</div>${contexto}<div class="par">${status}${prazo}</div>${setores}${alertas}</div>
     ${notaLeitura(`
       <p><b>Ordens</b> = ordens do recorte (lote, produto, tipo e reposição da barra). <b>Vencidas</b> = em aberto, com a última previsão do processo anterior à data de referência — a mesma regra da coluna Situação da tela Ordens. <b>Concluídas</b> = com data de conclusão; a nota diz quantas fecharam depois do prazo.</p>
       <p><b>Peças planejadas</b> = soma da quantidade das ordens. <b>Peças prontas</b> = soma do "Já Pronto", limitada à quantidade da ordem. <b>Saldo</b> = o que falta. <b>Avanço operacional</b> = operações com data de conclusão sobre as operações do recorte, inclusive as fora da conta.</p>
       <p><b>Peças por setor</b> = saldo ainda não apontado em cada operação daquele setor, na ordem do roteiro; <b>% feito</b> = apontado sobre o previsto no setor. Fase fora da conta (setor que não aponta, EMBALAR isenta) não entra. É concentração de trabalho a fazer, não medição de capacidade.</p>
       <p><b>Atraso médio</b> e <b>maior atraso</b> = dias úteis entre a última previsão do processo e a data de referência, só das ordens vencidas em aberto. Reposição e ordem inconsistente ficam fora, como na tela Ordens.</p>
+      <p><b>Em risco</b> = ordem em aberto, ainda dentro do prazo, mas já atrás do programado pela regra de "Onde travou": a fase onde está venceu, ou ela está num setor anterior ao previsto para hoje. <b>No prazo</b> = em aberto e na fase programada. Vencidas, em risco e no prazo somam as ordens em aberto, fora reposição e inconsistente.</p>
+      <p><b>Qual setor está segurando</b> = os mesmos cartões de "Onde travou": o setor onde cada ordem atrás do programado está parada, do maior para o menor. <b>Lotes por prioridade</b> = as ordens do recorte somadas por lote; a ordem é mais vencidas, maior atraso, mais em risco, prazo do lote. "Setor que segura" é o setor onde mais ordens do lote estão paradas.</p>
       <p><b>Alertas</b> = os mesmos contadores do menu. Nenhum número nasce nesta tela; cada bloco abre a tela que o explica.</p>`,
-      'ordens, vencidas, peças, saldo, avanço operacional, peças por setor, atraso médio, alertas')}`;
+      'ordens, vencidas, em risco, peças, saldo, avanço operacional, setor que segura, lotes, atraso médio, alertas')}`;
 
   p.querySelectorAll('[data-ir]').forEach(b=>{ if(b.dataset.ir) b.onclick=()=>irPara(b.dataset.ir); });
   p.querySelectorAll('[data-setor]').forEach(b=>b.onclick=()=>{
     if(setorCego(b.dataset.setor)) return;
     ATR_SETOR=b.dataset.setor; ATR_SIT=''; guardarAtrSetor(); irPara('atr');
+  });
+  p.querySelectorAll('[data-segura]').forEach(b=>b.onclick=()=>abrirComFiltro('#fOper',b.dataset.segura,'trav'));
+  p.querySelectorAll('[data-lote]').forEach(b=>{
+    const ir=()=>abrirComFiltro('#fLote',b.dataset.lote,'trav');
+    b.onclick=ir; if(b.tagName==='TR') b.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); ir(); } };
   });
 }
 
